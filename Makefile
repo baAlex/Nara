@@ -9,20 +9,20 @@ RUBY=ruby
 OUT=nara
 OUT_DBG=nara-dbg
 
-CFLAGS=-c -O3 -flto -mtune=generic
-CFLAGS_DBG=-c -std=c11 -O0 -Wall -Wextra -pedantic -g -DDEBUG
+CFLAGS=-c -O3 -flto -mtune=generic -I./source/lib-japan/include
+CFLAGS_DBG=-c -std=c11 -O0 -Wall -Wextra -pedantic -g -DDEBUG -I./source/lib-japan/include
 LFLAGS=-lglfw -lGL -lm
 LFLAGS_DBG=-lglfw -lGL -lm
 
 FILES=./source/nara.c\
       ./source/context.c\
       ./source/context-gl.c\
-      ./source/endianness.c\
-      ./source/image.c\
-      ./source/image-sgi.c\
-      ./source/matrix.c\
-      ./source/status.c\
-      ./source/vector.c
+      ./source/lib-japan/source/endianness.c\
+      ./source/lib-japan/source/image.c\
+      ./source/lib-japan/source/image-sgi.c\
+      ./source/lib-japan/source/matrix.c\
+      ./source/lib-japan/source/status.c\
+      ./source/lib-japan/source/vector.c
 
 default: debug
 all: release debug

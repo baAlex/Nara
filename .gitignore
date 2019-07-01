@@ -1,6 +1,9 @@
+nara
+nara-dbg
 *.a
 *.so
 source/*.o
 source/*.dbg.o
+source/shaders/*.h
 .vscode/
 dev/
