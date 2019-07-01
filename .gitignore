@@ -1,0 +1,6 @@
+*.a
+*.so
+source/*.o
+source/*.dbg.o
+.vscode/
+dev/
