@@ -1,0 +1,3 @@
+[submodule "source/lib-japan"]
+	path = source/lib-japan
+	url = https://github.com/baAlex/Japan.git
