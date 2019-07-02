@@ -124,6 +124,10 @@ int main()
 		ContextDraw(context, test_vertices, test_index);
 
 		// Events
+		/*printf("%s %s %s %s %s %s %s %s %s %s %s\n", evn.a ? "a" : "-", evn.b ? "b" : "-", evn.x ? "x" : "-",
+			   evn.y ? "y" : "-", evn.lb ? "lb" : "--", evn.rb ? "rb" : "--", evn.view ? "view" : "----",
+			   evn.menu ? "menu" : "----", evn.guide ? "guide" : "-----", evn.ls ? "ls" : "--", evn.rs ? "rs" : "--");*/
+
 		if (evn.system.exit == true)
 			break;
 	}

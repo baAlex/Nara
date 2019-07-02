@@ -18,7 +18,9 @@
 		GLFWwindow* window;
 
 		struct ContextOptions options;
-		struct Events events;
+		struct Events key_events;
+
+		int joystick_id;
 
 		// Time calculation
 		struct timespec one_second_counter;

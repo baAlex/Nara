@@ -21,14 +21,16 @@
 
 	struct Events
 	{
-		struct
-		{
-			bool a, b, x, y;
-			bool lb, rb;
-			bool view, menu, guide;
-			bool ls, rs;
+		bool a, b, x, y;
+		bool lb, rb;
+		bool view, menu, guide;
+		bool ls, rs;
 
-		} button;
+		/*struct
+		{
+			float h, v;
+
+		} pad;
 
 		struct
 		{
@@ -40,13 +42,7 @@
 		{
 			float h, v, t;
 
-		} right_analog;
-
-		struct
-		{
-			float h, v;
-
-		} pad;
+		} right_analog;*/
 
 		struct
 		{
@@ -56,7 +52,7 @@
 
 		struct
 		{
-			float betwen_frames; // In miliseconds
+			double betwen_frames; // In miliseconds
 			long frame_no;
 			bool one_second;
 
