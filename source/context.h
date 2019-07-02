@@ -51,13 +51,14 @@
 		struct
 		{
 			bool exit;
-			bool error;
 
 		} system;
 
 		struct
 		{
-			int fps;
+			float betwen_frames; // In miliseconds
+			long frame_no;
+			bool one_second;
 
 		} time;
 	};

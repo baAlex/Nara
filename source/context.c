@@ -28,8 +28,8 @@ SOFTWARE.
  - Alexander Brandt 2019
 -----------------------------*/
 
-#include <stdio.h>
 #include "context-private.h"
+#include <stdio.h>
 
 
 #ifdef MULTIPLE_CONTEXTS_TEST // A bad idea
@@ -60,7 +60,6 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	if ((context = calloc(1, sizeof(struct Context))) == NULL)
 		return NULL;
 
-	memset(context, 0, sizeof(struct Context));
 	memcpy(&context->options, &options, sizeof(struct ContextOptions));
 
 	printf("%s\n", glfwGetVersionString());
@@ -98,6 +97,8 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	glfwSetFramebufferSizeCallback(context->window, sResize);
 	sResize(context->window, context->options.window_size.x, context->options.window_size.y);
 
+	glfwSwapInterval(0); // TODO: Hardcoded
+
 	if (context->options.fullscreen == true)
 	{
 		vid_mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
@@ -105,7 +106,11 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 							 GLFW_DONT_CARE);
 	}
 
-	// GL Specific initialization
+	// Context specific initialization
+	timespec_get(&context->last_update, TIME_UTC);
+	timespec_get(&context->one_second_counter, TIME_UTC);
+
+	// GL specific initialization
 	glClearColor(context->options.clean_color.x, context->options.clean_color.y, context->options.clean_color.z, 1.0);
 	glEnableVertexAttribArray(ATTRIBUTE_POSITION);
 	glEnableVertexAttribArray(ATTRIBUTE_NORMAL);
@@ -164,17 +169,48 @@ void ContextUpdate(struct Context* context, struct Events* out_events)
 	glfwSwapBuffers(context->window);
 	glClear(GL_COLOR_BUFFER_BIT);
 
+	// Time calculation
+	bool one_second = false;
+	double betwen_frames = 0.0;
+	struct timespec current_time = {0};
+	char str_buffer[64];
+
+	timespec_get(&current_time, TIME_UTC);
+
+	context->frame_no++;
+
+	betwen_frames = current_time.tv_nsec / 1000000.0 + current_time.tv_sec * 1000.0;
+	betwen_frames -= context->last_update.tv_nsec / 1000000.0 + context->last_update.tv_sec * 1000.0;
+
+	if (current_time.tv_sec > context->one_second_counter.tv_sec)
+	{
+		context->one_second_counter = current_time;
+		one_second = true;
+
+		snprintf(str_buffer, 64, "%s | %li fps (~%.2f ms)", context->options.caption,
+				context->frame_no - context->fps_counter, betwen_frames);
+		glfwSetWindowTitle(context->window, str_buffer);
+
+		context->fps_counter = context->frame_no;
+	}
+
+	// Events
 	if (out_events != NULL)
 	{
 		memset(&context->events, 0, sizeof(struct Events));
-
 		glfwPollEvents(); // TODO: It did not goes well with MULTIPLE_CONTEXTS_TEST
 
-		if (glfwWindowShouldClose(context->window) == GLFW_TRUE)
-			context->events.system.exit = true;
+		memcpy(out_events, &context->events, sizeof(struct Events)); // Keyboard callbacks fill 'context::events'
 
-		memcpy(out_events, &context->events, sizeof(struct Events));
+		if (glfwWindowShouldClose(context->window) == GLFW_TRUE)
+			out_events->system.exit = true;
+
+		out_events->time.frame_no = context->frame_no;
+		out_events->time.one_second = one_second;
+		out_events->time.betwen_frames = betwen_frames;
 	}
+
+	context->last_update = current_time;
 }
 
 
@@ -272,5 +308,5 @@ void ContextDraw(struct Context* context, const struct Vertices* vertices, const
 	glVertexAttribPointer(ATTRIBUTE_NORMAL, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), ((float*)NULL) + 3);
 
 	glDrawElements(GL_LINE_LOOP, index->length, GL_UNSIGNED_SHORT, NULL);
-	//glDrawElements(GL_TRIANGLES, index->length, GL_UNSIGNED_SHORT, NULL);
+	// glDrawElements(GL_TRIANGLES, index->length, GL_UNSIGNED_SHORT, NULL);
 }

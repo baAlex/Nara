@@ -81,6 +81,10 @@ int main()
 	struct Matrix4 projection;
 	struct Matrix4 camera;
 
+	printf("Nara v0.1\n");
+	printf("- Lib-Japan v%i.%i.%i\n", JAPAN_VERSION_MAJOR, JAPAN_VERSION_MINOR, JAPAN_VERSION_PATCH);
+	printf("\n");
+
 	// Initialization
 	context = ContextCreate((struct ContextOptions)
 	{
@@ -119,6 +123,7 @@ int main()
 		ContextUpdate(context, &evn);
 		ContextDraw(context, test_vertices, test_index);
 
+		// Events
 		if (evn.system.exit == true)
 			break;
 	}
