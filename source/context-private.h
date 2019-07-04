@@ -32,7 +32,7 @@
 		const struct Program* current_program;
 
 		struct Matrix4 projection;
-		struct Matrix4 camera;
+		struct Vector3 camera[2]; // 0 = Target, 1 = Origin
 	};
 
 #endif

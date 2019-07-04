@@ -331,7 +331,7 @@ void ContextSetProgram(struct Context* context, const struct Program* program)
 
 		glUseProgram(program->ptr);
 		glUniformMatrix4fv(glGetUniformLocation(program->ptr, "projection"), 1, GL_FALSE, context->projection.e);
-		glUniformMatrix4fv(glGetUniformLocation(program->ptr, "camera"), 1, GL_FALSE, context->camera.e);
+		glUniform3fv(glGetUniformLocation(context->current_program->ptr, "camera"), 2, (float*)&context->camera);
 	}
 }
 
@@ -362,7 +362,7 @@ void ContextSetProjection(struct Context* context, struct Matrix4 matrix)
 
  ContextSetCamera()
 -----------------------------*/
-void ContextSetCamera(struct Context* context, struct Matrix4 matrix)
+void ContextSetCamera(struct Context* context, struct Vector3 target, struct Vector3 origin)
 {
 #ifdef MULTIPLE_CONTEXTS_TEST
 	if (s_current_context != context)
@@ -372,11 +372,11 @@ void ContextSetCamera(struct Context* context, struct Matrix4 matrix)
 	}
 #endif
 
-	memcpy(&context->camera, &matrix, sizeof(struct Matrix4));
+	context->camera[0] = target;
+	context->camera[1] = origin;
 
 	if (context->current_program != NULL)
-		glUniformMatrix4fv(glGetUniformLocation(context->current_program->ptr, "camera"), 1, GL_FALSE,
-		                   context->camera.e);
+		glUniform3fv(glGetUniformLocation(context->current_program->ptr, "camera"), 2, (float*)&context->camera);
 }
 
 
