@@ -38,7 +38,10 @@ SOFTWARE.
 #include "shaders/white-fragment.h"
 #include "shaders/white-vertex.h"
 
+#ifndef M_PI
 #define M_PI 3.14159265358979323846264338327950288
+#endif
+
 #define DEG_TO_RAD(d) ((d) * M_PI / 180.0)
 #define RAD_TO_DEG(r) ((r) * 180.0 / M_PI)
 
@@ -97,7 +100,6 @@ static void sCameraMove(struct Context* context, struct Events* evn, struct Vect
 	}
 	else if (evn->rb == true && evn->lb == false)
 	{
-
 		if (*distance > 1.0)
 			*distance -= speed;
 
@@ -198,8 +200,8 @@ int main()
 
 	// Resources
 	if ((white_program = ProgramCreate((char*)g_white_vertex, (char*)g_white_fragment, &st)) == NULL ||
-		(test_vertices = VerticesCreate(g_test_vertices, 8, &st)) == NULL ||
-		(test_index = IndexCreate(g_test_index, 6, &st)) == NULL)
+	    (test_vertices = VerticesCreate(g_test_vertices, 8, &st)) == NULL ||
+	    (test_index = IndexCreate(g_test_index, 6, &st)) == NULL)
 		goto return_failure;
 
 	projection = Matrix4Perspective(FOV, (float)CANVAS_WIDTH / (float)CANVAS_HEIGHT, 0.1, 100.0);
@@ -224,7 +226,10 @@ int main()
 
 		sCameraMove(context, &evn, &camera_target, &camera_distance);
 
-		if (evn.system.exit == true)
+		if (evn.window.resize == true)
+			printf("Window resized: %ix%i px\n", evn.window.width, evn.window.height);
+
+		if (evn.window.close == true)
 			break;
 	}
 

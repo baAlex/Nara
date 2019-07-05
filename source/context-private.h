@@ -18,7 +18,7 @@
 		GLFWwindow* window;
 
 		struct ContextOptions options;
-		struct Events key_events;
+		struct Events events; // Callbacks write here
 
 		int joystick_id;
 
@@ -31,8 +31,12 @@
 		// Gl state
 		const struct Program* current_program;
 
+		GLint u_projection;         // For current program
+		GLint u_camera_projection;  // "
+		GLint u_camera_components;  // "
+
 		struct Matrix4 projection;
-		struct Vector3 camera[2]; // 0 = Target, 1 = Origin
+		struct Vector3 camera_components[2]; // 0 = Target, 1 = Origin
 	};
 
 #endif

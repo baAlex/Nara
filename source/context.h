@@ -46,9 +46,13 @@
 
 		struct
 		{
-			bool exit;
+			bool resize;
+			int width;
+			int height;
 
-		} system;
+			bool close;
+
+		} window;
 
 		struct
 		{

@@ -40,9 +40,9 @@ static struct Context* s_current_context = NULL;
 
 /*-----------------------------
 
- sKeyboard()
+ sKeyboardCallback()
 -----------------------------*/
-static void sKeyboard(GLFWwindow* window, int key, int scancode, int action, int mods)
+static void sKeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	// TODO: Everything hardcoded!
 
@@ -54,20 +54,20 @@ static void sKeyboard(GLFWwindow* window, int key, int scancode, int action, int
 	{
 		switch (key)
 		{
-			case GLFW_KEY_S: context->key_events.a = true; break;
-			case GLFW_KEY_D: context->key_events.b = true; break;
-			case GLFW_KEY_A: context->key_events.x = true; break;
-			case GLFW_KEY_W: context->key_events.y = true; break;
+			case GLFW_KEY_S: context->events.a = true; break;
+			case GLFW_KEY_D: context->events.b = true; break;
+			case GLFW_KEY_A: context->events.x = true; break;
+			case GLFW_KEY_W: context->events.y = true; break;
 
-			case GLFW_KEY_Q: context->key_events.lb = true; break;
-			case GLFW_KEY_E: context->key_events.rb = true; break;
+			case GLFW_KEY_Q: context->events.lb = true; break;
+			case GLFW_KEY_E: context->events.rb = true; break;
 
-			case GLFW_KEY_SPACE: context->key_events.view = true; break;
-			case GLFW_KEY_ENTER: context->key_events.menu = true; break;
-			case GLFW_KEY_F1: context->key_events.guide = true; break;
+			case GLFW_KEY_SPACE: context->events.view = true; break;
+			case GLFW_KEY_ENTER: context->events.menu = true; break;
+			case GLFW_KEY_F1: context->events.guide = true; break;
 
-			case GLFW_KEY_T: context->key_events.ls = true; break;
-			case GLFW_KEY_Y: context->key_events.rs = true; break;
+			case GLFW_KEY_T: context->events.ls = true; break;
+			case GLFW_KEY_Y: context->events.rs = true; break;
 
 			default: break;
 		}
@@ -76,20 +76,20 @@ static void sKeyboard(GLFWwindow* window, int key, int scancode, int action, int
 	{
 		switch (key)
 		{
-			case GLFW_KEY_S: context->key_events.a = false; break;
-			case GLFW_KEY_D: context->key_events.b = false; break;
-			case GLFW_KEY_A: context->key_events.x = false; break;
-			case GLFW_KEY_W: context->key_events.y = false; break;
+			case GLFW_KEY_S: context->events.a = false; break;
+			case GLFW_KEY_D: context->events.b = false; break;
+			case GLFW_KEY_A: context->events.x = false; break;
+			case GLFW_KEY_W: context->events.y = false; break;
 
-			case GLFW_KEY_Q: context->key_events.lb = false; break;
-			case GLFW_KEY_E: context->key_events.rb = false; break;
+			case GLFW_KEY_Q: context->events.lb = false; break;
+			case GLFW_KEY_E: context->events.rb = false; break;
 
-			case GLFW_KEY_SPACE: context->key_events.view = false; break;
-			case GLFW_KEY_ENTER: context->key_events.menu = false; break;
-			case GLFW_KEY_F1: context->key_events.guide = false; break;
+			case GLFW_KEY_SPACE: context->events.view = false; break;
+			case GLFW_KEY_ENTER: context->events.menu = false; break;
+			case GLFW_KEY_F1: context->events.guide = false; break;
 
-			case GLFW_KEY_T: context->key_events.ls = false; break;
-			case GLFW_KEY_Y: context->key_events.rs = false; break;
+			case GLFW_KEY_T: context->events.ls = false; break;
+			case GLFW_KEY_Y: context->events.rs = false; break;
 
 			default: break;
 		}
@@ -99,13 +99,18 @@ static void sKeyboard(GLFWwindow* window, int key, int scancode, int action, int
 
 /*-----------------------------
 
- sResize()
+ sResizeCallback()
 -----------------------------*/
-static inline void sResize(GLFWwindow* window, int new_width, int new_height)
+static inline void sResizeCallback(GLFWwindow* window, int new_width, int new_height)
 {
 	struct Context* context = glfwGetWindowUserPointer(window);
+
 	ViewportResize(context->options.scale_mode, new_width, new_height, context->options.steps_size.x,
-				   context->options.steps_size.y);
+	               context->options.steps_size.y);
+
+	context->events.window.resize = true;
+	context->events.window.width = new_width;
+	context->events.window.height = new_height;
 }
 
 
@@ -145,7 +150,7 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
 	if ((context->window = glfwCreateWindow(context->options.window_size.x, context->options.window_size.y,
-											context->options.caption, NULL, NULL)) == NULL)
+	                                        context->options.caption, NULL, NULL)) == NULL)
 	{
 		StatusSet(st, "ContextCreate", STATUS_ERROR, "Creating GLFW window\n");
 		goto return_failure;
@@ -154,11 +159,11 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	glfwMakeContextCurrent(context->window);
 
 	glfwSetWindowSizeLimits(context->window, context->options.windows_min_size.x, context->options.windows_min_size.y,
-							GLFW_DONT_CARE, GLFW_DONT_CARE);
+	                        GLFW_DONT_CARE, GLFW_DONT_CARE);
 
 	glfwSetWindowUserPointer(context->window, context);
-	glfwSetFramebufferSizeCallback(context->window, sResize);
-	glfwSetKeyCallback(context->window, sKeyboard);
+	glfwSetFramebufferSizeCallback(context->window, sResizeCallback);
+	glfwSetKeyCallback(context->window, sKeyboardCallback);
 
 	glfwSwapInterval(0); // TODO: Hardcoded
 
@@ -166,7 +171,7 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	{
 		vid_mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
 		glfwSetWindowMonitor(context->window, glfwGetPrimaryMonitor(), 0, 0, vid_mode->width, vid_mode->height,
-							 GLFW_DONT_CARE);
+		                     GLFW_DONT_CARE);
 	}
 
 	// Joystick initialization
@@ -187,9 +192,12 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	timespec_get(&context->last_update, TIME_UTC);
 	timespec_get(&context->one_second_counter, TIME_UTC);
 
+	context->events.window.width = context->options.window_size.x;
+	context->events.window.height = context->options.window_size.y;
+
 	// GL specific initialization
 	ViewportResize(context->options.scale_mode, context->options.window_size.x, context->options.window_size.y,
-				   context->options.steps_size.x, context->options.steps_size.y);
+	               context->options.steps_size.x, context->options.steps_size.y);
 
 	glClearColor(context->options.clean_color.x, context->options.clean_color.y, context->options.clean_color.z, 1.0);
 	glEnableVertexAttribArray(ATTRIBUTE_POSITION);
@@ -268,7 +276,7 @@ void ContextUpdate(struct Context* context, struct Events* out_events)
 		one_second = true;
 
 		snprintf(str_buffer, 64, "%s | %li fps (~%.2f ms)", context->options.caption,
-				context->frame_no - context->fps_counter, betwen_frames);
+		         context->frame_no - context->fps_counter, betwen_frames);
 		glfwSetWindowTitle(context->window, str_buffer);
 
 		context->fps_counter = context->frame_no;
@@ -280,26 +288,32 @@ void ContextUpdate(struct Context* context, struct Events* out_events)
 
 	if (out_events != NULL)
 	{
-		glfwPollEvents(); // TODO: This did not goes well with MULTIPLE_CONTEXTS_TEST
-		joy_buttons = glfwGetJoystickButtons(context->joystick_id, &joy_buttons_no); // no requires PollEvents()
+		glfwPollEvents(); // TODO: This global state function did not goes well with MULTIPLE_CONTEXTS_TEST
+		joy_buttons = glfwGetJoystickButtons(context->joystick_id, &joy_buttons_no); // No PollEvents() required
 
-		out_events->a = (context->key_events.a == true || (joy_buttons_no >= 1 && joy_buttons[0] == GLFW_TRUE)) ? true : false;
-		out_events->b = (context->key_events.b == true || (joy_buttons_no >= 2 && joy_buttons[1] == GLFW_TRUE)) ? true : false;
-		out_events->x = (context->key_events.x == true || (joy_buttons_no >= 3 && joy_buttons[2] == GLFW_TRUE)) ? true : false;
-		out_events->y = (context->key_events.y == true || (joy_buttons_no >= 4 && joy_buttons[3] == GLFW_TRUE)) ? true : false;
+		out_events->a = (context->events.a == true || (joy_buttons_no >= 1 && joy_buttons[0] == GLFW_TRUE)) ? true : false;
+		out_events->b = (context->events.b == true || (joy_buttons_no >= 2 && joy_buttons[1] == GLFW_TRUE)) ? true : false;
+		out_events->x = (context->events.x == true || (joy_buttons_no >= 3 && joy_buttons[2] == GLFW_TRUE)) ? true : false;
+		out_events->y = (context->events.y == true || (joy_buttons_no >= 4 && joy_buttons[3] == GLFW_TRUE)) ? true : false;
 
-		out_events->lb = (context->key_events.lb == true || (joy_buttons_no >= 5 && joy_buttons[4] == GLFW_TRUE)) ? true : false;
-		out_events->rb = (context->key_events.rb == true || (joy_buttons_no >= 6 && joy_buttons[5] == GLFW_TRUE)) ? true : false;
+		out_events->lb = (context->events.lb == true || (joy_buttons_no >= 5 && joy_buttons[4] == GLFW_TRUE)) ? true : false;
+		out_events->rb = (context->events.rb == true || (joy_buttons_no >= 6 && joy_buttons[5] == GLFW_TRUE)) ? true : false;
 
-		out_events->view = (context->key_events.view == true || (joy_buttons_no >= 7 && joy_buttons[6] == GLFW_TRUE)) ? true : false;
-		out_events->menu = (context->key_events.menu == true || (joy_buttons_no >= 8 && joy_buttons[7] == GLFW_TRUE)) ? true : false;
-		out_events->guide = (context->key_events.guide == true || (joy_buttons_no >= 9 && joy_buttons[8] == GLFW_TRUE)) ? true : false;
+		out_events->view = (context->events.view == true || (joy_buttons_no >= 7 && joy_buttons[6] == GLFW_TRUE)) ? true : false;
+		out_events->menu = (context->events.menu == true || (joy_buttons_no >= 8 && joy_buttons[7] == GLFW_TRUE)) ? true : false;
+		out_events->guide = (context->events.guide == true || (joy_buttons_no >= 9 && joy_buttons[8] == GLFW_TRUE)) ? true : false;
 
-		out_events->ls = (context->key_events.ls == true || (joy_buttons_no >= 5 && joy_buttons[9] == GLFW_TRUE)) ? true : false;
-		out_events->rs = (context->key_events.rs == true || (joy_buttons_no >= 6 && joy_buttons[10] == GLFW_TRUE)) ? true : false;
+		out_events->ls = (context->events.ls == true || (joy_buttons_no >= 5 && joy_buttons[9] == GLFW_TRUE)) ? true : false;
+		out_events->rs = (context->events.rs == true || (joy_buttons_no >= 6 && joy_buttons[10] == GLFW_TRUE)) ? true : false;
 
 		// Misc
-		out_events->system.exit = (glfwWindowShouldClose(context->window) == GLFW_TRUE) ? true : false;
+		out_events->window.resize = context->events.window.resize;
+		context->events.window.resize = false;
+
+		out_events->window.width = context->events.window.width;
+		out_events->window.height = context->events.window.height;
+		out_events->window.close = (glfwWindowShouldClose(context->window) == GLFW_TRUE) ? true : false;
+
 		out_events->time.frame_no = context->frame_no;
 		out_events->time.one_second = one_second;
 		out_events->time.betwen_frames = betwen_frames;
@@ -327,11 +341,18 @@ void ContextSetProgram(struct Context* context, const struct Program* program)
 
 	if (program != context->current_program)
 	{
+		struct Matrix4 as_matrix = Matrix4LookAt(context->camera_components[1], context->camera_components[0],
+		                                         (struct Vector3){0.0, 0.0, 1.0});
+
 		context->current_program = program;
+		context->u_projection = glGetUniformLocation(program->ptr, "projection");
+		context->u_camera_projection = glGetUniformLocation(context->current_program->ptr, "camera_projection");
+		context->u_camera_components = glGetUniformLocation(context->current_program->ptr, "camera_components");
 
 		glUseProgram(program->ptr);
-		glUniformMatrix4fv(glGetUniformLocation(program->ptr, "projection"), 1, GL_FALSE, context->projection.e);
-		glUniform3fv(glGetUniformLocation(context->current_program->ptr, "camera"), 2, (float*)&context->camera);
+		glUniformMatrix4fv(context->u_projection, 1, GL_FALSE, context->projection.e);
+		glUniformMatrix4fv(context->u_camera_projection, 1, GL_FALSE, as_matrix.e);
+		glUniform3fv(context->u_camera_components, 2, (float*)&context->camera_components);
 	}
 }
 
@@ -353,8 +374,7 @@ void ContextSetProjection(struct Context* context, struct Matrix4 matrix)
 	memcpy(&context->projection, &matrix, sizeof(struct Matrix4));
 
 	if (context->current_program != NULL)
-		glUniformMatrix4fv(glGetUniformLocation(context->current_program->ptr, "projection"), 1, GL_FALSE,
-		                   context->projection.e); // TODO: This Uniform() is necessary?
+		glUniformMatrix4fv(context->u_projection, 1, GL_FALSE, context->projection.e);
 }
 
 
@@ -372,11 +392,16 @@ void ContextSetCamera(struct Context* context, struct Vector3 target, struct Vec
 	}
 #endif
 
-	context->camera[0] = target;
-	context->camera[1] = origin;
+	context->camera_components[0] = target;
+	context->camera_components[1] = origin;
 
 	if (context->current_program != NULL)
-		glUniform3fv(glGetUniformLocation(context->current_program->ptr, "camera"), 2, (float*)&context->camera);
+	{
+		struct Matrix4 as_matrix = Matrix4LookAt(origin, target, (struct Vector3){0.0, 0.0, 1.0});
+
+		glUniformMatrix4fv(context->u_camera_projection, 1, GL_FALSE, as_matrix.e);
+		glUniform3fv(context->u_camera_components, 2, (float*)&context->camera_components);
+	}
 }
 
 
