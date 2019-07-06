@@ -17,6 +17,7 @@ LFLAGS_DBG=-lglfw -lGL -lm
 FILES=./source/nara.c\
       ./source/context.c\
       ./source/context-gl.c\
+      ./source/terrain.c\
       ./source/lib-japan/source/endianness.c\
       ./source/lib-japan/source/image.c\
       ./source/lib-japan/source/image-sgi.c\

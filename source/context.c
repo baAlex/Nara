@@ -201,7 +201,7 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 
 	glClearColor(context->options.clean_color.x, context->options.clean_color.y, context->options.clean_color.z, 1.0);
 	glEnableVertexAttribArray(ATTRIBUTE_POSITION);
-	glEnableVertexAttribArray(ATTRIBUTE_NORMAL);
+	glEnableVertexAttribArray(ATTRIBUTE_COLOR);
 	// glEnableVertexAttribArray(ATTRIBUTE_UV);
 
 	// Bye!
@@ -425,8 +425,8 @@ void ContextDraw(struct Context* context, const struct Vertices* vertices, const
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index->ptr);
 
 	glVertexAttribPointer(ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), NULL);
-	glVertexAttribPointer(ATTRIBUTE_NORMAL, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), ((float*)NULL) + 3);
+	glVertexAttribPointer(ATTRIBUTE_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), ((float*)NULL) + 3);
 
-	glDrawElements(GL_LINE_LOOP, index->length, GL_UNSIGNED_SHORT, NULL);
+	glDrawElements(GL_LINES, index->length, GL_UNSIGNED_SHORT, NULL);
 	// glDrawElements(GL_TRIANGLES, index->length, GL_UNSIGNED_SHORT, NULL);
 }
