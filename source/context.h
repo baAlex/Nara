@@ -26,23 +26,20 @@
 		bool view, menu, guide;
 		bool ls, rs;
 
-		/*struct
+		struct
 		{
 			float h, v;
-
 		} pad;
 
 		struct
 		{
 			float h, v, t;
-
 		} left_analog;
 
 		struct
 		{
 			float h, v, t;
-
-		} right_analog;*/
+		} right_analog;
 
 		struct
 		{

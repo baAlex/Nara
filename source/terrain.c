@@ -35,6 +35,7 @@ SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 
+
 static struct Vector4 s_colors[] = {{1.0, 0.5, 0.5, 1.0}, {0.5, 1.0, 0.5, 1.0}, {0.5, 0.5, 1.0, 1.0},
 									{1.0, 0.0, 0.0, 1.0}, {0.0, 1.0, 0.0, 1.0}, {0.0, 0.0, 1.0, 1.0}};
 
@@ -60,11 +61,11 @@ static inline float sPixelAsFloat(const struct Image* image, int x, int y)
 
  TerrainLoad()
 -----------------------------*/
-int TerrainLoad(struct Terrain* terrain, int width, int height, const char* heightmap_filename, struct Status* st)
+int TerrainLoad(struct Terrain* terrain, size_t width, size_t height, const char* filename, struct Status* st)
 {
-	struct Image* heightmap_image = NULL;
-	int heightmap_step_x = 0;
-	int heightmap_step_y = 0;
+	struct Image* image = NULL;
+	int image_step_x = 0;
+	int image_step_y = 0;
 
 	union {
 		struct Vertex* v;
@@ -78,9 +79,9 @@ int TerrainLoad(struct Terrain* terrain, int width, int height, const char* heig
 
 	temp.raw = NULL;
 
-	if (heightmap_filename != NULL)
+	if (filename != NULL)
 	{
-		if ((heightmap_image = ImageLoad(heightmap_filename, st)) == NULL)
+		if ((image = ImageLoad(filename, st)) == NULL)
 			goto return_failure;
 	}
 
@@ -94,10 +95,9 @@ int TerrainLoad(struct Terrain* terrain, int width, int height, const char* heig
 	terrain->height = height;
 
 	// Vertices
-	for (int r = 0; r < (terrain->height + 1); r++)
+	for (size_t r = 0; r < (terrain->height + 1); r++)
 	{
-		heightmap_step_x = 0;
-		for (int c = 0; c < (terrain->width + 1); c++)
+		for (size_t c = 0; c < (terrain->width + 1); c++)
 		{
 			temp.v[c + (terrain->width + 1) * r].col = s_colors[rand() % (sizeof(s_colors) / sizeof(struct Vector4))];
 
@@ -105,18 +105,21 @@ int TerrainLoad(struct Terrain* terrain, int width, int height, const char* heig
 			temp.v[c + (terrain->width + 1) * r].pos.y = (float)r;
 			temp.v[c + (terrain->width + 1) * r].pos.z = 0.0;
 
-			if (heightmap_image != NULL)
+			if (image != NULL)
 			{
 				temp.v[c + (terrain->width + 1) * r].pos.z =
-					sPixelAsFloat(heightmap_image, heightmap_step_x, heightmap_step_y) * 5.0;
+					sPixelAsFloat(image, image_step_x, image_step_y) * 5.0;
 
-				if (heightmap_image != NULL && c < terrain->width)
-					heightmap_step_x += heightmap_image->width / terrain->width;
+				if (image != NULL && c < terrain->width)
+					image_step_x += image->width / terrain->width;
 			}
 		}
 
-		if (heightmap_image != NULL && r < terrain->height)
-			heightmap_step_y += heightmap_image->height / terrain->height;
+		if (image != NULL && r < terrain->height)
+		{
+			image_step_y += image->height / terrain->height;
+			image_step_x = 0;
+		}
 	}
 
 	if ((terrain->vertices = VerticesCreate(temp.v, (width + 1) * (height + 1), st)) == NULL)
@@ -125,9 +128,9 @@ int TerrainLoad(struct Terrain* terrain, int width, int height, const char* heig
 	// Index
 	size_t index_i = 0; // Index index
 
-	for (int r = 0; r < (terrain->height); r++)
+	for (size_t r = 0; r < (terrain->height); r++)
 	{
-		for (int c = 0; c < (terrain->width); c++)
+		for (size_t c = 0; c < (terrain->width); c++)
 		{
 			temp.i[index_i + 0] = c + ((terrain->width + 1) * r);
 			temp.i[index_i + 1] = c + ((terrain->width + 1) * r) + 1;
@@ -144,17 +147,16 @@ int TerrainLoad(struct Terrain* terrain, int width, int height, const char* heig
 
 	// Bye!
 	free(temp.raw);
-	if (heightmap_image != NULL)
-		ImageDelete(heightmap_image);
+	if (image != NULL)
+		ImageDelete(image);
 
 	return 0;
 
 return_failure:
-	if (heightmap_image != NULL)
-		ImageDelete(heightmap_image);
+	if (image != NULL)
+		ImageDelete(image);
 	if (temp.raw != NULL)
 		free(temp.raw);
-
 	if (terrain->vertices != 0)
 		VerticesDelete(terrain->vertices);
 	if (terrain->index != 0)
@@ -177,27 +179,4 @@ void TerrainClean(struct Terrain* t)
 		VerticesDelete(t->vertices);
 
 	memset(t, 0, sizeof(struct Terrain));
-}
-
-
-/*-----------------------------
-
- TerrainGetVertices()
------------------------------*/
-inline struct Vertices* TerrainGetVertices(struct Terrain* terrain) { return terrain->vertices; }
-
-
-/*-----------------------------
-
- TerrainGetIndex()
------------------------------*/
-inline struct Index* TerrainGetIndex(struct Terrain* terrain, int lod_level, struct Vector3 area_start,
-									 struct Vector3 area_end)
-{
-	(void)lod_level;  // TODO: Not today, but in the future...
-	(void)area_start; // The idea is to have many indexes stored in the
-	(void)area_end;   // terrain struct, returning them depending on
-					  // desired lod and position. Kind of quadtree.
-
-	return terrain->index;
 }

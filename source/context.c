@@ -202,6 +202,7 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	glClearColor(context->options.clean_color.x, context->options.clean_color.y, context->options.clean_color.z, 1.0);
 	glEnableVertexAttribArray(ATTRIBUTE_POSITION);
 	glEnableVertexAttribArray(ATTRIBUTE_COLOR);
+	glEnable(GL_DEPTH_TEST);
 	// glEnableVertexAttribArray(ATTRIBUTE_UV);
 
 	// Bye!
@@ -255,7 +256,7 @@ void ContextUpdate(struct Context* context, struct Events* out_events)
 #endif
 
 	glfwSwapBuffers(context->window);
-	glClear(GL_COLOR_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Time calculation
 	bool one_second = false;

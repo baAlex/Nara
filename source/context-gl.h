@@ -4,8 +4,8 @@
  - Alexander Brandt 2019
 -----------------------------*/
 
-#ifndef CONTEXT_GL
-#define CONTEXT_GL
+#ifndef CONTEXT_GL_H
+#define CONTEXT_GL_H
 
 	#include <stddef.h>
 	#include <stdbool.h>

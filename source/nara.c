@@ -48,8 +48,6 @@ SOFTWARE.
 
 #define FOV 45
 
-// For test purposes I using an aspect of 2.20:1
-// In real world the aspect should not be enforced
 #define CANVAS_WIDTH 528
 #define CANVAS_HEIGHT 240
 #define WINDOWS_MIN_WIDTH 220
@@ -76,7 +74,7 @@ const uint16_t g_test_index[] = {
 static void sCameraMove(struct Context* context, struct Events* evn, struct Vector3* target, float* distance)
 {
 	// The following lazy code should work
-	// until introduction of analog input
+	// until support of analog input
 
 	bool update = false;
 	float speed = 0.5 * (evn->time.betwen_frames / 33.3333); // Delta calculation
@@ -235,13 +233,18 @@ int main()
 	}
 
 	// Bye!
+	TerrainClean(&terrain);
+	IndexDelete(test_index);
+	VerticesDelete(test_vertices);
+	ProgramDelete(white_program);
 	ContextDelete(context);
+
 	return EXIT_SUCCESS;
 
 return_failure:
 
 	StatusPrint(st);
-		TerrainClean(&terrain);
+	TerrainClean(&terrain);
 	if (test_index != NULL)
 		IndexDelete(test_index);
 	if (test_vertices != NULL)
