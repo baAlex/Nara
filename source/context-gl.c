@@ -92,7 +92,7 @@ struct Program* ProgramCreate(const char* vertex_code, const char* fragment_code
 		glAttachShader(program->ptr, fragment);
 
 		glBindAttribLocation(program->ptr, ATTRIBUTE_POSITION, "vertex_position"); // Before link!
-		glBindAttribLocation(program->ptr, ATTRIBUTE_NORMAL, "vertex_color");
+		glBindAttribLocation(program->ptr, ATTRIBUTE_COLOR, "vertex_color");
 		// glBindAttribLocation(program->ptr, ATTRIBUTE_UV, "vertex_uv");
 
 		// Link

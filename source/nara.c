@@ -34,6 +34,7 @@ SOFTWARE.
 #include <math.h>
 
 #include "context.h"
+#include "terrain.h"
 
 #include "shaders/white-fragment.h"
 #include "shaders/white-vertex.h"
@@ -56,19 +57,15 @@ SOFTWARE.
 
 
 const struct Vertex g_test_vertices[] = {
-	{.pos = {-0.5, -0.5, 0.0}, .nor = {0.0, 0.0, 0.0}},
-	{.pos = {0.5, -0.5, 0.0}, .nor = {0.0, 0.0, 0.0}},
-	{.pos = {0.5, 0.5, 0.0}, .nor = {0.0, 0.0, 0.0}},
-	{.pos = {-0.5, 0.5, 0.0}, .nor = {0.0, 0.0, 0.0}},
-
-	{.pos = {0.0, 0.0, 1.0}, .nor = {0.0, 0.0, 0.0}},
-	{.pos = {1.0, 0.0, 1.0}, .nor = {0.0, 0.0, 0.0}},
-	{.pos = {1.0, 1.0, 1.0}, .nor = {0.0, 0.0, 0.0}},
-	{.pos = {0.0, 1.0, 1.0}, .nor = {0.0, 0.0, 0.0}}};
+	{.pos = {-0.5, -0.5, 1.0}, .col = {1.0, 0.0, 0.0, 1.0}},
+	{.pos = {0.5, -0.5, 1.0}, .col = {1.0, 0.0, 0.0, 1.0}},
+	{.pos = {0.5, 0.5, 1.0}, .col = {1.0, 0.0, 0.0, 1.0}},
+	{.pos = {-0.5, 0.5, 1.0}, .col = {1.0, 0.0, 0.0, 1.0}}
+};
 
 const uint16_t g_test_index[] = {
 	0, 1, 2,
-	0, 3, 2,
+	1, 2, 3
 };
 
 
@@ -174,6 +171,8 @@ int main()
 	struct Vertices* test_vertices = NULL;
 	struct Index* test_index = NULL;
 
+	struct Terrain terrain = {0};
+
 	struct Matrix4 projection;
 	struct Vector3 camera_target = {0.0, 0.0, 0.0};
 	float camera_distance = 5.0;
@@ -200,11 +199,12 @@ int main()
 
 	// Resources
 	if ((white_program = ProgramCreate((char*)g_white_vertex, (char*)g_white_fragment, &st)) == NULL ||
-	    (test_vertices = VerticesCreate(g_test_vertices, 8, &st)) == NULL ||
-	    (test_index = IndexCreate(g_test_index, 6, &st)) == NULL)
+	    (test_vertices = VerticesCreate(g_test_vertices, 4, &st)) == NULL ||
+	    (test_index = IndexCreate(g_test_index, 6, &st)) == NULL ||
+	    (TerrainLoad(&terrain, 100, 100, "resources/simplex-noise.sgi", &st)) != 0)
 		goto return_failure;
 
-	projection = Matrix4Perspective(FOV, (float)CANVAS_WIDTH / (float)CANVAS_HEIGHT, 0.1, 100.0);
+	projection = Matrix4Perspective(FOV, (float)CANVAS_WIDTH / (float)CANVAS_HEIGHT, 0.1, 4000.0);
 
 	ContextSetProjection(context, projection);
 	ContextSetProgram(context, white_program);
@@ -218,6 +218,7 @@ int main()
 	{
 		ContextUpdate(context, &evn);
 		ContextDraw(context, test_vertices, test_index);
+		ContextDraw(context, terrain.vertices, terrain.index);
 
 		// Events
 		/*printf("%s %s %s %s %s %s %s %s %s %s %s\n", evn.a ? "a" : "-", evn.b ? "b" : "-", evn.x ? "x" : "-",
@@ -240,6 +241,7 @@ int main()
 return_failure:
 
 	StatusPrint(st);
+		TerrainClean(&terrain);
 	if (test_index != NULL)
 		IndexDelete(test_index);
 	if (test_vertices != NULL)
