@@ -169,7 +169,7 @@ int main()
 	struct Vertices* test_vertices = NULL;
 	struct Index* test_index = NULL;
 
-	struct Terrain terrain = {0};
+	struct Terrain* terrain = NULL;
 
 	struct Matrix4 projection;
 	struct Vector3 camera_target = {0.0, 0.0, 0.0};
@@ -196,10 +196,17 @@ int main()
 		goto return_failure;
 
 	// Resources
+	struct TerrainOptions terrain_options = {0};
+
+	terrain_options.heightmap_filename = "./resources/heightmap.sgi";
+	terrain_options.width = 100;
+	terrain_options.height = 100;
+	terrain_options.elevation = 20;
+
 	if ((white_program = ProgramCreate((char*)g_white_vertex, (char*)g_white_fragment, &st)) == NULL ||
 	    (test_vertices = VerticesCreate(g_test_vertices, 4, &st)) == NULL ||
 	    (test_index = IndexCreate(g_test_index, 6, &st)) == NULL ||
-	    (TerrainLoad(&terrain, 100, 100, "resources/simplex-noise.sgi", &st)) != 0)
+	    (terrain = TerrainCreate(terrain_options, &st)) == NULL)
 		goto return_failure;
 
 	projection = Matrix4Perspective(FOV, (float)CANVAS_WIDTH / (float)CANVAS_HEIGHT, 0.1, 4000.0);
@@ -216,7 +223,7 @@ int main()
 	{
 		ContextUpdate(context, &evn);
 		ContextDraw(context, test_vertices, test_index);
-		ContextDraw(context, terrain.vertices, terrain.index);
+		ContextDraw(context, terrain->vertices, terrain->index);
 
 		// Events
 		/*printf("%s %s %s %s %s %s %s %s %s %s %s\n", evn.a ? "a" : "-", evn.b ? "b" : "-", evn.x ? "x" : "-",
@@ -233,7 +240,7 @@ int main()
 	}
 
 	// Bye!
-	TerrainClean(&terrain);
+	TerrainDelete(terrain);
 	IndexDelete(test_index);
 	VerticesDelete(test_vertices);
 	ProgramDelete(white_program);
@@ -244,7 +251,8 @@ int main()
 return_failure:
 
 	StatusPrint(st);
-	TerrainClean(&terrain);
+	if (terrain != NULL)
+		TerrainDelete(terrain);
 	if (test_index != NULL)
 		IndexDelete(test_index);
 	if (test_vertices != NULL)
