@@ -12,6 +12,7 @@
 
 	#include "vector.h"
 	#include "status.h"
+	#include "image.h"
 
 	#define GLFW_INCLUDE_ES2 // TODO: Hardcoded
 	#include <GLFW/glfw3.h>
@@ -43,6 +44,11 @@
 		size_t length; // In elements
 	};
 
+	struct Texture
+	{
+		GLuint ptr;
+	};
+
 	enum ScaleMode
 	{
 		SCALE_MODE_ASPECT = 0,
@@ -59,6 +65,9 @@
 
 	struct Index* IndexCreate(const uint16_t* data, size_t length, struct Status* st);
 	void IndexDelete(struct Index*);
+
+	struct Texture* TextureCreate(const struct Image* image, struct Status* st);
+	void TextureDelete(struct Texture*);
 
 	void ViewportResize(enum ScaleMode mode, int new_w, int new_h, int aspect_w, int aspect_h);
 

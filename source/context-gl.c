@@ -151,27 +151,44 @@ struct Vertices* VerticesCreate(const struct Vertex* data, size_t length, struct
 
 	StatusSet(st, "VerticesCreate", STATUS_SUCCESS, NULL);
 
-	if ((vertices = malloc(sizeof(struct Vertices))) == NULL)
+	if ((vertices = calloc(1, sizeof(struct Vertices))) == NULL)
 		StatusSet(st, "VerticesCreate", STATUS_MEMORY_ERROR, NULL);
 	else
 	{
 		glGenBuffers(1, &vertices->ptr);
+		glBindBuffer(GL_ARRAY_BUFFER, vertices->ptr); // Before ask if is!
 
-		glBindBuffer(GL_ARRAY_BUFFER, vertices->ptr);
+		if (glIsBuffer(vertices->ptr) == GL_FALSE)
+		{
+			StatusSet(st, "VerticesCreate", STATUS_ERROR, "Creating GL buffer");
+			goto return_failure;
+		}
+
 		glBufferData(GL_ARRAY_BUFFER, sizeof(struct Vertex) * length, data, GL_STREAM_DRAW);
 		glGetBufferParameteriv(GL_ARRAY_BUFFER, GL_BUFFER_SIZE, &reported_size);
 
 		if ((size_t)reported_size != (sizeof(struct Vertex) * length))
 		{
-			StatusSet(st, "VerticesCreate", STATUS_ERROR, "Creating GL buffer");
-			free(vertices);
-			return NULL;
+			StatusSet(st, "VerticesCreate", STATUS_ERROR, "Attaching data");
+			goto return_failure;
 		}
 
 		vertices->length = length;
 	}
 
+	// Bye!
 	return vertices;
+
+return_failure:
+	if (vertices != NULL)
+	{
+		if (vertices->ptr != 0)
+			glDeleteBuffers(1, &vertices->ptr);
+
+		free(vertices);
+	}
+
+	return NULL;
 }
 
 
@@ -197,27 +214,44 @@ struct Index* IndexCreate(const uint16_t* data, size_t length, struct Status* st
 
 	StatusSet(st, "IndexCreate", STATUS_SUCCESS, NULL);
 
-	if ((index = malloc(sizeof(struct Index))) == NULL)
+	if ((index = calloc(1, sizeof(struct Index))) == NULL)
 		StatusSet(st, "IndexCreate", STATUS_MEMORY_ERROR, NULL);
 	else
 	{
 		glGenBuffers(1, &index->ptr);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index->ptr); // Before ask if is!
 
-		glBindBuffer(GL_ARRAY_BUFFER, index->ptr);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(uint16_t) * length, data, GL_STREAM_DRAW);
-		glGetBufferParameteriv(GL_ARRAY_BUFFER, GL_BUFFER_SIZE, &reported_size);
+		if (glIsBuffer(index->ptr) == GL_FALSE)
+		{
+			StatusSet(st, "IndexCreate", STATUS_ERROR, "Creating GL buffer");
+			goto return_failure;
+		}
+
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(uint16_t) * length, data, GL_STREAM_DRAW);
+		glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &reported_size);
 
 		if ((size_t)reported_size != (sizeof(uint16_t) * length))
 		{
-			StatusSet(st, "IndexCreate", STATUS_ERROR, "Creating GL buffer");
-			free(index);
-			return NULL;
+			StatusSet(st, "IndexCreate", STATUS_ERROR, "Attaching data");
+			goto return_failure;
 		}
 
 		index->length = length;
 	}
 
+	// Bye!
 	return index;
+
+return_failure:
+	if (index != NULL)
+	{
+		if (index->ptr != 0)
+			glDeleteBuffers(1, &index->ptr);
+
+		free(index);
+	}
+
+	return NULL;
 }
 
 
@@ -225,10 +259,59 @@ struct Index* IndexCreate(const uint16_t* data, size_t length, struct Status* st
 
  IndexDelete()
 -----------------------------*/
-void IndexDelete(struct Index* index)
+inline void IndexDelete(struct Index* index)
 {
 	glDeleteBuffers(1, &index->ptr);
 	free(index);
+}
+
+
+/*-----------------------------
+
+ TextureCreate()
+-----------------------------*/
+struct Texture* TextureCreate(const struct Image* image, struct Status* st)
+{
+	struct Texture* texture = NULL;
+
+	StatusSet(st, "TextureCreate", STATUS_SUCCESS, NULL);
+
+	if (image->format != IMAGE_RGB8)
+	{
+		StatusSet(st, "TextureCreate", STATUS_UNEXPECTED_DATA, "Only RGB8 images supported");
+		return NULL;
+	}
+
+	if ((texture = calloc(1, sizeof(struct Texture))) == NULL)
+		StatusSet(st, "TextureCreate", STATUS_MEMORY_ERROR, NULL);
+	else
+	{
+		glGenTextures(1, &texture->ptr);
+		glBindTexture(GL_TEXTURE_2D, texture->ptr); // Before ask if is!
+
+		if (glIsTexture(texture->ptr) == GL_FALSE)
+		{
+			StatusSet(st, "TextureCreate", STATUS_ERROR, "Creating GL texture");
+			free(texture);
+			return NULL;
+		}
+
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image->width, image->height, 0, GL_RGB, GL_UNSIGNED_BYTE, image->data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+
+	return texture;
+}
+
+
+/*-----------------------------
+
+ TextureDelete()
+-----------------------------*/
+inline void TextureDelete(struct Texture* texture)
+{
+	glDeleteTextures(1, &texture->ptr);
+	free(texture);
 }
 
 
