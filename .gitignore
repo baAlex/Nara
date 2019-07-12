@@ -1,9 +1,7 @@
 nara
 nara-dbg
-*.a
-*.so
-source/*.o
-source/*.dbg.o
-source/shaders/*.h
-.vscode/
+objects/
 dev/
+.vscode/
+.ninja_deps
+.ninja_log

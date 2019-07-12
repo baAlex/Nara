@@ -1,0 +1,36 @@
+
+
+cflags = -O3 -flto -Wall -mtune=generic -I./source/lib-japan/include
+lflags = -lglfw -lGL -lm
+
+rule generate
+ command = ruby ./tools/c-ify.rb $in > $out
+
+rule compile
+ command = cc $cflags -c $in -o $out
+
+rule link
+ command = cc $in $lflags -o $out
+
+
+# Automatically generated files
+build ./objects/white-fragment.c: generate ./source/shaders/white-fragment.glsl
+build ./objects/white-vertex.c:   generate ./source/shaders/white-vertex.glsl
+build ./objects/white-fragment.o: compile ./objects/white-fragment.c
+build ./objects/white-vertex.o:   compile ./objects/white-vertex.c
+
+# Lib Japan
+build ./objects/endianness.o: compile ./source/lib-japan/source/endianness.c
+build ./objects/image.o:      compile ./source/lib-japan/source/image.c
+build ./objects/image-sgi.o:  compile ./source/lib-japan/source/image-sgi.c
+build ./objects/matrix.o:     compile ./source/lib-japan/source/matrix.c
+build ./objects/status.o:     compile ./source/lib-japan/source/status.c
+build ./objects/vector.o:     compile ./source/lib-japan/source/vector.c
+
+# Nara
+build ./objects/nara.o: compile ./source/nara.c
+build ./objects/context.o: compile ./source/context.c
+build ./objects/context-gl.o: compile ./source/context-gl.c
+build ./objects/terrain.o: compile ./source/terrain.c
+
+build nara: link ./objects/nara.o ./objects/context.o ./objects/context-gl.o ./objects/terrain.o ./objects/endianness.o ./objects/image.o ./objects/image-sgi.o ./objects/matrix.o ./objects/status.o ./objects/vector.o ./objects/white-fragment.o ./objects/white-vertex.o

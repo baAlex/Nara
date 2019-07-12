@@ -36,8 +36,8 @@ SOFTWARE.
 #include "context.h"
 #include "terrain.h"
 
-#include "shaders/white-fragment.h"
-#include "shaders/white-vertex.h"
+extern const uint8_t g_white_vertex[];
+extern const uint8_t g_white_fragment[];
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846264338327950288

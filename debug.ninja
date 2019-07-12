@@ -1,0 +1,36 @@
+
+
+cflags = -O0 -std=c11 -Wall -Wextra -pedantic -g -DDEBUG -I./source/lib-japan/include
+lflags = -lglfw -lGL -lm
+
+rule generate
+ command = ruby ./tools/c-ify.rb $in > $out
+
+rule compile
+ command = cc $cflags -c $in -o $out
+
+rule link
+ command = cc $in $lflags -o $out
+
+
+# Automatically generated files
+build ./objects/debug/white-fragment.c: generate ./source/shaders/white-fragment.glsl
+build ./objects/debug/white-vertex.c:   generate ./source/shaders/white-vertex.glsl
+build ./objects/debug/white-fragment.o: compile ./objects/debug/white-fragment.c
+build ./objects/debug/white-vertex.o:   compile ./objects/debug/white-vertex.c
+
+# Lib Japan
+build ./objects/debug/endianness.o: compile ./source/lib-japan/source/endianness.c
+build ./objects/debug/image.o:      compile ./source/lib-japan/source/image.c
+build ./objects/debug/image-sgi.o:  compile ./source/lib-japan/source/image-sgi.c
+build ./objects/debug/matrix.o:     compile ./source/lib-japan/source/matrix.c
+build ./objects/debug/status.o:     compile ./source/lib-japan/source/status.c
+build ./objects/debug/vector.o:     compile ./source/lib-japan/source/vector.c
+
+# Nara-dbg
+build ./objects/debug/nara.o: compile ./source/nara.c
+build ./objects/debug/context.o: compile ./source/context.c
+build ./objects/debug/context-gl.o: compile ./source/context-gl.c
+build ./objects/debug/terrain.o: compile ./source/terrain.c
+
+build nara-dbg: link ./objects/debug/nara.o ./objects/debug/context.o ./objects/debug/context-gl.o ./objects/debug/terrain.o ./objects/debug/endianness.o ./objects/debug/image.o ./objects/debug/image-sgi.o ./objects/debug/matrix.o ./objects/debug/status.o ./objects/debug/vector.o ./objects/debug/white-fragment.o ./objects/debug/white-vertex.o
