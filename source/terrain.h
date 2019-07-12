@@ -16,18 +16,19 @@
 		size_t elevation;
 
 		char* heightmap_filename;
-		char* color_filename;
+		char* colormap_filename;
 	};
 
 	struct Terrain
 	{
 		struct TerrainOptions options;
+		struct Image* heightmap;
 
+		// GL specific objects
 		struct Vertices* vertices;
 		struct Index* index;
 
-		struct Image* heightmap;
-		// struct Texture* color;
+		struct Texture* color;
 	};
 
 	struct Terrain* TerrainCreate(struct TerrainOptions options, struct Status* st);

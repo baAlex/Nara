@@ -18,13 +18,18 @@
 	#include <GLFW/glfw3.h>
 
 	#define ATTRIBUTE_POSITION 10
-	#define ATTRIBUTE_COLOR 11
-	//#define ATTRIBUTE_UV 12
+	#define ATTRIBUTE_UV 11
+
+	struct Vector2
+	{
+		float x;
+		float y;
+	};
 
 	struct Vertex
 	{
 		struct Vector3 pos;
-		struct Vector4 col;
+		struct Vector2 uv;
 	};
 
 	struct Program

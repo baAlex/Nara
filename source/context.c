@@ -177,13 +177,13 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	// Joystick initialization
 	context->joystick_id = -1;
 
-	for(int i = GLFW_JOYSTICK_1; i < GLFW_JOYSTICK_LAST; i++)
+	for (int i = GLFW_JOYSTICK_1; i < GLFW_JOYSTICK_LAST; i++)
 	{
-		if(glfwJoystickPresent(i) == GLFW_TRUE)
+		if (glfwJoystickPresent(i) == GLFW_TRUE)
 		{
 			printf("Gamepad found: '%s'\n", glfwGetJoystickName(i));
 
-			if(context->joystick_id == -1)
+			if (context->joystick_id == -1)
 				context->joystick_id = i;
 		}
 	}
@@ -201,9 +201,8 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 
 	glClearColor(context->options.clean_color.x, context->options.clean_color.y, context->options.clean_color.z, 1.0);
 	glEnableVertexAttribArray(ATTRIBUTE_POSITION);
-	glEnableVertexAttribArray(ATTRIBUTE_COLOR);
+	glEnableVertexAttribArray(ATTRIBUTE_UV);
 	glEnable(GL_DEPTH_TEST);
-	// glEnableVertexAttribArray(ATTRIBUTE_UV);
 
 	// Bye!
 	printf("%s\n", glGetString(GL_VENDOR));
@@ -349,11 +348,15 @@ void ContextSetProgram(struct Context* context, const struct Program* program)
 		context->u_projection = glGetUniformLocation(program->ptr, "projection");
 		context->u_camera_projection = glGetUniformLocation(context->current_program->ptr, "camera_projection");
 		context->u_camera_components = glGetUniformLocation(context->current_program->ptr, "camera_components");
+		context->u_color_texture = glGetUniformLocation(context->current_program->ptr, "color_texture");
+		// context->u_normal_texture = glGetUniformLocation(context->current_program->ptr, "normal_texture");
 
 		glUseProgram(program->ptr);
 		glUniformMatrix4fv(context->u_projection, 1, GL_FALSE, context->projection.e);
 		glUniformMatrix4fv(context->u_camera_projection, 1, GL_FALSE, as_matrix.e);
 		glUniform3fv(context->u_camera_components, 2, (float*)&context->camera_components);
+		glUniform1i(context->u_color_texture, 0); // Texture unit 0
+		// glUniform1i(context->u_normal_texture, 1); // Texture unit 1
 	}
 }
 
@@ -410,7 +413,7 @@ void ContextSetCamera(struct Context* context, struct Vector3 target, struct Vec
 
  ContextDraw()
 -----------------------------*/
-void ContextDraw(struct Context* context, const struct Vertices* vertices, const struct Index* index)
+void ContextDraw(struct Context* context, const struct Vertices* vertices, const struct Index* index, const struct Texture* color)
 {
 #ifdef MULTIPLE_CONTEXTS_TEST
 	if (s_current_context != context)
@@ -425,9 +428,15 @@ void ContextDraw(struct Context* context, const struct Vertices* vertices, const
 	glBindBuffer(GL_ARRAY_BUFFER, vertices->ptr);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index->ptr);
 
-	glVertexAttribPointer(ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), NULL);
-	glVertexAttribPointer(ATTRIBUTE_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), ((float*)NULL) + 3);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, color->ptr);
 
-	glDrawElements(GL_LINES, index->length, GL_UNSIGNED_SHORT, NULL);
-	// glDrawElements(GL_TRIANGLES, index->length, GL_UNSIGNED_SHORT, NULL);
+	// glActiveTexture(GL_TEXTURE1);
+	// glBindTexture(GL_TEXTURE_2D, normal->ptr);
+
+	glVertexAttribPointer(ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), NULL);
+	glVertexAttribPointer(ATTRIBUTE_UV, 2, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), ((float*)NULL) + 3);
+
+	// glDrawElements(GL_LINES, index->length, GL_UNSIGNED_SHORT, NULL);
+	glDrawElements(GL_TRIANGLES, index->length, GL_UNSIGNED_SHORT, NULL);
 }

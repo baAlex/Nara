@@ -54,19 +54,6 @@ extern const uint8_t g_white_fragment[];
 #define WINDOWS_MIN_HEIGHT 100
 
 
-const struct Vertex g_test_vertices[] = {
-	{.pos = {-0.5, -0.5, 1.0}, .col = {1.0, 0.0, 0.0, 1.0}},
-	{.pos = {0.5, -0.5, 1.0}, .col = {1.0, 0.0, 0.0, 1.0}},
-	{.pos = {0.5, 0.5, 1.0}, .col = {1.0, 0.0, 0.0, 1.0}},
-	{.pos = {-0.5, 0.5, 1.0}, .col = {1.0, 0.0, 0.0, 1.0}}
-};
-
-const uint16_t g_test_index[] = {
-	0, 1, 2,
-	1, 2, 3
-};
-
-
 /*-----------------------------
 
  sCameraMove()
@@ -166,9 +153,6 @@ int main()
 	struct Status st = {0};
 
 	struct Program* white_program = NULL;
-	struct Vertices* test_vertices = NULL;
-	struct Index* test_index = NULL;
-
 	struct Terrain* terrain = NULL;
 
 	struct Matrix4 projection;
@@ -199,13 +183,12 @@ int main()
 	struct TerrainOptions terrain_options = {0};
 
 	terrain_options.heightmap_filename = "./resources/heightmap.sgi";
+	terrain_options.colormap_filename = "./resources/colormap.sgi";
 	terrain_options.width = 100;
 	terrain_options.height = 100;
 	terrain_options.elevation = 20;
 
 	if ((white_program = ProgramCreate((char*)g_white_vertex, (char*)g_white_fragment, &st)) == NULL ||
-	    (test_vertices = VerticesCreate(g_test_vertices, 4, &st)) == NULL ||
-	    (test_index = IndexCreate(g_test_index, 6, &st)) == NULL ||
 	    (terrain = TerrainCreate(terrain_options, &st)) == NULL)
 		goto return_failure;
 
@@ -222,8 +205,7 @@ int main()
 	while (1)
 	{
 		ContextUpdate(context, &evn);
-		ContextDraw(context, test_vertices, test_index);
-		ContextDraw(context, terrain->vertices, terrain->index);
+		ContextDraw(context, terrain->vertices, terrain->index, terrain->color);
 
 		// Events
 		/*printf("%s %s %s %s %s %s %s %s %s %s %s\n", evn.a ? "a" : "-", evn.b ? "b" : "-", evn.x ? "x" : "-",
@@ -241,8 +223,6 @@ int main()
 
 	// Bye!
 	TerrainDelete(terrain);
-	IndexDelete(test_index);
-	VerticesDelete(test_vertices);
 	ProgramDelete(white_program);
 	ContextDelete(context);
 
@@ -253,10 +233,6 @@ return_failure:
 	StatusPrint(st);
 	if (terrain != NULL)
 		TerrainDelete(terrain);
-	if (test_index != NULL)
-		IndexDelete(test_index);
-	if (test_vertices != NULL)
-		VerticesDelete(test_vertices);
 	if (white_program != NULL)
 		ProgramDelete(white_program);
 	if (context != NULL)

@@ -86,6 +86,6 @@
 	void ContextSetProjection(struct Context* context, struct Matrix4 matrix);
 	void ContextSetCamera(struct Context* context, struct Vector3 target, struct Vector3 origin);
 
-	void ContextDraw(struct Context* context, const struct Vertices* vertices, const struct Index* index);
+	void ContextDraw(struct Context* context, const struct Vertices* vertices, const struct Index* index, const struct Texture* color);
 
 #endif

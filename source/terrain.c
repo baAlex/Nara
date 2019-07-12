@@ -63,14 +63,12 @@ static inline float sPixelAsFloat(const struct Image* image, float x, float y)
 struct Terrain* TerrainCreate(struct TerrainOptions options, struct Status* st)
 {
 	struct Terrain* terrain = NULL;
-	float img_step_x = 0;
-	float img_step_y = 0;
+	struct Image* colormap_image = NULL;
 
 	union {
-		struct Vertex* v;
-		uint16_t* i;
+		struct Vertex* vertices;
+		uint16_t* index;
 		void* raw;
-
 	} temp;
 
 	temp.raw = NULL;
@@ -81,14 +79,24 @@ struct Terrain* TerrainCreate(struct TerrainOptions options, struct Status* st)
 
 	memcpy(&terrain->options, &options, sizeof(struct TerrainOptions));
 
+	// Images
 	if (options.heightmap_filename != NULL)
 	{
 		if ((terrain->heightmap = ImageLoad(options.heightmap_filename, st)) == NULL)
 			goto return_failure;
 	}
 
+	if (options.colormap_filename != NULL)
+	{
+		if ((colormap_image = ImageLoad(options.colormap_filename, st)) == NULL)
+			goto return_failure;
+	}
+
 	// Vertices
-	if ((temp.raw = malloc(sizeof(struct Vertex) * (options.width + 1) * (options.height + 1))) == NULL)
+	float img_step_x = 0;
+	float img_step_y = 0;
+
+	if ((temp.vertices = malloc(sizeof(struct Vertex) * (options.width + 1) * (options.height + 1))) == NULL)
 	{
 		StatusSet(st, "TerrainCreate", STATUS_MEMORY_ERROR, NULL);
 		goto return_failure;
@@ -98,15 +106,16 @@ struct Terrain* TerrainCreate(struct TerrainOptions options, struct Status* st)
 	{
 		for (size_t c = 0; c < (options.width + 1); c++)
 		{
-			temp.v[c + (options.width + 1) * r].col = (struct Vector4){1.0, 1.0, 1.0, 1.0};
+			temp.vertices[c + (options.width + 1) * r].uv.x = img_step_x / (float)colormap_image->width;
+			temp.vertices[c + (options.width + 1) * r].uv.y = img_step_y / (float)colormap_image->height;
 
-			temp.v[c + (options.width + 1) * r].pos.x = (float)c;
-			temp.v[c + (options.width + 1) * r].pos.y = (float)r;
-			temp.v[c + (options.width + 1) * r].pos.z = 0.0;
+			temp.vertices[c + (options.width + 1) * r].pos.x = (float)c;
+			temp.vertices[c + (options.width + 1) * r].pos.y = (float)r;
+			temp.vertices[c + (options.width + 1) * r].pos.z = 0.0;
 
 			if (terrain->heightmap != NULL)
 			{
-				temp.v[c + (options.width + 1) * r].pos.z =
+				temp.vertices[c + (options.width + 1) * r].pos.z =
 					sPixelAsFloat(terrain->heightmap, img_step_x, img_step_y) * (float)options.elevation;
 
 				if (c < options.width)
@@ -121,34 +130,54 @@ struct Terrain* TerrainCreate(struct TerrainOptions options, struct Status* st)
 		}
 	}
 
-	if ((terrain->vertices = VerticesCreate(temp.v, (options.width + 1) * (options.height + 1), st)) == NULL)
+	if ((terrain->vertices = VerticesCreate(temp.vertices, (options.width + 1) * (options.height + 1), st)) == NULL)
 		goto return_failure;
+
+	free(temp.vertices);
 
 	// Index
 	size_t index_i = 0; // Index index
+
+	if ((temp.index = malloc(sizeof(uint16_t) * (options.width * options.height * 6))) == NULL)
+	{
+		StatusSet(st, "TerrainCreate", STATUS_MEMORY_ERROR, NULL);
+		goto return_failure;
+	}
 
 	for (size_t r = 0; r < (options.height); r++)
 	{
 		for (size_t c = 0; c < (options.width); c++)
 		{
-			temp.i[index_i + 0] = c + ((options.width + 1) * r);
-			temp.i[index_i + 1] = c + ((options.width + 1) * r) + 1;
-			temp.i[index_i + 2] = c + ((options.width + 1) * r) + 1 + (options.width + 1);
-			temp.i[index_i + 3] = c + ((options.width + 1) * r) + 1 + (options.width + 1);
-			temp.i[index_i + 4] = c + ((options.width + 1) * r) + (options.width + 1);
-			temp.i[index_i + 5] = c + ((options.width + 1) * r);
+			temp.index[index_i + 0] = c + ((options.width + 1) * r);
+			temp.index[index_i + 1] = c + ((options.width + 1) * r) + 1;
+			temp.index[index_i + 2] = c + ((options.width + 1) * r) + 1 + (options.width + 1);
+			temp.index[index_i + 3] = c + ((options.width + 1) * r) + 1 + (options.width + 1);
+			temp.index[index_i + 4] = c + ((options.width + 1) * r) + (options.width + 1);
+			temp.index[index_i + 5] = c + ((options.width + 1) * r);
 			index_i += 6;
 		}
 	}
 
-	if ((terrain->index = IndexCreate(temp.i, (options.width * options.height * 6), st)) == NULL)
+	if ((terrain->index = IndexCreate(temp.index, (options.width * options.height * 6), st)) == NULL)
 		goto return_failure;
 
+	free(temp.index);
+
+	// Color texture
+	if (options.colormap_filename != NULL)
+	{
+		if ((terrain->color = TextureCreate(colormap_image, st)) == NULL)
+			goto return_failure;
+
+		ImageDelete(colormap_image);
+	}
+
 	// Bye!
-	free(temp.raw);
 	return terrain;
 
 return_failure:
+	if (colormap_image != NULL)
+		ImageDelete(colormap_image);
 	if (temp.raw != NULL)
 		free(temp.raw);
 	if (terrain != NULL)
@@ -173,8 +202,8 @@ void TerrainDelete(struct Terrain* terrain)
 	if (terrain->heightmap != NULL)
 		ImageDelete(terrain->heightmap);
 
-	// if (terrain->color != NULL)
-	// TextureDelete(terrain->color);
+	if (terrain->color != NULL)
+		TextureDelete(terrain->color);
 
 	free(terrain);
 }
