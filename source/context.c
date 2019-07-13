@@ -149,6 +149,8 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
+	// glfwWindowHint(GLFW_SAMPLES, 2);
+
 	if ((context->window = glfwCreateWindow(context->options.window_size.x, context->options.window_size.y,
 	                                        context->options.caption, NULL, NULL)) == NULL)
 	{
@@ -203,6 +205,7 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	glEnableVertexAttribArray(ATTRIBUTE_POSITION);
 	glEnableVertexAttribArray(ATTRIBUTE_UV);
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
 
 	// Bye!
 	printf("%s\n", glGetString(GL_VENDOR));

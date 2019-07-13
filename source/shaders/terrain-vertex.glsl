@@ -7,7 +7,7 @@ uniform mat4 projection;
 uniform mat4 camera_projection;
 uniform vec3 camera_components[2]; // 0 = Target, 1 = Origin
 
-varying lowp vec2 uv ;
+varying lowp vec2 uv;
 
 void main()
 {

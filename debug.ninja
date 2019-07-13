@@ -14,10 +14,10 @@ rule link
 
 
 # Automatically generated files
-build ./objects/debug/white-fragment.c: generate ./source/shaders/white-fragment.glsl
-build ./objects/debug/white-vertex.c:   generate ./source/shaders/white-vertex.glsl
-build ./objects/debug/white-fragment.o: compile ./objects/debug/white-fragment.c
-build ./objects/debug/white-vertex.o:   compile ./objects/debug/white-vertex.c
+build ./objects/debug/terrain-fragment.c: generate ./source/shaders/terrain-fragment.glsl
+build ./objects/debug/terrain-vertex.c:   generate ./source/shaders/terrain-vertex.glsl
+build ./objects/debug/terrain-fragment.o: compile ./objects/debug/terrain-fragment.c
+build ./objects/debug/terrain-vertex.o:   compile ./objects/debug/terrain-vertex.c
 
 # Lib Japan
 build ./objects/debug/endianness.o: compile ./source/lib-japan/source/endianness.c
@@ -33,4 +33,4 @@ build ./objects/debug/context.o: compile ./source/context.c
 build ./objects/debug/context-gl.o: compile ./source/context-gl.c
 build ./objects/debug/terrain.o: compile ./source/terrain.c
 
-build nara-dbg: link ./objects/debug/nara.o ./objects/debug/context.o ./objects/debug/context-gl.o ./objects/debug/terrain.o ./objects/debug/endianness.o ./objects/debug/image.o ./objects/debug/image-sgi.o ./objects/debug/matrix.o ./objects/debug/status.o ./objects/debug/vector.o ./objects/debug/white-fragment.o ./objects/debug/white-vertex.o
+build nara-dbg: link ./objects/debug/nara.o ./objects/debug/context.o ./objects/debug/context-gl.o ./objects/debug/terrain.o ./objects/debug/endianness.o ./objects/debug/image.o ./objects/debug/image-sgi.o ./objects/debug/matrix.o ./objects/debug/status.o ./objects/debug/vector.o ./objects/debug/terrain-fragment.o ./objects/debug/terrain-vertex.o

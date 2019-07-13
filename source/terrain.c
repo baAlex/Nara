@@ -106,8 +106,8 @@ struct Terrain* TerrainCreate(struct TerrainOptions options, struct Status* st)
 	{
 		for (size_t c = 0; c < (options.width + 1); c++)
 		{
-			temp.vertices[c + (options.width + 1) * r].uv.x = img_step_x / (float)colormap_image->width;
-			temp.vertices[c + (options.width + 1) * r].uv.y = img_step_y / (float)colormap_image->height;
+			temp.vertices[c + (options.width + 1) * r].uv.x = img_step_x / (float)terrain->heightmap->width;
+			temp.vertices[c + (options.width + 1) * r].uv.y = img_step_y / (float)terrain->heightmap->height;
 
 			temp.vertices[c + (options.width + 1) * r].pos.x = (float)c;
 			temp.vertices[c + (options.width + 1) * r].pos.y = (float)r;

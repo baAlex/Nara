@@ -14,10 +14,10 @@ rule link
 
 
 # Automatically generated files
-build ./objects/white-fragment.c: generate ./source/shaders/white-fragment.glsl
-build ./objects/white-vertex.c:   generate ./source/shaders/white-vertex.glsl
-build ./objects/white-fragment.o: compile ./objects/white-fragment.c
-build ./objects/white-vertex.o:   compile ./objects/white-vertex.c
+build ./objects/terrain-fragment.c: generate ./source/shaders/terrain-fragment.glsl
+build ./objects/terrain-vertex.c:   generate ./source/shaders/terrain-vertex.glsl
+build ./objects/terrain-fragment.o: compile ./objects/terrain-fragment.c
+build ./objects/terrain-vertex.o:   compile ./objects/terrain-vertex.c
 
 # Lib Japan
 build ./objects/endianness.o: compile ./source/lib-japan/source/endianness.c
@@ -33,4 +33,4 @@ build ./objects/context.o: compile ./source/context.c
 build ./objects/context-gl.o: compile ./source/context-gl.c
 build ./objects/terrain.o: compile ./source/terrain.c
 
-build nara: link ./objects/nara.o ./objects/context.o ./objects/context-gl.o ./objects/terrain.o ./objects/endianness.o ./objects/image.o ./objects/image-sgi.o ./objects/matrix.o ./objects/status.o ./objects/vector.o ./objects/white-fragment.o ./objects/white-vertex.o
+build nara: link ./objects/nara.o ./objects/context.o ./objects/context-gl.o ./objects/terrain.o ./objects/endianness.o ./objects/image.o ./objects/image-sgi.o ./objects/matrix.o ./objects/status.o ./objects/vector.o ./objects/terrain-fragment.o ./objects/terrain-vertex.o

@@ -28,28 +28,26 @@ SOFTWARE.
  - Alexander Brandt 2019
 -----------------------------*/
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 #include "context.h"
 #include "terrain.h"
 
-extern const uint8_t g_white_vertex[];
-extern const uint8_t g_white_fragment[];
+extern const uint8_t g_terrain_vertex[];
+extern const uint8_t g_terrain_fragment[];
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846264338327950288
 #endif
 
-#define DEG_TO_RAD(d) ((d) * M_PI / 180.0)
-#define RAD_TO_DEG(r) ((r) * 180.0 / M_PI)
+#define DEG_TO_RAD(d) ((d)*M_PI / 180.0)
+#define RAD_TO_DEG(r) ((r)*180.0 / M_PI)
 
 #define FOV 45
 
-#define CANVAS_WIDTH 528
-#define CANVAS_HEIGHT 240
 #define WINDOWS_MIN_WIDTH 220
 #define WINDOWS_MIN_HEIGHT 100
 
@@ -152,12 +150,12 @@ int main()
 	struct Events evn = {0};
 	struct Status st = {0};
 
-	struct Program* white_program = NULL;
+	struct Program* terrain_program = NULL;
 	struct Terrain* terrain = NULL;
 
 	struct Matrix4 projection;
-	struct Vector3 camera_target = {0.0, 0.0, 0.0};
-	float camera_distance = 5.0;
+	struct Vector3 camera_target = {50.0, 50.0, 0.0};
+	float camera_distance = 50.0;
 
 	printf("Nara v0.1\n");
 	printf("- Lib-Japan v%i.%i.%i\n", JAPAN_VERSION_MAJOR, JAPAN_VERSION_MINOR, JAPAN_VERSION_PATCH);
@@ -167,13 +165,11 @@ int main()
 	context = ContextCreate((struct ContextOptions)
 	{
 		.caption = "Nara",
-		.window_size = {CANVAS_WIDTH, CANVAS_HEIGHT},
+		.window_size = {WINDOWS_MIN_WIDTH * 4, WINDOWS_MIN_HEIGHT * 4},
 		.windows_min_size = {WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT},
-		.aspect = {WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT},
-		.scale_mode = SCALE_MODE_ASPECT,
+		.scale_mode = SCALE_MODE_STRETCH,
 		.fullscreen = false,
 		.clean_color = {0.0, 0.0, 0.0}
-
 	}, &st);
 
 	if (context == NULL)
@@ -188,18 +184,16 @@ int main()
 	terrain_options.height = 100;
 	terrain_options.elevation = 20;
 
-	if ((white_program = ProgramCreate((char*)g_white_vertex, (char*)g_white_fragment, &st)) == NULL ||
-	    (terrain = TerrainCreate(terrain_options, &st)) == NULL)
+	if ((terrain_program = ProgramCreate((char*)g_terrain_vertex, (char*)g_terrain_fragment, &st)) == NULL ||
+		(terrain = TerrainCreate(terrain_options, &st)) == NULL)
 		goto return_failure;
 
-	projection = Matrix4Perspective(FOV, (float)CANVAS_WIDTH / (float)CANVAS_HEIGHT, 0.1, 4000.0);
+	projection = Matrix4Perspective(FOV, (float)WINDOWS_MIN_WIDTH / (float)WINDOWS_MIN_HEIGHT, 0.1, 4000.0);
 
 	ContextSetProjection(context, projection);
-	ContextSetProgram(context, white_program);
-	ContextSetCamera(context, camera_target, Vector3Add(camera_target, (struct Vector3)
-	{
-		camera_distance, camera_distance, camera_distance
-	}));
+	ContextSetProgram(context, terrain_program);
+	ContextSetCamera(context, camera_target,
+					 Vector3Add(camera_target, (struct Vector3){camera_distance, camera_distance, camera_distance}));
 
 	// Yay!
 	while (1)
@@ -215,15 +209,20 @@ int main()
 		sCameraMove(context, &evn, &camera_target, &camera_distance);
 
 		if (evn.window.resize == true)
+		{
 			printf("Window resized: %ix%i px\n", evn.window.width, evn.window.height);
+
+			projection = Matrix4Perspective(FOV, (float)evn.window.width / (float)evn.window.height, 0.1, 4000.0);
+			ContextSetProjection(context, projection);
+		}
 
 		if (evn.window.close == true)
 			break;
 	}
 
 	// Bye!
+	ProgramDelete(terrain_program);
 	TerrainDelete(terrain);
-	ProgramDelete(white_program);
 	ContextDelete(context);
 
 	return EXIT_SUCCESS;
@@ -233,8 +232,8 @@ return_failure:
 	StatusPrint(st);
 	if (terrain != NULL)
 		TerrainDelete(terrain);
-	if (white_program != NULL)
-		ProgramDelete(white_program);
+	if (terrain_program != NULL)
+		ProgramDelete(terrain_program);
 	if (context != NULL)
 		ContextDelete(context);
 
