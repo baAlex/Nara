@@ -12,7 +12,7 @@ Compilation
 -----------
 Runtime dependencies are:
  - GLFW3
- - *A OpenGL ES2 implementation*
+ - *An OpenGL ES2 implementation*
 
 Compilation dependencies:
  - Ruby
