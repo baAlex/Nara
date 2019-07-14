@@ -1,7 +1,7 @@
 
 
-cflags = -O0 -std=c11 -Wall -Wextra -pedantic -g -DDEBUG -I./source/lib-japan/include
-lflags = -lglfw -lGL -lm
+cflags = `pkg-config --cflags glfw3 gl` -O0 -std=c11 -Wall -Wextra -pedantic -g -DDEBUG -I./source/lib-japan/include
+lflags = `pkg-config --libs glfw3 gl` -lm
 
 rule generate
  command = ruby ./tools/c-ify.rb $in > $out

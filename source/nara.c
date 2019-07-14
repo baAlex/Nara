@@ -169,7 +169,7 @@ int main()
 		.windows_min_size = {WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT},
 		.scale_mode = SCALE_MODE_STRETCH,
 		.fullscreen = false,
-		.clean_color = {0.0, 0.0, 0.0}
+		.clean_color = {0.80, 0.82, 0.84}
 	}, &st);
 
 	if (context == NULL)
