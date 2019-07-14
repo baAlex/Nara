@@ -20,6 +20,7 @@ build ./objects/terrain-fragment.o: compile ./objects/terrain-fragment.c
 build ./objects/terrain-vertex.o:   compile ./objects/terrain-vertex.c
 
 # Lib Japan
+build ./objects/buffer.o:     compile ./source/lib-japan/source/buffer.c
 build ./objects/endianness.o: compile ./source/lib-japan/source/endianness.c
 build ./objects/image.o:      compile ./source/lib-japan/source/image.c
 build ./objects/image-sgi.o:  compile ./source/lib-japan/source/image-sgi.c
@@ -33,4 +34,4 @@ build ./objects/context.o: compile ./source/context.c
 build ./objects/context-gl.o: compile ./source/context-gl.c
 build ./objects/terrain.o: compile ./source/terrain.c
 
-build nara: link ./objects/nara.o ./objects/context.o ./objects/context-gl.o ./objects/terrain.o ./objects/endianness.o ./objects/image.o ./objects/image-sgi.o ./objects/matrix.o ./objects/status.o ./objects/vector.o ./objects/terrain-fragment.o ./objects/terrain-vertex.o
+build nara: link ./objects/nara.o ./objects/context.o ./objects/context-gl.o ./objects/terrain.o ./objects/buffer.o ./objects/endianness.o ./objects/image.o ./objects/image-sgi.o ./objects/matrix.o ./objects/status.o ./objects/vector.o ./objects/terrain-fragment.o ./objects/terrain-vertex.o

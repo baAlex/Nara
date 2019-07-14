@@ -11,9 +11,9 @@
 
 	struct TerrainOptions
 	{
-		size_t width;
-		size_t height;
-		size_t elevation;
+		int width;
+		int height;
+		int elevation;
 
 		char* heightmap_filename;
 		char* colormap_filename;

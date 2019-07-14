@@ -30,9 +30,16 @@ SOFTWARE.
 
 #include "terrain.h"
 
+#include "buffer.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+
+struct Dimensions2i
+{
+	int w;
+	int h;
+};
 
 
 /*-----------------------------
@@ -58,20 +65,143 @@ static inline float sPixelAsFloat(const struct Image* image, float x, float y)
 
 /*-----------------------------
 
+ sGenerateVertices()
+-----------------------------*/
+static struct Vertices* sGenerateVertices(struct Buffer* buffer, const struct Image* heightmap, struct Dimensions2i map,
+										  struct Dimensions2i tile, int elevation, struct Status* st)
+{
+	struct Vertices* vertices = NULL;
+	struct Vertex* temp_vertices = NULL;
+
+	int horizontal_tiles = 0;
+	int vertical_tiles = 0;
+
+	float heightmap_step_x = 0;
+	float heightmap_step_y = 0;
+
+	StatusSet(st, "GenerateVertices", STATUS_SUCCESS, NULL);
+
+	// Allocate memory
+	if ((map.w % tile.w) != 0 || (map.h % tile.h) != 0)
+	{
+		StatusSet(st, "GenerateVertices", STATUS_ERROR,
+				  "Map dimensions %ix%i not integer divisible by tile dimensions %ix%i\n", map.w, map.h, tile.w,
+				  tile.h);
+		return NULL;
+	}
+
+	horizontal_tiles = map.w / tile.w;
+	vertical_tiles = map.h / tile.h;
+
+	if ((horizontal_tiles * vertical_tiles) >= UINT16_MAX) // Because indices in OpenGL ES2
+	{
+		StatusSet(st, "GenerateVertices", STATUS_ERROR,
+				  "Number of vertices exceds 2^16, tile dimensions %ix%i too tiny\n", tile.w, tile.h);
+		return NULL;
+	}
+
+	if (BufferResize(buffer, sizeof(struct Vertex) * (horizontal_tiles + 1) * (vertical_tiles + 1)) == NULL)
+	{
+		StatusSet(st, "GenerateVertices", STATUS_MEMORY_ERROR, NULL);
+		return NULL;
+	}
+
+	temp_vertices = buffer->data;
+
+	// Generate vertices
+	for (int row = 0; row < (vertical_tiles + 1); row++)
+	{
+		for (int col = 0; col < (horizontal_tiles + 1); col++)
+		{
+			temp_vertices[col + (horizontal_tiles + 1) * row].uv.x = heightmap_step_x;
+			temp_vertices[col + (horizontal_tiles + 1) * row].uv.y = heightmap_step_y;
+
+			temp_vertices[col + (horizontal_tiles + 1) * row].pos.x = (float)(col * tile.w);
+			temp_vertices[col + (horizontal_tiles + 1) * row].pos.y = (float)(row * tile.h);
+
+			if (heightmap != NULL)
+			{
+				temp_vertices[col + (horizontal_tiles + 1) * row].pos.z =
+					sPixelAsFloat(heightmap, (float)heightmap->width * heightmap_step_x,
+								  (float)heightmap->height * heightmap_step_y) *
+					(float)elevation;
+			}
+			else
+			{
+				temp_vertices[col + (horizontal_tiles + 1) * row].pos.z = 0.0;
+			}
+
+			heightmap_step_x += (float)tile.w / (float)map.w;
+		}
+
+		heightmap_step_y += (float)tile.h / (float)map.h;
+		heightmap_step_x = 0.0;
+	}
+
+	if ((vertices = VerticesCreate(temp_vertices, (horizontal_tiles + 1) * (vertical_tiles + 1), st)) == NULL)
+		return NULL;
+
+	return vertices;
+}
+
+
+/*-----------------------------
+
+ sGenerateIndex()
+-----------------------------*/
+static struct Index* sGenerateIndex(struct Buffer* buffer, struct Dimensions2i map, struct Dimensions2i tile,
+									struct Status* st)
+{
+	struct Index* index = NULL;
+	uint16_t* temp_index = NULL;
+
+	int horizontal_tiles = map.w / tile.w;
+	int vertical_tiles = map.h / tile.h;
+	size_t index_i = 0; // Index index
+
+	// Allocate memory
+	StatusSet(st, "GenerateIndex", STATUS_SUCCESS, NULL);
+
+	if (BufferResize(buffer, sizeof(uint16_t) * (horizontal_tiles * vertical_tiles * 6)) == NULL)
+	{
+		StatusSet(st, "GenerateIndex", STATUS_MEMORY_ERROR, NULL);
+		return NULL;
+	}
+
+	temp_index = buffer->data;
+
+	// Generate index
+	for (int row = 0; row < horizontal_tiles; row++)
+	{
+		for (int col = 0; col < vertical_tiles; col++)
+		{
+			temp_index[index_i + 0] = col + ((horizontal_tiles + 1) * row);
+			temp_index[index_i + 1] = col + ((horizontal_tiles + 1) * row) + 1;
+			temp_index[index_i + 2] = col + ((horizontal_tiles + 1) * row) + 1 + (horizontal_tiles + 1);
+			temp_index[index_i + 3] = col + ((horizontal_tiles + 1) * row) + 1 + (horizontal_tiles + 1);
+			temp_index[index_i + 4] = col + ((horizontal_tiles + 1) * row) + (horizontal_tiles + 1);
+			temp_index[index_i + 5] = col + ((horizontal_tiles + 1) * row);
+			index_i += 6;
+		}
+	}
+
+	if ((index = IndexCreate(temp_index, (horizontal_tiles * vertical_tiles * 6), st)) == NULL)
+		return NULL;
+
+	return index;
+}
+
+
+/*-----------------------------
+
  TerrainCreate()
 -----------------------------*/
 struct Terrain* TerrainCreate(struct TerrainOptions options, struct Status* st)
 {
 	struct Terrain* terrain = NULL;
 	struct Image* colormap_image = NULL;
+	struct Buffer buffer = {0};
 
-	union {
-		struct Vertex* vertices;
-		uint16_t* index;
-		void* raw;
-	} temp;
-
-	temp.raw = NULL;
 	StatusSet(st, "TerrainCreate", STATUS_SUCCESS, NULL);
 
 	if ((terrain = calloc(1, sizeof(struct Terrain))) == NULL)
@@ -92,76 +222,16 @@ struct Terrain* TerrainCreate(struct TerrainOptions options, struct Status* st)
 			goto return_failure;
 	}
 
-	// Vertices
-	float img_step_x = 0;
-	float img_step_y = 0;
+	// Vertices-Index
+	struct Dimensions2i map_dimensions = {options.width, options.height};
+	struct Dimensions2i tile_dimensions = {50, 50}; // 50 mts
 
-	if ((temp.vertices = malloc(sizeof(struct Vertex) * (options.width + 1) * (options.height + 1))) == NULL)
-	{
-		StatusSet(st, "TerrainCreate", STATUS_MEMORY_ERROR, NULL);
-		goto return_failure;
-	}
-
-	for (size_t r = 0; r < (options.height + 1); r++)
-	{
-		for (size_t c = 0; c < (options.width + 1); c++)
-		{
-			temp.vertices[c + (options.width + 1) * r].uv.x = img_step_x / (float)terrain->heightmap->width;
-			temp.vertices[c + (options.width + 1) * r].uv.y = img_step_y / (float)terrain->heightmap->height;
-
-			temp.vertices[c + (options.width + 1) * r].pos.x = (float)c;
-			temp.vertices[c + (options.width + 1) * r].pos.y = (float)r;
-			temp.vertices[c + (options.width + 1) * r].pos.z = 0.0;
-
-			if (terrain->heightmap != NULL)
-			{
-				temp.vertices[c + (options.width + 1) * r].pos.z =
-					sPixelAsFloat(terrain->heightmap, img_step_x, img_step_y) * (float)options.elevation;
-
-				if (c < options.width)
-					img_step_x += (float)terrain->heightmap->width / (float)options.width;
-			}
-		}
-
-		if (terrain->heightmap != NULL && r < options.height)
-		{
-			img_step_y += (float)terrain->heightmap->height / (float)options.height;
-			img_step_x = 0;
-		}
-	}
-
-	if ((terrain->vertices = VerticesCreate(temp.vertices, (options.width + 1) * (options.height + 1), st)) == NULL)
+	if ((terrain->vertices = sGenerateVertices(&buffer, terrain->heightmap, map_dimensions, tile_dimensions,
+											   options.elevation, st)) == NULL)
 		goto return_failure;
 
-	free(temp.vertices);
-
-	// Index
-	size_t index_i = 0; // Index index
-
-	if ((temp.index = malloc(sizeof(uint16_t) * (options.width * options.height * 6))) == NULL)
-	{
-		StatusSet(st, "TerrainCreate", STATUS_MEMORY_ERROR, NULL);
+	if ((terrain->index = sGenerateIndex(&buffer, map_dimensions, tile_dimensions, st)) == NULL)
 		goto return_failure;
-	}
-
-	for (size_t r = 0; r < (options.height); r++)
-	{
-		for (size_t c = 0; c < (options.width); c++)
-		{
-			temp.index[index_i + 0] = c + ((options.width + 1) * r);
-			temp.index[index_i + 1] = c + ((options.width + 1) * r) + 1;
-			temp.index[index_i + 2] = c + ((options.width + 1) * r) + 1 + (options.width + 1);
-			temp.index[index_i + 3] = c + ((options.width + 1) * r) + 1 + (options.width + 1);
-			temp.index[index_i + 4] = c + ((options.width + 1) * r) + (options.width + 1);
-			temp.index[index_i + 5] = c + ((options.width + 1) * r);
-			index_i += 6;
-		}
-	}
-
-	if ((terrain->index = IndexCreate(temp.index, (options.width * options.height * 6), st)) == NULL)
-		goto return_failure;
-
-	free(temp.index);
 
 	// Color texture
 	if (options.colormap_filename != NULL)
@@ -173,13 +243,13 @@ struct Terrain* TerrainCreate(struct TerrainOptions options, struct Status* st)
 	}
 
 	// Bye!
+	BufferClean(&buffer);
 	return terrain;
 
 return_failure:
+	BufferClean(&buffer);
 	if (colormap_image != NULL)
 		ImageDelete(colormap_image);
-	if (temp.raw != NULL)
-		free(temp.raw);
 	if (terrain != NULL)
 		TerrainDelete(terrain);
 

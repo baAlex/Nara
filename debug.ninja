@@ -20,6 +20,7 @@ build ./objects/debug/terrain-fragment.o: compile ./objects/debug/terrain-fragme
 build ./objects/debug/terrain-vertex.o:   compile ./objects/debug/terrain-vertex.c
 
 # Lib Japan
+build ./objects/debug/buffer.o:     compile ./source/lib-japan/source/buffer.c
 build ./objects/debug/endianness.o: compile ./source/lib-japan/source/endianness.c
 build ./objects/debug/image.o:      compile ./source/lib-japan/source/image.c
 build ./objects/debug/image-sgi.o:  compile ./source/lib-japan/source/image-sgi.c
@@ -33,4 +34,4 @@ build ./objects/debug/context.o: compile ./source/context.c
 build ./objects/debug/context-gl.o: compile ./source/context-gl.c
 build ./objects/debug/terrain.o: compile ./source/terrain.c
 
-build nara-dbg: link ./objects/debug/nara.o ./objects/debug/context.o ./objects/debug/context-gl.o ./objects/debug/terrain.o ./objects/debug/endianness.o ./objects/debug/image.o ./objects/debug/image-sgi.o ./objects/debug/matrix.o ./objects/debug/status.o ./objects/debug/vector.o ./objects/debug/terrain-fragment.o ./objects/debug/terrain-vertex.o
+build nara-dbg: link ./objects/debug/nara.o ./objects/debug/context.o ./objects/debug/context-gl.o ./objects/debug/terrain.o ./objects/debug/buffer.o ./objects/debug/endianness.o ./objects/debug/image.o ./objects/debug/image-sgi.o ./objects/debug/matrix.o ./objects/debug/status.o ./objects/debug/vector.o ./objects/debug/terrain-fragment.o ./objects/debug/terrain-vertex.o

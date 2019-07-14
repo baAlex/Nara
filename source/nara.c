@@ -62,7 +62,7 @@ static void sCameraMove(struct Context* context, struct Events* evn, struct Vect
 	// until support of analog input
 
 	bool update = false;
-	float speed = 0.5 * (evn->time.betwen_frames / 33.3333); // Delta calculation
+	float speed = 25.0 * (evn->time.betwen_frames / 33.3333); // Delta calculation
 
 	struct Vector3 origin = {0};
 	struct Vector3 v = Vector3Subtract(Vector3Add(*target, (struct Vector3){1.0, 1.0, 1.0}), *target);
@@ -154,8 +154,8 @@ int main()
 	struct Terrain* terrain = NULL;
 
 	struct Matrix4 projection;
-	struct Vector3 camera_target = {50.0, 50.0, 0.0};
-	float camera_distance = 50.0;
+	struct Vector3 camera_target = {5000.0, 5000.0, 0.0}; // 5 km
+	float camera_distance = 5000.0; // 5 km
 
 	printf("Nara v0.1\n");
 	printf("- Lib-Japan v%i.%i.%i\n", JAPAN_VERSION_MAJOR, JAPAN_VERSION_MINOR, JAPAN_VERSION_PATCH);
@@ -180,15 +180,15 @@ int main()
 
 	terrain_options.heightmap_filename = "./resources/heightmap.sgi";
 	terrain_options.colormap_filename = "./resources/colormap.sgi";
-	terrain_options.width = 100;
-	terrain_options.height = 100;
-	terrain_options.elevation = 20;
+	terrain_options.width = 10000; // 10 km
+	terrain_options.height = 10000;
+	terrain_options.elevation = 1000; // 1 km
 
 	if ((terrain_program = ProgramCreate((char*)g_terrain_vertex, (char*)g_terrain_fragment, &st)) == NULL ||
 		(terrain = TerrainCreate(terrain_options, &st)) == NULL)
 		goto return_failure;
 
-	projection = Matrix4Perspective(FOV, (float)WINDOWS_MIN_WIDTH / (float)WINDOWS_MIN_HEIGHT, 0.1, 4000.0);
+	projection = Matrix4Perspective(FOV, (float)WINDOWS_MIN_WIDTH / (float)WINDOWS_MIN_HEIGHT, 0.1, 20000.0);
 
 	ContextSetProjection(context, projection);
 	ContextSetProgram(context, terrain_program);
@@ -212,7 +212,7 @@ int main()
 		{
 			printf("Window resized: %ix%i px\n", evn.window.width, evn.window.height);
 
-			projection = Matrix4Perspective(FOV, (float)evn.window.width / (float)evn.window.height, 0.1, 4000.0);
+			projection = Matrix4Perspective(FOV, (float)evn.window.width / (float)evn.window.height, 0.1, 20000.0); // 20 km
 			ContextSetProjection(context, projection);
 		}
 
