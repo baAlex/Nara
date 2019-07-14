@@ -14,7 +14,7 @@
 	#include "status.h"
 	#include "image.h"
 
-	#define GLFW_INCLUDE_ES2 // TODO: Hardcoded
+	#define GLFW_INCLUDE_ES2
 	#include <GLFW/glfw3.h>
 
 	#define ATTRIBUTE_POSITION 10

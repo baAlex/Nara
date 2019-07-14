@@ -1,7 +1,7 @@
 
 
-cflags = `pkg-config --cflags glfw3 gl` -O3 -flto -Wall -mtune=generic -I./source/lib-japan/include
-lflags = `pkg-config --libs glfw3 gl` -lm
+cflags = `pkg-config --cflags glfw3 glesv2` -O3 -flto -Wall -mtune=generic -I./source/lib-japan/include
+lflags = `pkg-config --libs glfw3 glesv2` -lm
 
 rule generate
  command = ruby ./tools/c-ify.rb $in > $out

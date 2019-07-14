@@ -145,7 +145,7 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 
 	// Create window
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API); // TODO: Hardcoded
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
