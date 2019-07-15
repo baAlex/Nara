@@ -134,7 +134,7 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 
 	if (glfwInit() != GLFW_TRUE)
 	{
-		StatusSet(st, "ContextCreate", STATUS_ERROR, "Initialiting GLFW\n");
+		StatusSet(st, "ContextCreate", STATUS_ERROR, "Initialiting GLFW");
 		goto return_failure;
 	}
 
@@ -154,7 +154,7 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	if ((context->window = glfwCreateWindow(context->options.window_size.x, context->options.window_size.y,
 	                                        context->options.caption, NULL, NULL)) == NULL)
 	{
-		StatusSet(st, "ContextCreate", STATUS_ERROR, "Creating GLFW window\n");
+		StatusSet(st, "ContextCreate", STATUS_ERROR, "Creating GLFW window");
 		goto return_failure;
 	}
 

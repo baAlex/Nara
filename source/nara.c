@@ -231,7 +231,7 @@ int main()
 
 return_failure:
 
-	StatusPrint(st);
+	StatusPrint("Nara", st);
 	if (terrain != NULL)
 		TerrainDelete(terrain);
 	if (terrain_program != NULL)

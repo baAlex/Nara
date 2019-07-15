@@ -20,12 +20,6 @@
 	#define ATTRIBUTE_POSITION 10
 	#define ATTRIBUTE_UV 11
 
-	struct Vector2
-	{
-		float x;
-		float y;
-	};
-
 	struct Vertex
 	{
 		struct Vector3 pos;

@@ -35,12 +35,6 @@ SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 
-struct Dimensions2i
-{
-	int w;
-	int h;
-};
-
 
 /*-----------------------------
 
@@ -67,8 +61,9 @@ static inline float sPixelAsFloat(const struct Image* image, float x, float y)
 
  sGenerateVertices()
 -----------------------------*/
-static struct Vertices* sGenerateVertices(struct Buffer* buffer, const struct Image* heightmap, struct Dimensions2i map,
-										  struct Dimensions2i tile, int elevation, struct Status* st)
+static struct Vertices* sGenerateVertices(struct Buffer* buffer, const struct Image* heightmap,
+                                          struct Vector2i terrain_size, struct Vector2i tile_size, int elevation,
+                                          struct Status* st)
 {
 	struct Vertices* vertices = NULL;
 	struct Vertex* temp_vertices = NULL;
@@ -82,20 +77,21 @@ static struct Vertices* sGenerateVertices(struct Buffer* buffer, const struct Im
 	StatusSet(st, "GenerateVertices", STATUS_SUCCESS, NULL);
 
 	// Allocate memory
-	if ((map.w % tile.w) != 0 || (map.h % tile.h) != 0)
+	if ((terrain_size.x % tile_size.x) != 0 || (terrain_size.y % tile_size.y) != 0)
 	{
 		StatusSet(st, "GenerateVertices", STATUS_ERROR,
-				  "Map dimensions %ix%i not integer divisible by tile dimensions %ix%i", map.w, map.h, tile.w, tile.h);
+		          "Terrain dimensions %ix%i not integer divisible by tile dimensions %ix%i", terrain_size.x,
+		          terrain_size.y, tile_size.x, tile_size.y);
 		return NULL;
 	}
 
-	horizontal_tiles = map.w / tile.w;
-	vertical_tiles = map.h / tile.h;
+	horizontal_tiles = terrain_size.x / tile_size.x;
+	vertical_tiles = terrain_size.y / tile_size.y;
 
 	if ((horizontal_tiles * vertical_tiles) >= UINT16_MAX) // Because indices in OpenGL ES2
 	{
 		StatusSet(st, "GenerateVertices", STATUS_ERROR,
-				  "Number of vertices exceds 2^16, tile dimensions %ix%i too tiny", tile.w, tile.h);
+		          "Number of vertices exceds 2^16, tile dimensions %ix%i too tiny", tile_size.x, tile_size.y);
 		return NULL;
 	}
 
@@ -115,8 +111,8 @@ static struct Vertices* sGenerateVertices(struct Buffer* buffer, const struct Im
 			temp_vertices[col + (horizontal_tiles + 1) * row].uv.x = heightmap_step_x;
 			temp_vertices[col + (horizontal_tiles + 1) * row].uv.y = heightmap_step_y;
 
-			temp_vertices[col + (horizontal_tiles + 1) * row].pos.x = (float)(col * tile.w);
-			temp_vertices[col + (horizontal_tiles + 1) * row].pos.y = (float)(row * tile.h);
+			temp_vertices[col + (horizontal_tiles + 1) * row].pos.x = (float)(col * tile_size.x);
+			temp_vertices[col + (horizontal_tiles + 1) * row].pos.y = (float)(row * tile_size.y);
 
 			if (heightmap != NULL)
 			{
@@ -130,10 +126,10 @@ static struct Vertices* sGenerateVertices(struct Buffer* buffer, const struct Im
 				temp_vertices[col + (horizontal_tiles + 1) * row].pos.z = 0.0;
 			}
 
-			heightmap_step_x += (float)tile.w / (float)map.w;
+			heightmap_step_x += (float)tile_size.x / (float)terrain_size.x;
 		}
 
-		heightmap_step_y += (float)tile.h / (float)map.h;
+		heightmap_step_y += (float)tile_size.y / (float)terrain_size.y;
 		heightmap_step_x = 0.0;
 	}
 
@@ -148,14 +144,14 @@ static struct Vertices* sGenerateVertices(struct Buffer* buffer, const struct Im
 
  sGenerateIndex()
 -----------------------------*/
-static struct Index* sGenerateIndex(struct Buffer* buffer, struct Dimensions2i map, struct Dimensions2i tile,
+static struct Index* sGenerateIndex(struct Buffer* buffer, struct Vector2i terrain_size, struct Vector2i tile_size,
 									struct Status* st)
 {
 	struct Index* index = NULL;
 	uint16_t* temp_index = NULL;
 
-	int horizontal_tiles = map.w / tile.w;
-	int vertical_tiles = map.h / tile.h;
+	int horizontal_tiles = terrain_size.x / tile_size.x;
+	int vertical_tiles = terrain_size.y / tile_size.y;
 
 	// Allocate memory
 	StatusSet(st, "GenerateIndex", STATUS_SUCCESS, NULL);
@@ -175,6 +171,8 @@ static struct Index* sGenerateIndex(struct Buffer* buffer, struct Dimensions2i m
 	{
 		for (int col = 0; col < horizontal_tiles + 0; col++)
 		{
+			// TODO: diagonal pattern when drawing as GL_LINES
+
 			#if 1
 			temp_index[index_i + 0] = col + ((horizontal_tiles + 1) * row);
 			temp_index[index_i + 1] = col + ((horizontal_tiles + 1) * row) + 1;
@@ -237,8 +235,8 @@ struct Terrain* TerrainCreate(struct TerrainOptions options, struct Status* st)
 	}
 
 	// Vertices-Index
-	struct Dimensions2i map_dimensions = {options.width, options.height};
-	struct Dimensions2i tile_dimensions = {50, 100};
+	struct Vector2i map_dimensions = {options.width, options.height};
+	struct Vector2i tile_dimensions = {50, 100}; // 50x100 mts
 
 	if ((terrain->vertices = sGenerateVertices(&buffer, terrain->heightmap, map_dimensions, tile_dimensions,
 											   options.elevation, st)) == NULL)

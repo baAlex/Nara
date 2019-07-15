@@ -65,7 +65,7 @@ struct Program* ProgramCreate(const char* vertex_code, const char* fragment_code
 	StatusSet(st, "ProgramCreate", STATUS_SUCCESS, NULL);
 
 	if ((program = malloc(sizeof(struct Program))) == NULL)
-		StatusSet(st, "Program", STATUS_MEMORY_ERROR, NULL);
+		StatusSet(st, "ProgramCreate", STATUS_MEMORY_ERROR, NULL);
 	else
 	{
 		// Compile shaders
