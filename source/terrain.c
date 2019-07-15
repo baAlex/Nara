@@ -85,8 +85,7 @@ static struct Vertices* sGenerateVertices(struct Buffer* buffer, const struct Im
 	if ((map.w % tile.w) != 0 || (map.h % tile.h) != 0)
 	{
 		StatusSet(st, "GenerateVertices", STATUS_ERROR,
-				  "Map dimensions %ix%i not integer divisible by tile dimensions %ix%i\n", map.w, map.h, tile.w,
-				  tile.h);
+				  "Map dimensions %ix%i not integer divisible by tile dimensions %ix%i", map.w, map.h, tile.w, tile.h);
 		return NULL;
 	}
 
@@ -96,7 +95,7 @@ static struct Vertices* sGenerateVertices(struct Buffer* buffer, const struct Im
 	if ((horizontal_tiles * vertical_tiles) >= UINT16_MAX) // Because indices in OpenGL ES2
 	{
 		StatusSet(st, "GenerateVertices", STATUS_ERROR,
-				  "Number of vertices exceds 2^16, tile dimensions %ix%i too tiny\n", tile.w, tile.h);
+				  "Number of vertices exceds 2^16, tile dimensions %ix%i too tiny", tile.w, tile.h);
 		return NULL;
 	}
 
@@ -157,7 +156,6 @@ static struct Index* sGenerateIndex(struct Buffer* buffer, struct Dimensions2i m
 
 	int horizontal_tiles = map.w / tile.w;
 	int vertical_tiles = map.h / tile.h;
-	size_t index_i = 0; // Index index
 
 	// Allocate memory
 	StatusSet(st, "GenerateIndex", STATUS_SUCCESS, NULL);
@@ -171,16 +169,32 @@ static struct Index* sGenerateIndex(struct Buffer* buffer, struct Dimensions2i m
 	temp_index = buffer->data;
 
 	// Generate index
-	for (int row = 0; row < horizontal_tiles; row++)
+	size_t index_i = 0; // Index index
+
+	for (int row = 0; row < vertical_tiles + 0; row++)
 	{
-		for (int col = 0; col < vertical_tiles; col++)
+		for (int col = 0; col < horizontal_tiles + 0; col++)
 		{
+			#if 1
 			temp_index[index_i + 0] = col + ((horizontal_tiles + 1) * row);
 			temp_index[index_i + 1] = col + ((horizontal_tiles + 1) * row) + 1;
 			temp_index[index_i + 2] = col + ((horizontal_tiles + 1) * row) + 1 + (horizontal_tiles + 1);
-			temp_index[index_i + 3] = col + ((horizontal_tiles + 1) * row) + 1 + (horizontal_tiles + 1);
-			temp_index[index_i + 4] = col + ((horizontal_tiles + 1) * row) + (horizontal_tiles + 1);
-			temp_index[index_i + 5] = col + ((horizontal_tiles + 1) * row);
+			#else
+			temp_index[index_i + 0] = 0;
+			temp_index[index_i + 1] = 0;
+			temp_index[index_i + 2] = 0;
+			#endif
+
+			#if 1
+			temp_index[index_i + 3] = col + ((horizontal_tiles + 1) * row);
+			temp_index[index_i + 4] = col + ((horizontal_tiles + 1) * row) + 1 + (horizontal_tiles + 1);
+			temp_index[index_i + 5] = col + ((horizontal_tiles + 1) * row) + (horizontal_tiles + 1);
+			#else
+			temp_index[index_i + 3] = 0;
+			temp_index[index_i + 4] = 0;
+			temp_index[index_i + 5] = 0;
+			#endif
+
 			index_i += 6;
 		}
 	}
@@ -224,7 +238,7 @@ struct Terrain* TerrainCreate(struct TerrainOptions options, struct Status* st)
 
 	// Vertices-Index
 	struct Dimensions2i map_dimensions = {options.width, options.height};
-	struct Dimensions2i tile_dimensions = {50, 50}; // 50 mts
+	struct Dimensions2i tile_dimensions = {50, 100};
 
 	if ((terrain->vertices = sGenerateVertices(&buffer, terrain->heightmap, map_dimensions, tile_dimensions,
 											   options.elevation, st)) == NULL)

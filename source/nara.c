@@ -38,6 +38,8 @@ SOFTWARE.
 
 extern const uint8_t g_terrain_vertex[];
 extern const uint8_t g_terrain_fragment[];
+extern const uint8_t g_red_vertex[];
+extern const uint8_t g_red_fragment[];
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846264338327950288
