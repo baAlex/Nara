@@ -39,4 +39,8 @@ build ./objects/context.o: compile ./source/context.c
 build ./objects/context-gl.o: compile ./source/context-gl.c
 build ./objects/terrain.o: compile ./source/terrain.c
 
-build nara: link ./objects/nara.o ./objects/context.o ./objects/context-gl.o ./objects/terrain.o ./objects/buffer.o ./objects/endianness.o ./objects/image.o ./objects/image-sgi.o ./objects/matrix.o ./objects/status.o ./objects/vector.o ./objects/terrain-fragment.o ./objects/terrain-vertex.o ./objects/red-fragment.o ./objects/red-vertex.o
+build nara: link ./objects/nara.o ./objects/context.o ./objects/context-gl.o $
+./objects/terrain.o ./objects/buffer.o ./objects/endianness.o $
+./objects/image.o ./objects/image-sgi.o ./objects/matrix.o ./objects/status.o $
+./objects/vector.o ./objects/terrain-fragment.o ./objects/terrain-vertex.o $
+./objects/red-fragment.o ./objects/red-vertex.o

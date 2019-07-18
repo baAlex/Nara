@@ -20,7 +20,7 @@
 		struct ContextOptions options;
 		struct Events events; // Callbacks write here
 
-		int joystick_id;
+		int joystick_id; // -1 if none
 
 		// Time calculation
 		struct timespec one_second_counter;

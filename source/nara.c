@@ -60,80 +60,57 @@ extern const uint8_t g_red_fragment[];
 -----------------------------*/
 static void sCameraMove(struct Context* context, struct Events* evn, struct Vector3* target, float* distance)
 {
-	// The following lazy code should work
-	// until support of analog input
-
 	bool update = false;
-	float speed = 25.0 * (evn->time.betwen_frames / 33.3333); // Delta calculation
-
 	struct Vector3 origin = {0};
-	struct Vector3 v = Vector3Subtract(Vector3Add(*target, (struct Vector3){1.0, 1.0, 1.0}), *target);
+	struct Vector3 v = {0};
 
-	v.z = 0.0;
-	v = Vector3Normalize(v);
+	float speed = 100.0 * (evn->time.betwen_frames / 33.3333); // Delta calculation
 
 	// Up, down
 	if (evn->lb == true && evn->rb == false)
 	{
-		*distance += speed;
-
-		origin = Vector3Add(*target, (struct Vector3){*distance, *distance, *distance});
+		*distance += speed / 4.0;
 		update = true;
 	}
 	else if (evn->rb == true && evn->lb == false)
 	{
-		if (*distance > 1.0)
-			*distance -= speed;
-
-		origin = Vector3Add(*target, (struct Vector3){*distance, *distance, *distance});
+		*distance -= speed / 4.0;
 		update = true;
 	}
-	else
-	{
-		origin = Vector3Add(*target, (struct Vector3){*distance, *distance, *distance});
-	}
+
+	origin = Vector3Add(*target, (struct Vector3){*distance, *distance, *distance});
+
+	// Current angle
+	v = Vector3Subtract(Vector3Add(*target, (struct Vector3){1.0, 1.0, 1.0}), *target);
+	v.z = 0.0;
+	v = Vector3Normalize(v);
 
 	// Forward, backward
-	if (evn->a == true && evn->y == false)
+	if (fabs(evn->left_analog.v) > 0.12) // Dead zone
 	{
-		v = Vector3Scale(v, speed);
+		v = Vector3Scale(v, evn->left_analog.v * speed); // TODO: linear!
 
 		*target = Vector3Add(*target, v);
 		origin = Vector3Add(origin, v);
 		update = true;
-	}
-	else if (evn->y == true && evn->a == false)
-	{
-		v = Vector3Scale(v, speed);
 
-		*target = Vector3Subtract(*target, v);
-		origin = Vector3Subtract(origin, v);
-		update = true;
+		// Current angle (again for left/right calculation)
+		v = Vector3Subtract(Vector3Add(*target, (struct Vector3){1.0, 1.0, 1.0}), *target);
+		v.z = 0.0;
+		v = Vector3Normalize(v);
 	}
 
 	// Left, right
-	if (evn->x == true && evn->b == false)
+	if (fabs(evn->left_analog.h) > 0.12)
 	{
 		float angle = atan2f(v.y, v.x);
 
 		v.x = cosf(angle + DEG_TO_RAD(90.0));
 		v.y = sinf(angle + DEG_TO_RAD(90.0));
-		v = Vector3Scale(v, speed);
+		v = Vector3Scale(v, (-evn->left_analog.h) * speed);
 
 		*target = Vector3Subtract(*target, v);
 		origin = Vector3Subtract(origin, v);
-		update = true;
-	}
-	else if (evn->b == true && evn->x == false)
-	{
-		float angle = atan2f(v.y, v.x);
-
-		v.x = cosf(angle + DEG_TO_RAD(90.0));
-		v.y = sinf(angle + DEG_TO_RAD(90.0));
-		v = Vector3Scale(v, speed);
-
-		*target = Vector3Add(*target, v);
-		origin = Vector3Add(origin, v);
 		update = true;
 	}
 
@@ -157,7 +134,7 @@ int main()
 
 	struct Matrix4 projection;
 	struct Vector3 camera_target = {5000.0, 5000.0, 0.0}; // 5 km
-	float camera_distance = 5000.0; // 5 km
+	float camera_distance = 5000.0;                       // 5 km
 
 	printf("Nara v0.1\n");
 	printf("- Lib-Japan v%i.%i.%i\n", JAPAN_VERSION_MAJOR, JAPAN_VERSION_MINOR, JAPAN_VERSION_PATCH);
@@ -172,7 +149,8 @@ int main()
 		.scale_mode = SCALE_MODE_STRETCH,
 		.fullscreen = false,
 		.clean_color = {0.80, 0.82, 0.84}
-	}, &st);
+	},
+	&st);
 
 	if (context == NULL)
 		goto return_failure;
@@ -187,7 +165,7 @@ int main()
 	terrain_options.elevation = 1000; // 1 km
 
 	if ((terrain_program = ProgramCreate((char*)g_terrain_vertex, (char*)g_terrain_fragment, &st)) == NULL ||
-		(terrain = TerrainCreate(terrain_options, &st)) == NULL)
+	    (terrain = TerrainCreate(terrain_options, &st)) == NULL)
 		goto return_failure;
 
 	projection = Matrix4Perspective(FOV, (float)WINDOWS_MIN_WIDTH / (float)WINDOWS_MIN_HEIGHT, 0.1, 20000.0);
@@ -195,7 +173,7 @@ int main()
 	ContextSetProjection(context, projection);
 	ContextSetProgram(context, terrain_program);
 	ContextSetCamera(context, camera_target,
-					 Vector3Add(camera_target, (struct Vector3){camera_distance, camera_distance, camera_distance}));
+	                 Vector3Add(camera_target, (struct Vector3){camera_distance, camera_distance, camera_distance}));
 
 	// Yay!
 	while (1)
@@ -205,8 +183,13 @@ int main()
 
 		// Events
 		/*printf("%s %s %s %s %s %s %s %s %s %s %s\n", evn.a ? "a" : "-", evn.b ? "b" : "-", evn.x ? "x" : "-",
-			   evn.y ? "y" : "-", evn.lb ? "lb" : "--", evn.rb ? "rb" : "--", evn.view ? "view" : "----",
-			   evn.menu ? "menu" : "----", evn.guide ? "guide" : "-----", evn.ls ? "ls" : "--", evn.rs ? "rs" : "--");*/
+		       evn.y ? "y" : "-", evn.lb ? "lb" : "--", evn.rb ? "rb" : "--", evn.view ? "view" : "----",
+		       evn.menu ? "menu" : "----", evn.guide ? "guide" : "-----", evn.ls ? "ls" : "--", evn.rs ? "rs" : "--");
+
+		printf("left [x: %+0.2f, y: %+0.2f, t: %+0.2f], right [x: %+0.2f, y: %+0.2f, t: %+0.2f]\n", evn.left_analog.h,
+		       evn.left_analog.v, evn.left_analog.t, evn.right_analog.h, evn.right_analog.v, evn.right_analog.t);
+
+		printf("pad [x: %+0.2f, y: %+0.2f]\n", evn.pad.h, evn.pad.v);*/
 
 		sCameraMove(context, &evn, &camera_target, &camera_distance);
 
@@ -214,7 +197,8 @@ int main()
 		{
 			printf("Window resized: %ix%i px\n", evn.window.width, evn.window.height);
 
-			projection = Matrix4Perspective(FOV, (float)evn.window.width / (float)evn.window.height, 0.1, 20000.0); // 20 km
+			projection =
+			    Matrix4Perspective(FOV, (float)evn.window.width / (float)evn.window.height, 0.1, 20000.0); // 20 km
 			ContextSetProjection(context, projection);
 		}
 

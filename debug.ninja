@@ -39,4 +39,10 @@ build ./objects/debug/context.o: compile ./source/context.c
 build ./objects/debug/context-gl.o: compile ./source/context-gl.c
 build ./objects/debug/terrain.o: compile ./source/terrain.c
 
-build nara-dbg: link ./objects/debug/nara.o ./objects/debug/context.o ./objects/debug/context-gl.o ./objects/debug/terrain.o ./objects/debug/buffer.o ./objects/debug/endianness.o ./objects/debug/image.o ./objects/debug/image-sgi.o ./objects/debug/matrix.o ./objects/debug/status.o ./objects/debug/vector.o ./objects/debug/terrain-fragment.o ./objects/debug/terrain-vertex.o ./objects/debug/red-fragment.o ./objects/debug/red-vertex.o
+build nara-dbg: link ./objects/debug/nara.o ./objects/debug/context.o $
+./objects/debug/context-gl.o ./objects/debug/terrain.o $
+./objects/debug/buffer.o ./objects/debug/endianness.o ./objects/debug/image.o $
+./objects/debug/image-sgi.o ./objects/debug/matrix.o ./objects/debug/status.o $
+./objects/debug/vector.o ./objects/debug/terrain-fragment.o $
+./objects/debug/terrain-vertex.o ./objects/debug/red-fragment.o $
+./objects/debug/red-vertex.o
