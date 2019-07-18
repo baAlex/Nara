@@ -1,5 +1,4 @@
 
-
 cflags = `pkg-config --cflags glfw3 glesv2` -O3 -flto -Wall -mtune=generic -I./source/lib-japan/include
 lflags = `pkg-config --libs glfw3 glesv2` -lm
 
@@ -36,11 +35,26 @@ build ./objects/vector.o:     compile ./source/lib-japan/source/vector.c
 # Nara
 build ./objects/nara.o: compile ./source/nara.c
 build ./objects/context.o: compile ./source/context.c
-build ./objects/context-gl.o: compile ./source/context-gl.c
+build ./objects/context-input.o: compile ./source/context-input.c
+build ./objects/context-opengl.o: compile ./source/context-opengl.c
+build ./objects/context-time.o: compile ./source/context-time.c
 build ./objects/terrain.o: compile ./source/terrain.c
 
-build nara: link ./objects/nara.o ./objects/context.o ./objects/context-gl.o $
-./objects/terrain.o ./objects/buffer.o ./objects/endianness.o $
-./objects/image.o ./objects/image-sgi.o ./objects/matrix.o ./objects/status.o $
-./objects/vector.o ./objects/terrain-fragment.o ./objects/terrain-vertex.o $
-./objects/red-fragment.o ./objects/red-vertex.o
+# Link
+build nara: link ./objects/nara.o $
+./objects/terrain-fragment.o $
+./objects/terrain-vertex.o $
+./objects/red-fragment.o $
+./objects/red-vertex.o $
+./objects/buffer.o $
+./objects/endianness.o $
+./objects/image.o $
+./objects/image-sgi.o $
+./objects/matrix.o $
+./objects/status.o $
+./objects/vector.o $
+./objects/context.o $
+./objects/context-input.o $
+./objects/context-opengl.o $
+./objects/context-time.o $
+./objects/terrain.o

@@ -24,14 +24,14 @@ SOFTWARE.
 
 -------------------------------
 
- [context-gl.c]
+ [context-opengl.c]
  - Alexander Brandt 2019
 -----------------------------*/
 
 #include <math.h>
 #include <stdlib.h>
 
-#include "context-gl.h"
+#include "context-private.h"
 
 
 /*-----------------------------
@@ -295,7 +295,7 @@ struct Texture* TextureCreate(const struct Image* image, struct Status* st)
 			return NULL;
 		}
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // TODO: a texture property?
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image->width, image->height, 0, GL_RGB, GL_UNSIGNED_BYTE, image->data);
@@ -399,4 +399,109 @@ void ViewportResize(enum ScaleMode mode, int new_w, int new_h, int aspect_w, int
 	}
 
 	glViewport(final_position_x, final_position_y, final_size_x, final_size_y);
+}
+
+
+/*-----------------------------
+
+ ContextOpenGlInitialization()
+-----------------------------*/
+inline void ContextOpenGlInitialization(struct ContextOpenGl* state, struct Vector3 clean_color)
+{
+	(void)state;
+	glClearColor(clean_color.x, clean_color.y, clean_color.z, 1.0);
+
+	glEnableVertexAttribArray(ATTRIBUTE_POSITION);
+	glEnableVertexAttribArray(ATTRIBUTE_UV);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+}
+
+
+/*-----------------------------
+
+ ContextOpenGlStep()
+-----------------------------*/
+inline void ContextOpenGlStep(struct ContextOpenGl* state)
+{
+	(void)state;
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+
+/*-----------------------------
+
+ SetProgram()
+-----------------------------*/
+void SetProgram(struct ContextOpenGl* state, const struct Program* program)
+{
+	if (program != state->current_program)
+	{
+		struct Matrix4 as_matrix =
+		    Matrix4LookAt(state->camera_components[1], state->camera_components[0], (struct Vector3){0.0, 0.0, 1.0});
+
+		state->current_program = program;
+		state->u_projection = glGetUniformLocation(program->ptr, "projection");
+		state->u_camera_projection = glGetUniformLocation(state->current_program->ptr, "camera_projection");
+		state->u_camera_components = glGetUniformLocation(state->current_program->ptr, "camera_components");
+		state->u_color_texture = glGetUniformLocation(state->current_program->ptr, "color_texture");
+
+		glUseProgram(program->ptr);
+		glUniformMatrix4fv(state->u_projection, 1, GL_FALSE, state->projection.e);
+		glUniformMatrix4fv(state->u_camera_projection, 1, GL_FALSE, as_matrix.e);
+		glUniform3fv(state->u_camera_components, 2, (float*)&state->camera_components);
+		glUniform1i(state->u_color_texture, 0); // Texture unit 0
+	}
+}
+
+
+/*-----------------------------
+
+ SetProjection()
+-----------------------------*/
+void SetProjection(struct ContextOpenGl* state, struct Matrix4 matrix)
+{
+	memcpy(&state->projection, &matrix, sizeof(struct Matrix4));
+
+	if (state->current_program != NULL)
+		glUniformMatrix4fv(state->u_projection, 1, GL_FALSE, state->projection.e);
+}
+
+
+/*-----------------------------
+
+ SetCamera()
+-----------------------------*/
+void SetCamera(struct ContextOpenGl* state, struct Vector3 target, struct Vector3 origin)
+{
+	state->camera_components[0] = target;
+	state->camera_components[1] = origin;
+
+	if (state->current_program != NULL)
+	{
+		struct Matrix4 as_matrix = Matrix4LookAt(origin, target, (struct Vector3){0.0, 0.0, 1.0});
+
+		glUniformMatrix4fv(state->u_camera_projection, 1, GL_FALSE, as_matrix.e);
+		glUniform3fv(state->u_camera_components, 2, (float*)&state->camera_components);
+	}
+}
+
+
+/*-----------------------------
+
+ Draw()
+-----------------------------*/
+void Draw(const struct Vertices* vertices, const struct Index* index, const struct Texture* color)
+{
+	glBindBuffer(GL_ARRAY_BUFFER, vertices->ptr);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index->ptr);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, color->ptr);
+
+	glVertexAttribPointer(ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), NULL);
+	glVertexAttribPointer(ATTRIBUTE_UV, 2, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), ((float*)NULL) + 3);
+
+	// glDrawElements(GL_LINES, index->length, GL_UNSIGNED_SHORT, NULL);
+	glDrawElements(GL_TRIANGLES, index->length, GL_UNSIGNED_SHORT, NULL);
 }

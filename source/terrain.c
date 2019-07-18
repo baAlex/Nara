@@ -236,7 +236,7 @@ struct Terrain* TerrainCreate(struct TerrainOptions options, struct Status* st)
 
 	// Vertices-Index
 	struct Vector2i map_dimensions = {options.width, options.height};
-	struct Vector2i tile_dimensions = {50, 100}; // 50x100 mts
+	struct Vector2i tile_dimensions = {50, 50}; // 50x50 mts
 
 	if ((terrain->vertices = sGenerateVertices(&buffer, terrain->heightmap, map_dimensions, tile_dimensions,
 											   options.elevation, st)) == NULL)

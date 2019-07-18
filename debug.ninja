@@ -1,5 +1,4 @@
 
-
 cflags = `pkg-config --cflags glfw3 glesv2` -O0 -std=c11 -Wall -Wextra -pedantic -g -DDEBUG -I./source/lib-japan/include
 lflags = `pkg-config --libs glfw3 glesv2` -lm
 
@@ -36,13 +35,26 @@ build ./objects/debug/vector.o:     compile ./source/lib-japan/source/vector.c
 # Nara-dbg
 build ./objects/debug/nara.o: compile ./source/nara.c
 build ./objects/debug/context.o: compile ./source/context.c
-build ./objects/debug/context-gl.o: compile ./source/context-gl.c
+build ./objects/debug/context-input.o: compile ./source/context-input.c
+build ./objects/debug/context-opengl.o: compile ./source/context-opengl.c
+build ./objects/debug/context-time.o: compile ./source/context-time.c
 build ./objects/debug/terrain.o: compile ./source/terrain.c
 
-build nara-dbg: link ./objects/debug/nara.o ./objects/debug/context.o $
-./objects/debug/context-gl.o ./objects/debug/terrain.o $
-./objects/debug/buffer.o ./objects/debug/endianness.o ./objects/debug/image.o $
-./objects/debug/image-sgi.o ./objects/debug/matrix.o ./objects/debug/status.o $
-./objects/debug/vector.o ./objects/debug/terrain-fragment.o $
-./objects/debug/terrain-vertex.o ./objects/debug/red-fragment.o $
-./objects/debug/red-vertex.o
+# Link
+build nara-dbg: link ./objects/debug/nara.o $
+./objects/debug/terrain-fragment.o $
+./objects/debug/terrain-vertex.o $
+./objects/debug/red-fragment.o $
+./objects/debug/red-vertex.o $
+./objects/debug/buffer.o $
+./objects/debug/endianness.o $
+./objects/debug/image.o $
+./objects/debug/image-sgi.o $
+./objects/debug/matrix.o $
+./objects/debug/status.o $
+./objects/debug/vector.o $
+./objects/debug/context.o $
+./objects/debug/context-input.o $
+./objects/debug/context-opengl.o $
+./objects/debug/context-time.o $
+./objects/debug/terrain.o

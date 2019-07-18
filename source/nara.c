@@ -54,25 +54,30 @@ extern const uint8_t g_red_fragment[];
 #define WINDOWS_MIN_HEIGHT 100
 
 
+struct WindowSpecifications window_specs;
+struct TimeSpecifications time_specs;
+struct InputSpecifications input_specs;
+
+
 /*-----------------------------
 
  sCameraMove()
 -----------------------------*/
-static void sCameraMove(struct Context* context, struct Events* evn, struct Vector3* target, float* distance)
+static void sCameraMove(struct Context* context, struct Vector3* target, float* distance)
 {
 	bool update = false;
 	struct Vector3 origin = {0};
 	struct Vector3 v = {0};
 
-	float speed = 100.0 * (evn->time.betwen_frames / 33.3333); // Delta calculation
+	float speed = 100.0 * (time_specs.miliseconds_betwen / 33.3333); // Delta calculation
 
 	// Up, down
-	if (evn->lb == true && evn->rb == false)
+	if (input_specs.lb == true && input_specs.rb == false)
 	{
 		*distance += speed / 4.0;
 		update = true;
 	}
-	else if (evn->rb == true && evn->lb == false)
+	else if (input_specs.rb == true && input_specs.lb == false)
 	{
 		*distance -= speed / 4.0;
 		update = true;
@@ -86,9 +91,9 @@ static void sCameraMove(struct Context* context, struct Events* evn, struct Vect
 	v = Vector3Normalize(v);
 
 	// Forward, backward
-	if (fabs(evn->left_analog.v) > 0.12) // Dead zone
+	if (fabs(input_specs.left_analog.v) > 0.12) // Dead zone
 	{
-		v = Vector3Scale(v, evn->left_analog.v * speed); // TODO: linear!
+		v = Vector3Scale(v, input_specs.left_analog.v * speed); // TODO: linear!
 
 		*target = Vector3Add(*target, v);
 		origin = Vector3Add(origin, v);
@@ -101,13 +106,13 @@ static void sCameraMove(struct Context* context, struct Events* evn, struct Vect
 	}
 
 	// Left, right
-	if (fabs(evn->left_analog.h) > 0.12)
+	if (fabs(input_specs.left_analog.h) > 0.12)
 	{
 		float angle = atan2f(v.y, v.x);
 
 		v.x = cosf(angle + DEG_TO_RAD(90.0));
 		v.y = sinf(angle + DEG_TO_RAD(90.0));
-		v = Vector3Scale(v, (-evn->left_analog.h) * speed);
+		v = Vector3Scale(v, (-input_specs.left_analog.h) * speed);
 
 		*target = Vector3Subtract(*target, v);
 		origin = Vector3Subtract(origin, v);
@@ -126,7 +131,6 @@ static void sCameraMove(struct Context* context, struct Events* evn, struct Vect
 int main()
 {
 	struct Context* context = NULL;
-	struct Events evn = {0};
 	struct Status st = {0};
 
 	struct Program* terrain_program = NULL;
@@ -141,11 +145,10 @@ int main()
 	printf("\n");
 
 	// Initialization
-	context = ContextCreate((struct ContextOptions)
-	{
+	context = ContextCreate((struct ContextOptions){
 		.caption = "Nara",
 		.window_size = {WINDOWS_MIN_WIDTH * 4, WINDOWS_MIN_HEIGHT * 4},
-		.windows_min_size = {WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT},
+		.window_min_size = {WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT},
 		.scale_mode = SCALE_MODE_STRETCH,
 		.fullscreen = false,
 		.clean_color = {0.80, 0.82, 0.84}
@@ -178,10 +181,10 @@ int main()
 	// Yay!
 	while (1)
 	{
-		ContextUpdate(context, &evn);
+		ContextUpdate(context, &window_specs, &time_specs, &input_specs);
 		ContextDraw(context, terrain->vertices, terrain->index, terrain->color);
+		sCameraMove(context, &camera_target, &camera_distance);
 
-		// Events
 		/*printf("%s %s %s %s %s %s %s %s %s %s %s\n", evn.a ? "a" : "-", evn.b ? "b" : "-", evn.x ? "x" : "-",
 		       evn.y ? "y" : "-", evn.lb ? "lb" : "--", evn.rb ? "rb" : "--", evn.view ? "view" : "----",
 		       evn.menu ? "menu" : "----", evn.guide ? "guide" : "-----", evn.ls ? "ls" : "--", evn.rs ? "rs" : "--");
@@ -191,18 +194,17 @@ int main()
 
 		printf("pad [x: %+0.2f, y: %+0.2f]\n", evn.pad.h, evn.pad.v);*/
 
-		sCameraMove(context, &evn, &camera_target, &camera_distance);
-
-		if (evn.window.resize == true)
+		// Window specifications
+		if (window_specs.resized == true)
 		{
-			printf("Window resized: %ix%i px\n", evn.window.width, evn.window.height);
+			printf("Window resized: %ix%i px\n", window_specs.size.x, window_specs.size.y);
 
 			projection =
-			    Matrix4Perspective(FOV, (float)evn.window.width / (float)evn.window.height, 0.1, 20000.0); // 20 km
+			    Matrix4Perspective(FOV, (float)window_specs.size.x / (float)window_specs.size.y, 0.1, 20000.0); // 20 km
 			ContextSetProjection(context, projection);
 		}
 
-		if (evn.window.close == true)
+		if (window_specs.close == true)
 			break;
 	}
 

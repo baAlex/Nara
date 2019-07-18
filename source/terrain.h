@@ -7,7 +7,7 @@
 #ifndef TERRAIN_H
 #define TERRAIN_H
 
-	#include "context-gl.h"
+	#include "context.h"
 
 	struct TerrainOptions
 	{
@@ -24,7 +24,6 @@
 		struct TerrainOptions options;
 		struct Image* heightmap;
 
-		// GL specific objects
 		struct Vertices* vertices;
 		struct Index* index;
 
