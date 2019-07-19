@@ -69,50 +69,56 @@ static void sCameraMove(struct Context* context, struct Vector3* target, float* 
 	struct Vector3 origin = {0};
 	struct Vector3 v = {0};
 
-	float speed = 100.0 * (time_specs.miliseconds_betwen / 33.3333); // Delta calculation
+	float speed = 50.0 * (time_specs.miliseconds_betwen / 33.3333); // Delta calculation
 
 	// Up, down
 	if (input_specs.lb == true && input_specs.rb == false)
 	{
-		*distance += speed / 4.0;
+		*distance += speed / 2.0;
 		update = true;
 	}
 	else if (input_specs.rb == true && input_specs.lb == false)
 	{
-		*distance -= speed / 4.0;
+		*distance -= speed / 2.0;
 		update = true;
 	}
 
-	origin = Vector3Add(*target, (struct Vector3){*distance, *distance, *distance});
+	origin = Vector3Add(*target, (struct Vector3){0.0, *distance, *distance});
 
 	// Current angle
-	v = Vector3Subtract(Vector3Add(*target, (struct Vector3){1.0, 1.0, 1.0}), *target);
+	v = Vector3Subtract(origin, *target);
 	v.z = 0.0;
 	v = Vector3Normalize(v);
 
 	// Forward, backward
-	if (fabs(input_specs.left_analog.v) > 0.12) // Dead zone
+	if (fabs(input_specs.left_analog.v) > 0.1) // Dead zone
 	{
-		v = Vector3Scale(v, input_specs.left_analog.v * speed); // TODO: linear!
+		v = Vector3Scale(v, powf((input_specs.left_analog.v), 2.0) * speed);
+
+		if (input_specs.left_analog.v < 0.0)
+			v = Vector3Invert(v);
 
 		*target = Vector3Add(*target, v);
 		origin = Vector3Add(origin, v);
 		update = true;
 
 		// Current angle (again for left/right calculation)
-		v = Vector3Subtract(Vector3Add(*target, (struct Vector3){1.0, 1.0, 1.0}), *target);
+		v = Vector3Subtract(origin, *target);
 		v.z = 0.0;
 		v = Vector3Normalize(v);
 	}
 
 	// Left, right
-	if (fabs(input_specs.left_analog.h) > 0.12)
+	if (fabs(input_specs.left_analog.h) > 0.1)
 	{
 		float angle = atan2f(v.y, v.x);
 
 		v.x = cosf(angle + DEG_TO_RAD(90.0));
 		v.y = sinf(angle + DEG_TO_RAD(90.0));
-		v = Vector3Scale(v, (-input_specs.left_analog.h) * speed);
+		v = Vector3Scale(v, powf(input_specs.left_analog.h, 2.0) * (-speed));
+
+		if (input_specs.left_analog.h < 0.0)
+			v = Vector3Invert(v);
 
 		*target = Vector3Subtract(*target, v);
 		origin = Vector3Subtract(origin, v);
@@ -176,7 +182,7 @@ int main()
 	ContextSetProjection(context, projection);
 	ContextSetProgram(context, terrain_program);
 	ContextSetCamera(context, camera_target,
-	                 Vector3Add(camera_target, (struct Vector3){camera_distance, camera_distance, camera_distance}));
+	                 Vector3Add(camera_target, (struct Vector3){0.0, camera_distance, camera_distance}));
 
 	// Yay!
 	while (1)
@@ -185,14 +191,14 @@ int main()
 		ContextDraw(context, terrain->vertices, terrain->index, terrain->color);
 		sCameraMove(context, &camera_target, &camera_distance);
 
-		/*printf("%s %s %s %s %s %s %s %s %s %s %s\n", evn.a ? "a" : "-", evn.b ? "b" : "-", evn.x ? "x" : "-",
-		       evn.y ? "y" : "-", evn.lb ? "lb" : "--", evn.rb ? "rb" : "--", evn.view ? "view" : "----",
-		       evn.menu ? "menu" : "----", evn.guide ? "guide" : "-----", evn.ls ? "ls" : "--", evn.rs ? "rs" : "--");
+		/*printf("%s %s %s %s %s %s %s %s %s %s %s\n", input_specs.a ? "a" : "-", input_specs.b ? "b" : "-", input_specs.x ? "x" : "-",
+		       input_specs.y ? "y" : "-", input_specs.lb ? "lb" : "--", input_specs.rb ? "rb" : "--", input_specs.view ? "view" : "----",
+		       input_specs.menu ? "menu" : "----", input_specs.guide ? "guide" : "-----", input_specs.ls ? "ls" : "--", input_specs.rs ? "rs" : "--");
 
-		printf("left [x: %+0.2f, y: %+0.2f, t: %+0.2f], right [x: %+0.2f, y: %+0.2f, t: %+0.2f]\n", evn.left_analog.h,
-		       evn.left_analog.v, evn.left_analog.t, evn.right_analog.h, evn.right_analog.v, evn.right_analog.t);
+		printf("left [x: %+0.2f, y: %+0.2f, t: %+0.2f], right [x: %+0.2f, y: %+0.2f, t: %+0.2f]\n", input_specs.left_analog.h,
+		       input_specs.left_analog.v, input_specs.left_analog.t, input_specs.right_analog.h, input_specs.right_analog.v, input_specs.right_analog.t);
 
-		printf("pad [x: %+0.2f, y: %+0.2f]\n", evn.pad.h, evn.pad.v);*/
+		printf("pad [x: %+0.2f, y: %+0.2f]\n", input_specs.pad.h, input_specs.pad.v);*/
 
 		// Window specifications
 		if (window_specs.resized == true)

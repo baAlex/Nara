@@ -61,30 +61,11 @@ void ContextDraw(struct Context* context, const struct Vertices* vertices, const
 -----------------------------*/
 static void sKeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-	// struct Context* context = glfwGetWindowUserPointer(window);
-
-	(void)window;
-	(void)key;
+	struct Context* context = glfwGetWindowUserPointer(window);
 	(void)scancode;
-	(void)action;
 	(void)mods;
 
-	/*switch (key)
-	{
-	case GLFW_KEY_S: context->events.a = (action == GLFW_PRESS) ? true : false; break;
-	case GLFW_KEY_D: context->events.b = (action == GLFW_PRESS) ? true : false; break;
-	case GLFW_KEY_A: context->events.x = (action == GLFW_PRESS) ? true : false; break;
-	case GLFW_KEY_W: context->events.y = (action == GLFW_PRESS) ? true : false; break;
-	case GLFW_KEY_Q: context->events.lb = (action == GLFW_PRESS) ? true : false; break;
-	case GLFW_KEY_E: context->events.rb = (action == GLFW_PRESS) ? true : false; break;
-	case GLFW_KEY_SPACE: context->events.view = (action == GLFW_PRESS) ? true : false; break;
-	case GLFW_KEY_ENTER: context->events.menu = (action == GLFW_PRESS) ? true : false; break;
-	case GLFW_KEY_F1: context->events.guide = (action == GLFW_PRESS) ? true : false; break;
-	case GLFW_KEY_T: context->events.ls = (action == GLFW_PRESS) ? true : false; break;
-	case GLFW_KEY_Y: context->events.rs = (action == GLFW_PRESS) ? true : false; break;
-
-	default: break;
-	}*/
+	ReceiveKeyboardKey(&context->input, key, action);
 }
 
 

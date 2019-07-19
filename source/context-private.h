@@ -9,6 +9,7 @@
 
 	#include <string.h>
 	#include <stdlib.h>
+	#include <math.h>
 	#include <time.h>
 	#include "context.h"
 
@@ -34,13 +35,18 @@
 
 	struct ContextInput
 	{
-		struct InputSpecifications specs;
+		struct InputSpecifications specs; // The following ones combined
+
+		struct InputSpecifications key_specs;
+		struct InputSpecifications mouse_specs;
+
 		int active_gamepad; // -1 if none
 	};
 
 	void ContextInputInitialization(struct ContextInput* state);
 	void ContextInputStep(struct ContextInput* state);
 
+	void ReceiveKeyboardKey(struct ContextInput* state, int key, int action);
 
 	struct ContextOpenGl
 	{
