@@ -4,8 +4,8 @@ Nara
 The terrain in the screenshots should work as an overworld for an action rpg,
 but at the moment is more a renderer that a videogame.
 
-![screenshot](./documentation/screenshot-02.png)
-![screenshot](./documentation/screenshot-03.png)
+![screenshot](./documentation/screenshot-02.jpg)
+![screenshot](./documentation/screenshot-03.jpg)
 
 
 Compilation
