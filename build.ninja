@@ -9,7 +9,7 @@ rule compile
  command = cc $cflags -c $in -o $out
 
 rule link
- command = cc $in $lflags -o $out
+ command = cc -flto $in $lflags -o $out
 
 
 # Automatically generated files
@@ -25,20 +25,25 @@ build ./objects/red-vertex.o:       compile ./objects/red-vertex.c
 
 # Lib Japan
 build ./objects/buffer.o:     compile ./source/lib-japan/source/buffer.c
+build ./objects/dictionary.o: compile ./source/lib-japan/source/dictionary.c
 build ./objects/endianness.o: compile ./source/lib-japan/source/endianness.c
 build ./objects/image.o:      compile ./source/lib-japan/source/image.c
 build ./objects/image-sgi.o:  compile ./source/lib-japan/source/image-sgi.c
+build ./objects/list.o:       compile ./source/lib-japan/source/list.c
 build ./objects/matrix.o:     compile ./source/lib-japan/source/matrix.c
 build ./objects/status.o:     compile ./source/lib-japan/source/status.c
 build ./objects/vector.o:     compile ./source/lib-japan/source/vector.c
 
 # Nara
-build ./objects/nara.o: compile ./source/nara.c
-build ./objects/context.o: compile ./source/context.c
-build ./objects/context-input.o: compile ./source/context-input.c
-build ./objects/context-opengl.o: compile ./source/context-opengl.c
-build ./objects/context-time.o: compile ./source/context-time.c
-build ./objects/terrain.o: compile ./source/terrain.c
+build ./objects/nara.o:             compile ./source/nara.c
+build ./objects/context.o:          compile ./source/context.c
+build ./objects/context-input.o:    compile ./source/context-input.c
+build ./objects/context-opengl.o:   compile ./source/context-opengl.c
+build ./objects/context-time.o:     compile ./source/context-time.c
+build ./objects/entity.o:           compile ./source/entity.c
+build ./objects/game-camera.o:      compile ./source/game-camera.c
+build ./objects/game-player.o:      compile ./source/game-player.c
+build ./objects/terrain.o:          compile ./source/terrain.c
 
 # Link
 build nara: link ./objects/nara.o $
@@ -47,9 +52,11 @@ build nara: link ./objects/nara.o $
 ./objects/red-fragment.o $
 ./objects/red-vertex.o $
 ./objects/buffer.o $
+./objects/dictionary.o $
 ./objects/endianness.o $
 ./objects/image.o $
 ./objects/image-sgi.o $
+./objects/list.o $
 ./objects/matrix.o $
 ./objects/status.o $
 ./objects/vector.o $
@@ -57,4 +64,7 @@ build nara: link ./objects/nara.o $
 ./objects/context-input.o $
 ./objects/context-opengl.o $
 ./objects/context-time.o $
+./objects/entity.o $
+./objects/game-camera.o $
+./objects/game-player.o $
 ./objects/terrain.o

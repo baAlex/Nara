@@ -34,100 +34,24 @@ SOFTWARE.
 #include <string.h>
 
 #include "context.h"
+#include "entity.h"
 #include "terrain.h"
-
-extern const uint8_t g_terrain_vertex[];
-extern const uint8_t g_terrain_fragment[];
-extern const uint8_t g_red_vertex[];
-extern const uint8_t g_red_fragment[];
-
-#ifndef M_PI
-#define M_PI 3.14159265358979323846264338327950288
-#endif
-
-#define DEG_TO_RAD(d) ((d)*M_PI / 180.0)
-#define RAD_TO_DEG(r) ((r)*180.0 / M_PI)
+#include "game.h"
 
 #define FOV 45
 
 #define WINDOWS_MIN_WIDTH 220
 #define WINDOWS_MIN_HEIGHT 100
 
+extern const uint8_t g_terrain_vertex[];
+extern const uint8_t g_terrain_fragment[];
+extern const uint8_t g_red_vertex[];
+extern const uint8_t g_red_fragment[];
 
-struct WindowSpecifications window_specs;
-struct TimeSpecifications time_specs;
-struct InputSpecifications input_specs;
-
-
-/*-----------------------------
-
- sCameraMove()
------------------------------*/
-static void sCameraMove(struct Context* context, struct Vector3* target, float* distance)
-{
-	bool update = false;
-	struct Vector3 origin = {0};
-	struct Vector3 v = {0};
-
-	float speed = 50.0 * (time_specs.miliseconds_betwen / 33.3333); // Delta calculation
-
-	// Up, down
-	if (input_specs.lb == true && input_specs.rb == false)
-	{
-		*distance += speed / 2.0;
-		update = true;
-	}
-	else if (input_specs.rb == true && input_specs.lb == false)
-	{
-		*distance -= speed / 2.0;
-		update = true;
-	}
-
-	origin = Vector3Add(*target, (struct Vector3){0.0, *distance, *distance});
-
-	// Current angle
-	v = Vector3Subtract(origin, *target);
-	v.z = 0.0;
-	v = Vector3Normalize(v);
-
-	// Forward, backward
-	if (fabs(input_specs.left_analog.v) > 0.1) // Dead zone
-	{
-		v = Vector3Scale(v, powf((input_specs.left_analog.v), 2.0) * speed);
-
-		if (input_specs.left_analog.v < 0.0)
-			v = Vector3Invert(v);
-
-		*target = Vector3Add(*target, v);
-		origin = Vector3Add(origin, v);
-		update = true;
-
-		// Current angle (again for left/right calculation)
-		v = Vector3Subtract(origin, *target);
-		v.z = 0.0;
-		v = Vector3Normalize(v);
-	}
-
-	// Left, right
-	if (fabs(input_specs.left_analog.h) > 0.1)
-	{
-		float angle = atan2f(v.y, v.x);
-
-		v.x = cosf(angle + DEG_TO_RAD(90.0));
-		v.y = sinf(angle + DEG_TO_RAD(90.0));
-		v = Vector3Scale(v, powf(input_specs.left_analog.h, 2.0) * (-speed));
-
-		if (input_specs.left_analog.h < 0.0)
-			v = Vector3Invert(v);
-
-		*target = Vector3Subtract(*target, v);
-		origin = Vector3Subtract(origin, v);
-		update = true;
-	}
-
-	if (update == true)
-		ContextSetCamera(context, *target, origin);
-}
+struct WindowSpecifications g_window_specs;
+struct TimeSpecifications g_time_specs;
+struct InputSpecifications g_input_specs;
+struct Context* g_context = NULL;
 
 
 /*-----------------------------
@@ -136,22 +60,21 @@ static void sCameraMove(struct Context* context, struct Vector3* target, float* 
 -----------------------------*/
 int main()
 {
-	struct Context* context = NULL;
 	struct Status st = {0};
+	struct Dictionary* class_definitions = NULL;
 
-	struct Program* terrain_program = NULL;
-	struct Terrain* terrain = NULL;
+	struct List entities = {0};             // In a future these three should
+	struct Program* terrain_program = NULL; // be component of an object representing
+	struct Terrain* terrain = NULL;         // a game map/level. Being loaded from a file
 
 	struct Matrix4 projection;
-	struct Vector3 camera_target = {5000.0, 5000.0, 0.0}; // 5 km
-	float camera_distance = 5000.0;                       // 5 km
 
 	printf("Nara v0.1\n");
 	printf("- Lib-Japan v%i.%i.%i\n", JAPAN_VERSION_MAJOR, JAPAN_VERSION_MINOR, JAPAN_VERSION_PATCH);
 	printf("\n");
 
-	// Initialization
-	context = ContextCreate((struct ContextOptions){
+	// Context initialization
+	g_context = ContextCreate((struct ContextOptions){
 		.caption = "Nara",
 		.window_size = {WINDOWS_MIN_WIDTH * 4, WINDOWS_MIN_HEIGHT * 4},
 		.window_min_size = {WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT},
@@ -161,63 +84,91 @@ int main()
 	},
 	&st);
 
-	if (context == NULL)
+	if (g_context == NULL)
 		goto return_failure;
+
+	// Classes initialization
+	{
+		class_definitions = DictionaryCreate(NULL);
+		struct Class* class = NULL;
+
+		class = ClassCreate(class_definitions, "Camera");
+		class->entity_data_size = sizeof(struct GameCamera);
+		class->class_data_size = 0;
+		class->func_start = GameCameraStart;
+		class->func_think = GameCameraThink;
+		class->func_delete = GameCameraDelete;
+
+		class = ClassCreate(class_definitions, "Player");
+		class->entity_data_size = sizeof(struct GamePlayer);
+		class->class_data_size = 0;
+		class->func_start = GamePlayerStart;
+		class->func_think = GamePlayerThink;
+		class->func_delete = GamePlayerDelete;
+	}
 
 	// Resources
-	struct TerrainOptions terrain_options = {0};
+	{
+		struct TerrainOptions terrain_options = {0};
 
-	terrain_options.heightmap_filename = "./resources/heightmap.sgi";
-	terrain_options.colormap_filename = "./resources/colormap.sgi";
-	terrain_options.width = 10000; // 10 km
-	terrain_options.height = 10000;
-	terrain_options.elevation = 1000; // 1 km
+		terrain_options.heightmap_filename = "./resources/heightmap.sgi";
+		terrain_options.colormap_filename = "./resources/colormap.sgi";
+		terrain_options.width = 10000; // 10 km
+		terrain_options.height = 10000;
+		terrain_options.elevation = 1000; // 1 km
 
-	if ((terrain_program = ProgramCreate((char*)g_terrain_vertex, (char*)g_terrain_fragment, &st)) == NULL ||
-	    (terrain = TerrainCreate(terrain_options, &st)) == NULL)
-		goto return_failure;
+		if ((terrain_program = ProgramCreate((char*)g_terrain_vertex, (char*)g_terrain_fragment, &st)) == NULL ||
+		    (terrain = TerrainCreate(terrain_options, &st)) == NULL)
+			goto return_failure;
 
-	projection = Matrix4Perspective(FOV, (float)WINDOWS_MIN_WIDTH / (float)WINDOWS_MIN_HEIGHT, 0.1, 20000.0);
+		projection = Matrix4Perspective(FOV, (float)WINDOWS_MIN_WIDTH / (float)WINDOWS_MIN_HEIGHT, 0.1, 20000.0); // 20 km
+		ContextSetProjection(g_context, projection);
+		ContextSetProgram(g_context, terrain_program);
 
-	ContextSetProjection(context, projection);
-	ContextSetProgram(context, terrain_program);
-	ContextSetCamera(context, camera_target,
-	                 Vector3Add(camera_target, (struct Vector3){0.0, camera_distance, camera_distance}));
+		// Entities
+		EntityCreate(&entities, ClassGet(class_definitions, "Camera"), (struct Vector3){4.0, 5.0, 6.0});
+		EntityCreate(&entities, ClassGet(class_definitions, "Player"), (struct Vector3){1.0, 2.0, 3.0});
+	}
 
 	// Yay!
 	while (1)
 	{
-		ContextUpdate(context, &window_specs, &time_specs, &input_specs);
-		ContextDraw(context, terrain->vertices, terrain->index, terrain->color);
-		sCameraMove(context, &camera_target, &camera_distance);
+		ContextUpdate(g_context, &g_window_specs, &g_time_specs, &g_input_specs);
+		ContextDraw(g_context, terrain->vertices, terrain->index, terrain->color);
 
-		/*printf("%s %s %s %s %s %s %s %s %s %s %s\n", input_specs.a ? "a" : "-", input_specs.b ? "b" : "-", input_specs.x ? "x" : "-",
-		       input_specs.y ? "y" : "-", input_specs.lb ? "lb" : "--", input_specs.rb ? "rb" : "--", input_specs.view ? "view" : "----",
-		       input_specs.menu ? "menu" : "----", input_specs.guide ? "guide" : "-----", input_specs.ls ? "ls" : "--", input_specs.rs ? "rs" : "--");
+		EntitiesUpdate(&entities, (g_time_specs.miliseconds_betwen / 33.3333));
 
-		printf("left [x: %+0.2f, y: %+0.2f, t: %+0.2f], right [x: %+0.2f, y: %+0.2f, t: %+0.2f]\n", input_specs.left_analog.h,
-		       input_specs.left_analog.v, input_specs.left_analog.t, input_specs.right_analog.h, input_specs.right_analog.v, input_specs.right_analog.t);
+		/*printf("%s %s %s %s %s %s %s %s %s %s %s\n", g_input_specs.a ? "a" : "-", g_input_specs.b ? "b" : "-",
+		g_input_specs.x ? "x" : "-", g_input_specs.y ? "y" : "-", g_input_specs.lb ? "lb" : "--", g_input_specs.rb ? "rb" :
+		"--", g_input_specs.view ? "view" : "----", g_input_specs.menu ? "menu" : "----", g_input_specs.guide ? "guide" :
+		"-----", g_input_specs.ls ? "ls" : "--", g_input_specs.rs ? "rs" : "--");
 
-		printf("pad [x: %+0.2f, y: %+0.2f]\n", input_specs.pad.h, input_specs.pad.v);*/
+		printf("left [x: %+0.2f, y: %+0.2f, t: %+0.2f], right [x: %+0.2f, y: %+0.2f, t: %+0.2f]\n",
+		g_input_specs.left_analog.h, g_input_specs.left_analog.v, g_input_specs.left_analog.t, g_input_specs.right_analog.h,
+		g_input_specs.right_analog.v, g_input_specs.right_analog.t);
+
+		printf("pad [x: %+0.2f, y: %+0.2f]\n", g_input_specs.pad.h, g_input_specs.pad.v);*/
 
 		// Window specifications
-		if (window_specs.resized == true)
+		if (g_window_specs.resized == true)
 		{
-			printf("Window resized: %ix%i px\n", window_specs.size.x, window_specs.size.y);
+			printf("Window resized: %ix%i px\n", g_window_specs.size.x, g_window_specs.size.y);
 
 			projection =
-			    Matrix4Perspective(FOV, (float)window_specs.size.x / (float)window_specs.size.y, 0.1, 20000.0); // 20 km
-			ContextSetProjection(context, projection);
+			    Matrix4Perspective(FOV, (float)g_window_specs.size.x / (float)g_window_specs.size.y, 0.1, 20000.0); // 20 km
+			ContextSetProjection(g_context, projection);
 		}
 
-		if (window_specs.close == true)
+		if (g_window_specs.close == true)
 			break;
 	}
 
 	// Bye!
+	DictionaryDelete(class_definitions);
+	ListClean(&entities);
 	ProgramDelete(terrain_program);
 	TerrainDelete(terrain);
-	ContextDelete(context);
+	ContextDelete(g_context);
 
 	return EXIT_SUCCESS;
 
@@ -228,8 +179,8 @@ return_failure:
 		TerrainDelete(terrain);
 	if (terrain_program != NULL)
 		ProgramDelete(terrain_program);
-	if (context != NULL)
-		ContextDelete(context);
+	if (g_context != NULL)
+		ContextDelete(g_context);
 
 	return EXIT_FAILURE;
 }

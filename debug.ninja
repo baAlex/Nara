@@ -25,20 +25,25 @@ build ./objects/debug/red-vertex.o:       compile ./objects/debug/red-vertex.c
 
 # Lib Japan
 build ./objects/debug/buffer.o:     compile ./source/lib-japan/source/buffer.c
+build ./objects/debug/dictionary.o: compile ./source/lib-japan/source/dictionary.c
 build ./objects/debug/endianness.o: compile ./source/lib-japan/source/endianness.c
 build ./objects/debug/image.o:      compile ./source/lib-japan/source/image.c
 build ./objects/debug/image-sgi.o:  compile ./source/lib-japan/source/image-sgi.c
+build ./objects/debug/list.o:       compile ./source/lib-japan/source/list.c
 build ./objects/debug/matrix.o:     compile ./source/lib-japan/source/matrix.c
 build ./objects/debug/status.o:     compile ./source/lib-japan/source/status.c
 build ./objects/debug/vector.o:     compile ./source/lib-japan/source/vector.c
 
 # Nara-dbg
-build ./objects/debug/nara.o: compile ./source/nara.c
-build ./objects/debug/context.o: compile ./source/context.c
-build ./objects/debug/context-input.o: compile ./source/context-input.c
+build ./objects/debug/nara.o:           compile ./source/nara.c
+build ./objects/debug/context.o:        compile ./source/context.c
+build ./objects/debug/context-input.o:  compile ./source/context-input.c
 build ./objects/debug/context-opengl.o: compile ./source/context-opengl.c
-build ./objects/debug/context-time.o: compile ./source/context-time.c
-build ./objects/debug/terrain.o: compile ./source/terrain.c
+build ./objects/debug/context-time.o:   compile ./source/context-time.c
+build ./objects/debug/entity.o:         compile ./source/entity.c
+build ./objects/debug/game-camera.o:    compile ./source/game-camera.c
+build ./objects/debug/game-player.o:    compile ./source/game-player.c
+build ./objects/debug/terrain.o:        compile ./source/terrain.c
 
 # Link
 build nara-dbg: link ./objects/debug/nara.o $
@@ -47,9 +52,11 @@ build nara-dbg: link ./objects/debug/nara.o $
 ./objects/debug/red-fragment.o $
 ./objects/debug/red-vertex.o $
 ./objects/debug/buffer.o $
+./objects/debug/dictionary.o $
 ./objects/debug/endianness.o $
 ./objects/debug/image.o $
 ./objects/debug/image-sgi.o $
+./objects/debug/list.o $
 ./objects/debug/matrix.o $
 ./objects/debug/status.o $
 ./objects/debug/vector.o $
@@ -57,4 +64,7 @@ build nara-dbg: link ./objects/debug/nara.o $
 ./objects/debug/context-input.o $
 ./objects/debug/context-opengl.o $
 ./objects/debug/context-time.o $
+./objects/debug/entity.o $
+./objects/debug/game-camera.o $
+./objects/debug/game-player.o $
 ./objects/debug/terrain.o
