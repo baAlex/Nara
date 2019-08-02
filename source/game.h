@@ -19,17 +19,12 @@
 	#define DEG_TO_RAD(d) ((d)*M_PI / 180.0)
 	#define RAD_TO_DEG(r) ((r)*180.0 / M_PI)
 
-	// TODO: Too many globals!
-	extern struct WindowSpecifications g_window_specs;
-	extern struct TimeSpecifications g_time_specs;
 	extern struct InputSpecifications g_input_specs;
-	extern struct Context* g_context;
 
 
 	struct GameCamera
 	{
-		struct Vector3 target;
-		float distance;
+		int nothing;
 	};
 
 	void GameCameraStart(struct Entity* self);
@@ -39,8 +34,7 @@
 
 	struct GamePlayer
 	{
-		// At the moment working as placeholder
-		float acceleration;
+		int nothing;
 	};
 
 	void GamePlayerStart(struct Entity* self);

@@ -51,7 +51,8 @@
 	struct ContextOpenGl
 	{
 		struct Matrix4 projection;
-		struct Vector3 camera_components[2]; // 0 = Target, 1 = Origin
+		struct Matrix4 camera;
+		//struct Vector3 camera_components[2]; // 0 = Target, 1 = Origin
 
 		const struct Program* current_program;
 
@@ -68,6 +69,7 @@
 	void SetProgram(struct ContextOpenGl*, const struct Program* program);
 	void SetProjection(struct ContextOpenGl*, struct Matrix4 matrix);
 	void SetCamera(struct ContextOpenGl*, struct Vector3 target, struct Vector3 origin);
+	void SetCameraAsMatrix(struct ContextOpenGl*, struct Matrix4 matrix);
 	void Draw(const struct Vertices* vertices, const struct Index* index, const struct Texture* color);
 
 

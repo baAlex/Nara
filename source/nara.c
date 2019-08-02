@@ -68,6 +68,7 @@ int main()
 	struct Terrain* terrain = NULL;         // a game map/level. Being loaded from a file
 
 	struct Matrix4 projection;
+	struct Entity* camera = NULL;
 
 	printf("Nara v0.1\n");
 	printf("- Lib-Japan v%i.%i.%i\n", JAPAN_VERSION_MAJOR, JAPAN_VERSION_MINOR, JAPAN_VERSION_PATCH);
@@ -126,7 +127,7 @@ int main()
 		ContextSetProgram(g_context, terrain_program);
 
 		// Entities
-		EntityCreate(&entities, ClassGet(class_definitions, "Camera"), (struct Vector3){4.0, 5.0, 6.0});
+		camera = EntityCreate(&entities, ClassGet(class_definitions, "Camera"), (struct Vector3){4.0, 5.0, 6.0});
 		EntityCreate(&entities, ClassGet(class_definitions, "Player"), (struct Vector3){1.0, 2.0, 3.0});
 	}
 
@@ -149,7 +150,22 @@ int main()
 
 		printf("pad [x: %+0.2f, y: %+0.2f]\n", g_input_specs.pad.h, g_input_specs.pad.v);*/
 
-		// Window specifications
+		// Update view
+		if (Vector3Equals(camera->position, camera->old_position) == false
+		|| Vector3Equals(camera->angle, camera->old_angle) == false)
+		{
+			struct Matrix4 rot;
+			struct Matrix4 pos;
+
+			rot = Matrix4Identity();
+			rot = Matrix4RotateX(rot, DEG_TO_RAD(camera->angle.x));
+			rot = Matrix4RotateZ(rot, DEG_TO_RAD(camera->angle.z));
+
+			pos = Matrix4Translate(Vector3Invert(camera->position));
+
+			ContextSetCameraAsMatrix(g_context, Matrix4Multiply(rot, pos));
+		}
+
 		if (g_window_specs.resized == true)
 		{
 			printf("Window resized: %ix%i px\n", g_window_specs.size.x, g_window_specs.size.y);
@@ -159,6 +175,7 @@ int main()
 			ContextSetProjection(g_context, projection);
 		}
 
+		// Exit?
 		if (g_window_specs.close == true)
 			break;
 	}

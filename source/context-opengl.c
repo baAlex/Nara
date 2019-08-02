@@ -437,9 +437,6 @@ void SetProgram(struct ContextOpenGl* state, const struct Program* program)
 {
 	if (program != state->current_program)
 	{
-		struct Matrix4 as_matrix =
-		    Matrix4LookAt(state->camera_components[1], state->camera_components[0], (struct Vector3){0.0, 0.0, 1.0});
-
 		state->current_program = program;
 		state->u_projection = glGetUniformLocation(program->ptr, "projection");
 		state->u_camera_projection = glGetUniformLocation(state->current_program->ptr, "camera_projection");
@@ -447,9 +444,9 @@ void SetProgram(struct ContextOpenGl* state, const struct Program* program)
 		state->u_color_texture = glGetUniformLocation(state->current_program->ptr, "color_texture");
 
 		glUseProgram(program->ptr);
-		glUniformMatrix4fv(state->u_projection, 1, GL_FALSE, state->projection.e);
-		glUniformMatrix4fv(state->u_camera_projection, 1, GL_FALSE, as_matrix.e);
-		glUniform3fv(state->u_camera_components, 2, (float*)&state->camera_components);
+		glUniformMatrix4fv(state->u_projection, 1, GL_FALSE, &state->projection.e[0][0]);
+		glUniformMatrix4fv(state->u_camera_projection, 1, GL_FALSE, &state->camera.e[0][0]);
+		//glUniform3fv(state->u_camera_components, 2, (float*)&state->camera_components);
 		glUniform1i(state->u_color_texture, 0); // Texture unit 0
 	}
 }
@@ -464,7 +461,7 @@ void SetProjection(struct ContextOpenGl* state, struct Matrix4 matrix)
 	memcpy(&state->projection, &matrix, sizeof(struct Matrix4));
 
 	if (state->current_program != NULL)
-		glUniformMatrix4fv(state->u_projection, 1, GL_FALSE, state->projection.e);
+		glUniformMatrix4fv(state->u_projection, 1, GL_FALSE, &state->projection.e[0][0]);
 }
 
 
@@ -474,17 +471,32 @@ void SetProjection(struct ContextOpenGl* state, struct Matrix4 matrix)
 -----------------------------*/
 void SetCamera(struct ContextOpenGl* state, struct Vector3 target, struct Vector3 origin)
 {
-	state->camera_components[0] = target;
-	state->camera_components[1] = origin;
+	//state->camera_components[0] = target;
+	//state->camera_components[1] = origin;
+
+	state->camera = Matrix4LookAt(origin, target, (struct Vector3){0.0, 0.0, 1.0});
 
 	if (state->current_program != NULL)
 	{
-		struct Matrix4 as_matrix = Matrix4LookAt(origin, target, (struct Vector3){0.0, 0.0, 1.0});
-
-		glUniformMatrix4fv(state->u_camera_projection, 1, GL_FALSE, as_matrix.e);
-		glUniform3fv(state->u_camera_components, 2, (float*)&state->camera_components);
+		glUniformMatrix4fv(state->u_camera_projection, 1, GL_FALSE, &state->camera.e[0][0]);
+		//glUniform3fv(state->u_camera_components, 2, (float*)&state->camera_components);
 	}
 }
+
+void SetCameraAsMatrix(struct ContextOpenGl* state, struct Matrix4 matrix)
+{
+	//state->camera_components[0] = target;
+	//state->camera_components[1] = origin;
+
+	state->camera = matrix;
+
+	if (state->current_program != NULL)
+	{
+		glUniformMatrix4fv(state->u_camera_projection, 1, GL_FALSE, &state->camera.e[0][0]);
+		//glUniform3fv(state->u_camera_components, 2, (float*)&state->camera_components);
+	}
+}
+
 
 
 /*-----------------------------

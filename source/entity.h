@@ -45,6 +45,10 @@
 		void* data;
 
 		struct Vector3 position;
+		struct Vector3 angle;
+
+		struct Vector3 old_position;
+		struct Vector3 old_angle;
 
 		// Private:
 		bool to_start;

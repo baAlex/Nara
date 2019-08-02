@@ -38,13 +38,9 @@ SOFTWARE.
 void GameCameraStart(struct Entity* self)
 {
 	struct GameCamera* data = self->data;
-	printf("### Hello, Camera %p here!\n", (void*)self);
+	(void)data;
 
-	data->target = (struct Vector3){5000.0, 5000.0, 0.0};
-	data->distance = 5000.0;
-
-	ContextSetCamera(g_context, data->target,
-	                 Vector3Add(data->target, (struct Vector3){0.0, data->distance, data->distance}));
+	self->position = (struct Vector3){5000.0, 5000.0, 5000.0};
 }
 
 
@@ -56,8 +52,6 @@ void GameCameraDelete(struct Entity* self)
 {
 	struct GameCamera* data = self->data;
 	(void)data;
-
-	printf("### Bye, was a pleasure for Camera %p\n", (void*)self);
 }
 
 
@@ -68,67 +62,45 @@ void GameCameraDelete(struct Entity* self)
 void GameCameraThink(struct Entity* self, float delta)
 {
 	struct GameCamera* data = self->data;
+	(void)data;
 
-	bool update = false;
-	struct Vector3 temp_origin = {0};
-	struct Vector3 v = {0};
-
-	float speed = 50.0 * delta;
-
-	// Up, down
-	if (g_input_specs.lb == true && g_input_specs.rb == false)
-	{
-		data->distance += speed / 2.0;
-		update = true;
-	}
-	else if (g_input_specs.rb == true && g_input_specs.lb == false)
-	{
-		data->distance -= speed / 2.0;
-		update = true;
-	}
-
-	temp_origin = Vector3Add(data->target, (struct Vector3){0.0, data->distance, data->distance});
-
-	// Current angle
-	v = Vector3Subtract(temp_origin, data->target);
-	v.z = 0.0;
-	v = Vector3Normalize(v);
+	struct Vector3 temp_v;
 
 	// Forward, backward
 	if (fabs(g_input_specs.left_analog.v) > 0.1) // Dead zone
 	{
-		v = Vector3Scale(v, powf((g_input_specs.left_analog.v), 2.0) * speed);
+		float x = sin(DEG_TO_RAD(self->angle.z)) * sin(DEG_TO_RAD(self->angle.x));
+		float y = cos(DEG_TO_RAD(self->angle.z)) * sin(DEG_TO_RAD(self->angle.x));
+		float z = cos(DEG_TO_RAD(self->angle.x));
 
-		if (g_input_specs.left_analog.v < 0.0)
-			v = Vector3Invert(v);
+		temp_v = Vector3Set(x, y, z);
+		temp_v = Vector3Scale(temp_v, g_input_specs.left_analog.v * 50.0 * delta);
 
-		data->target = Vector3Add(data->target, v);
-		temp_origin = Vector3Add(temp_origin, v);
-		update = true;
-
-		// Current angle (again for left/right calculation)
-		v = Vector3Subtract(temp_origin, data->target);
-		v.z = 0.0;
-		v = Vector3Normalize(v);
+		self->position = Vector3Add(self->position, temp_v);
 	}
 
-	// Left, right
-	if (fabs(g_input_specs.left_analog.h) > 0.1)
+	// Stride left, right
+	if (fabs(g_input_specs.left_analog.h) > 0.1) // Dead zone
 	{
-		float angle = atan2f(v.y, v.x);
+		float x = sin(DEG_TO_RAD(self->angle.z + 90.0));
+		float y = cos(DEG_TO_RAD(self->angle.z + 90.0));
+		float z = 0.0;
 
-		v.x = cosf(angle + DEG_TO_RAD(90.0));
-		v.y = sinf(angle + DEG_TO_RAD(90.0));
-		v = Vector3Scale(v, powf(g_input_specs.left_analog.h, 2.0) * (-speed));
+		temp_v = Vector3Set(x, y, z);
+		temp_v = Vector3Scale(temp_v, g_input_specs.left_analog.h * 50.0 * delta);
 
-		if (g_input_specs.left_analog.h < 0.0)
-			v = Vector3Invert(v);
-
-		data->target = Vector3Subtract(data->target, v);
-		temp_origin = Vector3Subtract(temp_origin, v);
-		update = true;
+		self->position = Vector3Add(self->position, temp_v);
 	}
 
-	if (update == true)
-		ContextSetCamera(g_context, data->target, temp_origin);
+	// Look up, down
+	if (fabs(g_input_specs.right_analog.v) > 0.2)
+	{
+		self->angle.x += g_input_specs.right_analog.v * 4.0 * delta;
+	}
+
+	// Look left, right
+	if (fabs(g_input_specs.right_analog.h) > 0.2)
+	{
+		self->angle.z += g_input_specs.right_analog.h * 4.0 * delta;
+	}
 }

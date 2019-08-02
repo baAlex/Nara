@@ -236,9 +236,9 @@ void ReceiveKeyboardKey(struct ContextInput* state, int key, int action)
 	state->key_specs.left_analog.v = sKeysToAxe(action, key, state->key_specs.left_analog.v, GLFW_KEY_S, GLFW_KEY_W);
 	state->key_specs.left_analog.h = sKeysToAxe(action, key, state->key_specs.left_analog.h, GLFW_KEY_D, GLFW_KEY_A);
 
-	state->key_specs.right_analog.v = sKeysToAxe(action, key, state->key_specs.right_analog.v, GLFW_KEY_KP_5, GLFW_KEY_KP_8);
-	state->key_specs.right_analog.h = sKeysToAxe(action, key, state->key_specs.right_analog.h, GLFW_KEY_KP_6, GLFW_KEY_KP_4);
+	state->key_specs.right_analog.v = sKeysToAxe(action, key, state->key_specs.right_analog.v, GLFW_KEY_DOWN, GLFW_KEY_UP);
+	state->key_specs.right_analog.h = sKeysToAxe(action, key, state->key_specs.right_analog.h, GLFW_KEY_RIGHT, GLFW_KEY_LEFT);
 
-	state->key_specs.pad.v = sKeysToAxe(action, key, state->key_specs.pad.v, GLFW_KEY_DOWN, GLFW_KEY_UP);
-	state->key_specs.pad.h = sKeysToAxe(action, key, state->key_specs.pad.h, GLFW_KEY_RIGHT, GLFW_KEY_LEFT);
+	state->key_specs.pad.v = sKeysToAxe(action, key, state->key_specs.pad.v, GLFW_KEY_K, GLFW_KEY_I);
+	state->key_specs.pad.h = sKeysToAxe(action, key, state->key_specs.pad.h, GLFW_KEY_J, GLFW_KEY_L);
 }

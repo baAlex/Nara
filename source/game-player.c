@@ -35,9 +35,6 @@ void GamePlayerStart(struct Entity* self)
 {
 	struct GamePlayer* data = self->data;
 	(void)data;
-
-	printf("### Ey. I, Player %p, should not be here!\n", (void*)self);
-	EntityDelete(self);
 }
 
 
@@ -45,8 +42,6 @@ void GamePlayerDelete(struct Entity* self)
 {
 	struct GamePlayer* data = self->data;
 	(void)data;
-
-	printf("### Good bye sir!\n");
 }
 
 

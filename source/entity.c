@@ -183,7 +183,12 @@ void EntitiesUpdate(struct List* list, float delta)
 		if (entity->to_delete == true || entity->to_start == true)
 			last_special_case = entity;
 		else if (entity->class->func_think != NULL)
+		{
+			entity->old_position = entity->position;
+			entity->old_angle = entity->angle;
+
 			entity->class->func_think(entity, delta);
+		}
 	}
 
 	// There are no entity to be started/deleted, bye!
