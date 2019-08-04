@@ -24,23 +24,30 @@ SOFTWARE.
 
 -------------------------------
 
- [game-camera.c]
+ [camera.c]
  - Alexander Brandt 2019
 -----------------------------*/
 
 #include "game.h"
 
 
+#define ANALOG_DEAD_ZONE 0.2
+#define MOVEMENT_SPEED 50.0
+#define LOOK_SPEED 4.0
+
+
 /*-----------------------------
 
  GameCameraStart()
 -----------------------------*/
-void GameCameraStart(struct Entity* self)
+void* GameCameraStart()
 {
-	struct GameCamera* data = self->data;
-	(void)data;
+	struct GameCamera* self = malloc(sizeof(struct GameCamera)); // TODO, check error
 
-	self->position = (struct Vector3){5000.0, 5000.0, 5000.0};
+	self->co.position = (struct Vector3){5000.0, 5000.0, 5000.0};
+	self->co.angle = (struct Vector3){0.0, 0.0, 0.0};
+
+	return self;
 }
 
 
@@ -48,10 +55,10 @@ void GameCameraStart(struct Entity* self)
 
  GameCameraDelete()
 -----------------------------*/
-void GameCameraDelete(struct Entity* self)
+void GameCameraDelete(void* raw_self)
 {
-	struct GameCamera* data = self->data;
-	(void)data;
+	struct GameCamera* self = raw_self;
+	free(self);
 }
 
 
@@ -59,48 +66,53 @@ void GameCameraDelete(struct Entity* self)
 
  GameCameraThink()
 -----------------------------*/
-void GameCameraThink(struct Entity* self, float delta)
+struct EntityCommon GameCameraThink(void* raw_self, const struct EntityInput* input)
 {
-	struct GameCamera* data = self->data;
-	(void)data;
-
+	struct GameCamera* self = raw_self;
 	struct Vector3 temp_v;
 
 	// Forward, backward
-	if (fabs(g_input_specs.left_analog.v) > 0.1) // Dead zone
+	if (fabs(input->left_analog.v) > ANALOG_DEAD_ZONE)
 	{
-		float x = sin(DEG_TO_RAD(self->angle.z)) * sin(DEG_TO_RAD(self->angle.x));
-		float y = cos(DEG_TO_RAD(self->angle.z)) * sin(DEG_TO_RAD(self->angle.x));
-		float z = cos(DEG_TO_RAD(self->angle.x));
+		float x = sinf(DEG_TO_RAD(self->co.angle.z)) * sinf(DEG_TO_RAD(self->co.angle.x));
+		float y = cosf(DEG_TO_RAD(self->co.angle.z)) * sinf(DEG_TO_RAD(self->co.angle.x));
+		float z = cosf(DEG_TO_RAD(self->co.angle.x));
 
 		temp_v = Vector3Set(x, y, z);
-		temp_v = Vector3Scale(temp_v, g_input_specs.left_analog.v * 50.0 * delta);
+		temp_v = Vector3Scale(temp_v, input->left_analog.v * MOVEMENT_SPEED * input->delta);
 
-		self->position = Vector3Add(self->position, temp_v);
+		self->co.position = Vector3Add(self->co.position, temp_v);
 	}
 
 	// Stride left, right
-	if (fabs(g_input_specs.left_analog.h) > 0.1) // Dead zone
+	if (fabs(input->left_analog.h) > ANALOG_DEAD_ZONE)
 	{
-		float x = sin(DEG_TO_RAD(self->angle.z + 90.0));
-		float y = cos(DEG_TO_RAD(self->angle.z + 90.0));
+		float x = sinf(DEG_TO_RAD(self->co.angle.z + 90.0));
+		float y = cosf(DEG_TO_RAD(self->co.angle.z + 90.0));
 		float z = 0.0;
 
 		temp_v = Vector3Set(x, y, z);
-		temp_v = Vector3Scale(temp_v, g_input_specs.left_analog.h * 50.0 * delta);
+		temp_v = Vector3Scale(temp_v, input->left_analog.h * MOVEMENT_SPEED * input->delta);
 
-		self->position = Vector3Add(self->position, temp_v);
+		self->co.position = Vector3Add(self->co.position, temp_v);
 	}
 
 	// Look up, down
-	if (fabs(g_input_specs.right_analog.v) > 0.2)
+	if (fabs(input->right_analog.v) > ANALOG_DEAD_ZONE)
 	{
-		self->angle.x += g_input_specs.right_analog.v * 4.0 * delta;
+		self->co.angle.x += input->right_analog.v * LOOK_SPEED * input->delta;
+
+		if(self->co.angle.x < -180.0)
+			self->co.angle.x = -180.0;
+		if(self->co.angle.x > 0.0)
+			self->co.angle.x = 0.0;
 	}
 
 	// Look left, right
-	if (fabs(g_input_specs.right_analog.h) > 0.2)
+	if (fabs(input->right_analog.h) > ANALOG_DEAD_ZONE)
 	{
-		self->angle.z += g_input_specs.right_analog.h * 4.0 * delta;
+		self->co.angle.z += input->right_analog.h * LOOK_SPEED * input->delta;
 	}
+
+	return self->co;
 }

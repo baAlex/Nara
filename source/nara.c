@@ -35,8 +35,8 @@ SOFTWARE.
 
 #include "context.h"
 #include "entity.h"
+#include "game/game.h"
 #include "terrain.h"
-#include "game.h"
 
 #define FOV 45
 
@@ -48,10 +48,65 @@ extern const uint8_t g_terrain_fragment[];
 extern const uint8_t g_red_vertex[];
 extern const uint8_t g_red_fragment[];
 
-struct WindowSpecifications g_window_specs;
-struct TimeSpecifications g_time_specs;
-struct InputSpecifications g_input_specs;
-struct Context* g_context = NULL;
+static struct WindowSpecifications s_window_specs;
+static struct TimeSpecifications s_time_specs;
+static struct InputSpecifications s_input_specs;
+static struct Context* s_context = NULL;
+
+
+/*-----------------------------
+
+ sInitializeClasses()
+-----------------------------*/
+static struct Dictionary* sInitializeClasses()
+{
+	struct Dictionary* classes = DictionaryCreate(NULL);
+	struct Class* class = NULL;
+
+	class = ClassCreate(classes, "Camera");
+	class->func_start = GameCameraStart;
+	class->func_think = GameCameraThink;
+	class->func_delete = GameCameraDelete;
+
+	class = ClassCreate(classes, "Point");
+	class->func_start = GamePointStart;
+	class->func_think = GamePointThink;
+	class->func_delete = GamePointDelete;
+
+	return classes;
+}
+
+
+/*-----------------------------
+
+ sSetProjection()
+-----------------------------*/
+static void sSetProjection(struct Vector2i window_size, struct Context* s_context)
+{
+	struct Matrix4 projection;
+
+	projection = Matrix4Perspective(FOV, (float)window_size.x / (float)window_size.y, 0.1, 20000.0); // 20 km
+	ContextSetProjection(s_context, projection);
+}
+
+
+/*-----------------------------
+
+ sSetCamera()
+-----------------------------*/
+static void sSetCamera(const struct Entity* camera, struct Context* s_context)
+{
+	struct Matrix4 projection;
+	struct Matrix4 translation;
+
+	projection = Matrix4Identity();
+	projection = Matrix4RotateX(projection, DEG_TO_RAD(camera->co.angle.x));
+	projection = Matrix4RotateZ(projection, DEG_TO_RAD(camera->co.angle.z));
+
+	translation = Matrix4Translate(Vector3Invert(camera->co.position));
+
+	ContextSetCameraAsMatrix(s_context, Matrix4Multiply(projection, translation));
+}
 
 
 /*-----------------------------
@@ -61,21 +116,22 @@ struct Context* g_context = NULL;
 int main()
 {
 	struct Status st = {0};
-	struct Dictionary* class_definitions = NULL;
 
 	struct List entities = {0};             // In a future these three should
 	struct Program* terrain_program = NULL; // be component of an object representing
 	struct Terrain* terrain = NULL;         // a game map/level. Being loaded from a file
 
-	struct Matrix4 projection;
-	struct Entity* camera = NULL;
+	struct Dictionary* classes = sInitializeClasses(); // TODO: error check
+	struct EntityInput entities_input = {0};
+	struct Entity* camera_entity = NULL;
+
 
 	printf("Nara v0.1\n");
 	printf("- Lib-Japan v%i.%i.%i\n", JAPAN_VERSION_MAJOR, JAPAN_VERSION_MINOR, JAPAN_VERSION_PATCH);
 	printf("\n");
 
 	// Context initialization
-	g_context = ContextCreate((struct ContextOptions){
+	s_context = ContextCreate((struct ContextOptions){
 		.caption = "Nara",
 		.window_size = {WINDOWS_MIN_WIDTH * 4, WINDOWS_MIN_HEIGHT * 4},
 		.window_min_size = {WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT},
@@ -85,28 +141,8 @@ int main()
 	},
 	&st);
 
-	if (g_context == NULL)
+	if (s_context == NULL)
 		goto return_failure;
-
-	// Classes initialization
-	{
-		class_definitions = DictionaryCreate(NULL);
-		struct Class* class = NULL;
-
-		class = ClassCreate(class_definitions, "Camera");
-		class->entity_data_size = sizeof(struct GameCamera);
-		class->class_data_size = 0;
-		class->func_start = GameCameraStart;
-		class->func_think = GameCameraThink;
-		class->func_delete = GameCameraDelete;
-
-		class = ClassCreate(class_definitions, "Player");
-		class->entity_data_size = sizeof(struct GamePlayer);
-		class->class_data_size = 0;
-		class->func_start = GamePlayerStart;
-		class->func_think = GamePlayerThink;
-		class->func_delete = GamePlayerDelete;
-	}
 
 	// Resources
 	{
@@ -116,76 +152,64 @@ int main()
 		terrain_options.colormap_filename = "./resources/colormap.sgi";
 		terrain_options.width = 10000; // 10 km
 		terrain_options.height = 10000;
-		terrain_options.elevation = 1000; // 1 km
+		terrain_options.elevation = 4000; // 4 km
 
 		if ((terrain_program = ProgramCreate((char*)g_terrain_vertex, (char*)g_terrain_fragment, &st)) == NULL ||
 		    (terrain = TerrainCreate(terrain_options, &st)) == NULL)
 			goto return_failure;
 
-		projection = Matrix4Perspective(FOV, (float)WINDOWS_MIN_WIDTH / (float)WINDOWS_MIN_HEIGHT, 0.1, 20000.0); // 20 km
-		ContextSetProjection(g_context, projection);
-		ContextSetProgram(g_context, terrain_program);
+		sSetProjection((struct Vector2i){WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT}, s_context);
+		ContextSetProgram(s_context, terrain_program);
 
-		// Entities
-		camera = EntityCreate(&entities, ClassGet(class_definitions, "Camera"), (struct Vector3){4.0, 5.0, 6.0});
-		EntityCreate(&entities, ClassGet(class_definitions, "Player"), (struct Vector3){1.0, 2.0, 3.0});
+		camera_entity = EntityCreate(&entities, ClassGet(classes, "Camera"));
+		EntityCreate(&entities, ClassGet(classes, "Point"));
 	}
 
 	// Yay!
 	while (1)
 	{
-		ContextUpdate(g_context, &g_window_specs, &g_time_specs, &g_input_specs);
-		ContextDraw(g_context, terrain->vertices, terrain->index, terrain->color);
+		ContextUpdate(s_context, &s_window_specs, &s_time_specs, &s_input_specs);
+		ContextDraw(s_context, terrain->vertices, terrain->index, terrain->color);
 
-		EntitiesUpdate(&entities, (g_time_specs.miliseconds_betwen / 33.3333));
+		memcpy(&entities_input, &s_input_specs, sizeof(struct InputSpecifications)); // HACK!
+		entities_input.delta = s_time_specs.miliseconds_betwen / 33.3333;
 
-		/*printf("%s %s %s %s %s %s %s %s %s %s %s\n", g_input_specs.a ? "a" : "-", g_input_specs.b ? "b" : "-",
-		g_input_specs.x ? "x" : "-", g_input_specs.y ? "y" : "-", g_input_specs.lb ? "lb" : "--", g_input_specs.rb ? "rb" :
-		"--", g_input_specs.view ? "view" : "----", g_input_specs.menu ? "menu" : "----", g_input_specs.guide ? "guide" :
-		"-----", g_input_specs.ls ? "ls" : "--", g_input_specs.rs ? "rs" : "--");
+		EntitiesUpdate(&entities, entities_input);
+
+		/*printf("%s %s %s %s %s %s %s %s %s %s %s\n", s_input_specs.a ? "a" : "-", s_input_specs.b ? "b" : "-",
+		s_input_specs.x ? "x" : "-", s_input_specs.y ? "y" : "-", s_input_specs.lb ? "lb" : "--", s_input_specs.rb ?
+		"rb" :
+		"--", s_input_specs.view ? "view" : "----", s_input_specs.menu ? "menu" : "----", s_input_specs.guide ? "guide"
+		:
+		"-----", s_input_specs.ls ? "ls" : "--", s_input_specs.rs ? "rs" : "--");
 
 		printf("left [x: %+0.2f, y: %+0.2f, t: %+0.2f], right [x: %+0.2f, y: %+0.2f, t: %+0.2f]\n",
-		g_input_specs.left_analog.h, g_input_specs.left_analog.v, g_input_specs.left_analog.t, g_input_specs.right_analog.h,
-		g_input_specs.right_analog.v, g_input_specs.right_analog.t);
+		s_input_specs.left_analog.h, s_input_specs.left_analog.v, s_input_specs.left_analog.t,
+		s_input_specs.right_analog.h, s_input_specs.right_analog.v, s_input_specs.right_analog.t);
 
-		printf("pad [x: %+0.2f, y: %+0.2f]\n", g_input_specs.pad.h, g_input_specs.pad.v);*/
+		printf("pad [x: %+0.2f, y: %+0.2f]\n", s_input_specs.pad.h, s_input_specs.pad.v);*/
 
 		// Update view
-		if (Vector3Equals(camera->position, camera->old_position) == false
-		|| Vector3Equals(camera->angle, camera->old_angle) == false)
+		if (Vector3Equals(camera_entity->co.position, camera_entity->old_co.position) == false ||
+		    Vector3Equals(camera_entity->co.angle, camera_entity->old_co.angle) == false)
 		{
-			struct Matrix4 rot;
-			struct Matrix4 pos;
-
-			rot = Matrix4Identity();
-			rot = Matrix4RotateX(rot, DEG_TO_RAD(camera->angle.x));
-			rot = Matrix4RotateZ(rot, DEG_TO_RAD(camera->angle.z));
-
-			pos = Matrix4Translate(Vector3Invert(camera->position));
-
-			ContextSetCameraAsMatrix(g_context, Matrix4Multiply(rot, pos));
+			sSetCamera(camera_entity, s_context);
 		}
 
-		if (g_window_specs.resized == true)
-		{
-			printf("Window resized: %ix%i px\n", g_window_specs.size.x, g_window_specs.size.y);
-
-			projection =
-			    Matrix4Perspective(FOV, (float)g_window_specs.size.x / (float)g_window_specs.size.y, 0.1, 20000.0); // 20 km
-			ContextSetProjection(g_context, projection);
-		}
+		if (s_window_specs.resized == true)
+			sSetProjection(s_window_specs.size, s_context);
 
 		// Exit?
-		if (g_window_specs.close == true)
+		if (s_window_specs.close == true)
 			break;
 	}
 
 	// Bye!
-	DictionaryDelete(class_definitions);
+	DictionaryDelete(classes);
 	ListClean(&entities);
 	ProgramDelete(terrain_program);
 	TerrainDelete(terrain);
-	ContextDelete(g_context);
+	ContextDelete(s_context);
 
 	return EXIT_SUCCESS;
 
@@ -196,8 +220,8 @@ return_failure:
 		TerrainDelete(terrain);
 	if (terrain_program != NULL)
 		ProgramDelete(terrain_program);
-	if (g_context != NULL)
-		ContextDelete(g_context);
+	if (s_context != NULL)
+		ContextDelete(s_context);
 
 	return EXIT_FAILURE;
 }

@@ -12,6 +12,7 @@
 	#include "vector.h"
 	#include "list.h"
 	#include "dictionary.h"
+	#include "game/game.h"
 
 	struct Entity;
 
@@ -19,20 +20,10 @@
 	{
 		struct DictionaryItem* item;
 
-		void (*func_start)(struct Entity* self);
-		void (*func_delete)(struct Entity* self);
-		void (*func_think)(struct Entity* self, float delta);
+		void* (*func_start)();
+		void (*func_delete)(void* blob);
+		struct EntityCommon (*func_think)(void* blob, const struct EntityInput*);
 
-		int (*func_class_data_alloc)(void* data);
-		void (*func_class_data_free)(void* data);
-
-		size_t entity_data_size; // For every single entity *individually*
-		size_t class_data_size;  // A single chunk shared betwen all entities
-		                         // of the same class (npcs who uses the same
-		                         // model, should save it here)
-		void* data;
-
-		// Private:
 		size_t references;
 		bool to_delete;
 	};
@@ -40,17 +31,13 @@
 	struct Entity
 	{
 		struct ListItem* item;
-
 		struct Class* class;
-		void* data;
 
-		struct Vector3 position;
-		struct Vector3 angle;
+		void* blob;
 
-		struct Vector3 old_position;
-		struct Vector3 old_angle;
+		struct EntityCommon co;
+		struct EntityCommon old_co;
 
-		// Private:
 		bool to_start;
 		bool to_delete;
 	};
@@ -59,9 +46,9 @@
 	struct Class* ClassGet(struct Dictionary*, const char* name);
 	void ClassDelete(struct Class*);
 
-	struct Entity* EntityCreate(struct List*, struct Class* class, struct Vector3 position);
-	void EntityDelete(struct Entity*); // Marks entity to be deleted after the callbacks cycle
+	struct Entity* EntityCreate(struct List*, struct Class* class);
+	void EntityDelete(struct Entity*); // Marks entity to be deleted after the update cycle
 
-	void EntitiesUpdate(struct List*, float delta);
+	void EntitiesUpdate(struct List*, struct EntityInput input);
 
 #endif

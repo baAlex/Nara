@@ -24,30 +24,33 @@ SOFTWARE.
 
 -------------------------------
 
- [game-player.c]
+ [point.c]
  - Alexander Brandt 2019
 -----------------------------*/
 
 #include "game.h"
 
 
-void GamePlayerStart(struct Entity* self)
+void* GamePointStart()
 {
-	struct GamePlayer* data = self->data;
-	(void)data;
+	struct GamePoint* self = malloc(sizeof(struct GamePoint)); // TODO, check error
+
+	self->co.position = (struct Vector3){0.0, 0.0, 0.0};
+	self->co.angle = (struct Vector3){0.0, 0.0, 0.0};
+
+	return self;
 }
 
-
-void GamePlayerDelete(struct Entity* self)
+void GamePointDelete(void* raw_self)
 {
-	struct GamePlayer* data = self->data;
-	(void)data;
+	struct GamePoint* self = raw_self;
+	free(self);
 }
 
-
-void GamePlayerThink(struct Entity* self, float delta)
+struct EntityCommon GamePointThink(void* raw_self, const struct EntityInput* input)
 {
-	struct GamePlayer* data = self->data;
-	(void)data;
-	(void)delta;
+	(void)input;
+
+	struct GamePoint* self = raw_self;
+	return self->co;
 }

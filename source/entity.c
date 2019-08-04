@@ -39,18 +39,13 @@ static void sFreeEntityFromList(struct ListItem* item)
 	struct Entity* entity = item->data;
 	struct Class* class = entity->class;
 
+	if (entity->class->func_delete != NULL)
+		entity->class->func_delete(entity->blob);
+
 	class->references--;
 
-	if (class->class_data_size != 0 && class->references == 0)
-	{
-		if (class->func_class_data_free != NULL)
-			class->func_class_data_free(class->data);
-
-		free(class->data);
-	}
-
-	if (entity->class->func_delete != NULL)
-		entity->class->func_delete(entity);
+	if (class->to_delete == true && class->references == 0)
+		ClassDelete(class);
 
 	printf("(EntityFree) '%s : %p' freeded\n", class->item->key, (void*)entity);
 }
@@ -112,40 +107,25 @@ inline void ClassDelete(struct Class* class)
 
  EntityCreate()
 -----------------------------*/
-struct Entity* EntityCreate(struct List* list, struct Class* class, struct Vector3 position)
+struct Entity* EntityCreate(struct List* list, struct Class* class)
 {
 	struct ListItem* item = NULL;
 	struct Entity* entity = NULL;
 
-	if ((item = ListAdd(list, NULL, sizeof(struct Entity) + class->entity_data_size)) == NULL)
+	if ((item = ListAdd(list, NULL, sizeof(struct Entity))) == NULL)
 		return NULL;
 
-	item->callback_delete = sFreeEntityFromList; // I am not sure about this
+	item->callback_delete = sFreeEntityFromList;
 	entity = item->data;
 
-	// Entity set
 	memset(entity, 0, sizeof(struct Entity));
 	entity->item = item;
 	entity->class = class;
-	entity->position = position;
 	entity->to_start = true;
-
-	if (class->entity_data_size != 0)
-		entity->data = (struct Entity*)entity + 1;
-
-	// Class set
-	if (class->class_data_size != 0 && class->references == 0)
-	{
-		class->data = calloc(1, sizeof(class->class_data_size));
-
-		if (class->func_class_data_alloc != NULL)
-			class->func_class_data_alloc(class->data);
-	}
 
 	class->references++;
 
-	printf("(EntityCreate) '%s : %p' created, pos: [%02f, %02f, %02f]\n", class->item->key, (void*)entity, position.x,
-	       position.y, position.z);
+	printf("(EntityCreate) '%s : %p' created\n", class->item->key, (void*)entity);
 	return entity;
 }
 
@@ -164,7 +144,7 @@ inline void EntityDelete(struct Entity* entity)
 
  EntitiesUpdate()
 -----------------------------*/
-void EntitiesUpdate(struct List* list, float delta)
+void EntitiesUpdate(struct List* list, struct EntityInput input)
 {
 	struct ListItem* item = NULL;
 	struct Entity* entity = NULL;
@@ -184,10 +164,8 @@ void EntitiesUpdate(struct List* list, float delta)
 			last_special_case = entity;
 		else if (entity->class->func_think != NULL)
 		{
-			entity->old_position = entity->position;
-			entity->old_angle = entity->angle;
-
-			entity->class->func_think(entity, delta);
+			entity->old_co = entity->co;
+			entity->co = entity->class->func_think(entity->blob, &input);
 		}
 	}
 
@@ -206,7 +184,7 @@ void EntitiesUpdate(struct List* list, float delta)
 		if (entity->to_start == true)
 		{
 			if (entity->class->func_start != NULL)
-				entity->class->func_start(entity);
+				entity->blob = entity->class->func_start();
 
 			entity->to_start = false;
 		}

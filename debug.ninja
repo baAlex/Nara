@@ -41,9 +41,9 @@ build ./objects/debug/context-input.o:  compile ./source/context-input.c
 build ./objects/debug/context-opengl.o: compile ./source/context-opengl.c
 build ./objects/debug/context-time.o:   compile ./source/context-time.c
 build ./objects/debug/entity.o:         compile ./source/entity.c
-build ./objects/debug/game-camera.o:    compile ./source/game-camera.c
-build ./objects/debug/game-player.o:    compile ./source/game-player.c
 build ./objects/debug/terrain.o:        compile ./source/terrain.c
+build ./objects/debug/camera.o:         compile ./source/game/camera.c
+build ./objects/debug/point.o:          compile ./source/game/point.c
 
 # Link
 build nara-dbg: link ./objects/debug/nara.o $
@@ -65,6 +65,6 @@ build nara-dbg: link ./objects/debug/nara.o $
 ./objects/debug/context-opengl.o $
 ./objects/debug/context-time.o $
 ./objects/debug/entity.o $
-./objects/debug/game-camera.o $
-./objects/debug/game-player.o $
-./objects/debug/terrain.o
+./objects/debug/terrain.o $
+./objects/debug/camera.o $
+./objects/debug/point.o
