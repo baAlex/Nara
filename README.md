@@ -1,11 +1,12 @@
 Nara
 ====
 
-The terrain in the screenshots should work as an overworld for an action rpg,
-but at the moment is more a renderer that a videogame.
+The terrain in the screenshots should work as an overworld for an action rpg, but at the moment is more a renderer that a videogame.
 
-![screenshot](./documentation/screenshot-02.jpg)
-![screenshot](./documentation/screenshot-03.jpg)
+![screenshot](./documentation/screenshot-04.jpg)
+![screenshot](./documentation/screenshot-05.jpg)
+
+ It's not my idea to make the next Frostbite engine, using only OpenGL ES2 I want to see this game running on mobile devices (and with old-school lightmaps it still looks pretty). And yes, the screenshots delate that there are no lod mechanism on the terrain rendering, I'm working on it ⛰️📐️.
 
 
 Compilation
