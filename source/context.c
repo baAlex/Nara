@@ -31,6 +31,20 @@ SOFTWARE.
 #include "context-private.h"
 #include <stdio.h>
 
+struct Context
+{
+	GLFWwindow* window;
+	struct Vector2i window_size;
+	bool window_resized;
+
+	struct ContextOptions options;
+
+	// Modules:
+	struct ContextOpenGl opengl;
+	struct ContextInput input;
+	struct ContextTime time;
+};
+
 
 inline void ContextSetProgram(struct Context* context, const struct Program* program)
 {
@@ -47,9 +61,9 @@ inline void ContextSetCamera(struct Context* context, struct Vector3 target, str
 	SetCamera(&context->opengl, target, origin);
 }
 
-inline void ContextSetCameraAsMatrix(struct Context* context, struct Matrix4 matrix)
+inline void ContextSetCameraAsMatrix(struct Context* context, struct Matrix4 matrix, struct Vector3 origin)
 {
-	SetCameraAsMatrix(&context->opengl, matrix);
+	SetCameraAsMatrix(&context->opengl, matrix, origin);
 }
 
 void ContextDraw(struct Context* context, const struct Vertices* vertices, const struct Index* index,

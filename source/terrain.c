@@ -42,13 +42,17 @@ SOFTWARE.
 -----------------------------*/
 static inline float sPixelAsFloat(const struct Image* image, float x, float y)
 {
-	uint8_t v = 0;
+	uint8_t v8 = 0;
+	uint16_t v16 = 0;
 
 	switch (image->format)
 	{
 	case IMAGE_GRAY8:
-		v = ((uint8_t*)image->data)[(int)floor(x) + image->width * (int)floor(y)];
-		return (float)v / 255.0;
+		v8 = ((uint8_t*)image->data)[(int)floor(x) + image->width * (int)floor(y)];
+		return (float)v8 / 255.0;
+	case IMAGE_GRAY16:
+		v16 = ((uint16_t*)image->data)[(int)floor(x) + image->width * (int)floor(y)];
+		return (float)v16 / 65535.0;
 	default:
 		break;
 	}
@@ -236,7 +240,7 @@ struct Terrain* TerrainCreate(struct TerrainOptions options, struct Status* st)
 
 	// Vertices-Index
 	struct Vector2i map_dimensions = {options.width, options.height};
-	struct Vector2i tile_dimensions = {50, 50}; // 50x50 mts
+	struct Vector2i tile_dimensions = {8, 8};
 
 	if ((terrain->vertices = sGenerateVertices(&buffer, terrain->heightmap, map_dimensions, tile_dimensions,
 											   options.elevation, st)) == NULL)

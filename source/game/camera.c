@@ -32,8 +32,8 @@ SOFTWARE.
 
 
 #define ANALOG_DEAD_ZONE 0.2
-#define MOVEMENT_SPEED 50.0
-#define LOOK_SPEED 4.0
+#define MOVEMENT_SPEED 2.5
+#define LOOK_SPEED 3.0
 
 
 /*-----------------------------
@@ -44,8 +44,8 @@ void* GameCameraStart()
 {
 	struct GameCamera* self = malloc(sizeof(struct GameCamera)); // TODO, check error
 
-	self->co.position = (struct Vector3){5000.0, 5000.0, 5000.0};
-	self->co.angle = (struct Vector3){0.0, 0.0, 0.0};
+	self->co.position = (struct Vector3){128.0, 128.0, 256.0};
+	self->co.angle = (struct Vector3){-67.5, 0.0, 45.0};
 
 	return self;
 }

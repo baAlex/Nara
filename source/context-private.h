@@ -52,39 +52,14 @@
 	{
 		struct Matrix4 projection;
 		struct Matrix4 camera;
-		//struct Vector3 camera_components[2]; // 0 = Target, 1 = Origin
+		struct Vector3 camera_origin;
 
 		const struct Program* current_program;
 
 		GLint u_projection;        // For current program
 		GLint u_camera_projection; // "
-		GLint u_camera_components; // "
+		GLint u_camera_origin;     // "
 		GLint u_color_texture;     // "
-	};
-
-	void ContextOpenGlInitialization(struct ContextOpenGl* state, struct Vector3 clean_color);
-	void ContextOpenGlStep(struct ContextOpenGl* state);
-
-	void ViewportResize(enum ScaleMode mode, int new_w, int new_h, int aspect_w, int aspect_h);
-	void SetProgram(struct ContextOpenGl*, const struct Program* program);
-	void SetProjection(struct ContextOpenGl*, struct Matrix4 matrix);
-	void SetCamera(struct ContextOpenGl*, struct Vector3 target, struct Vector3 origin);
-	void SetCameraAsMatrix(struct ContextOpenGl*, struct Matrix4 matrix);
-	void Draw(const struct Vertices* vertices, const struct Index* index, const struct Texture* color);
-
-
-	struct Context
-	{
-		GLFWwindow* window;
-		struct Vector2i window_size;
-		bool window_resized;
-
-		struct ContextOptions options;
-
-		// Modules:
-		struct ContextOpenGl opengl;
-		struct ContextInput input;
-		struct ContextTime time;
 	};
 
 	struct Program
@@ -108,5 +83,15 @@
 	{
 		GLuint ptr;
 	};
+
+	void ContextOpenGlInitialization(struct ContextOpenGl* state, struct Vector3 clean_color);
+	void ContextOpenGlStep(struct ContextOpenGl* state);
+
+	void ViewportResize(enum ScaleMode mode, int new_w, int new_h, int aspect_w, int aspect_h);
+	void SetProgram(struct ContextOpenGl*, const struct Program* program);
+	void SetProjection(struct ContextOpenGl*, struct Matrix4 matrix);
+	void SetCamera(struct ContextOpenGl*, struct Vector3 target, struct Vector3 origin);
+	void SetCameraAsMatrix(struct ContextOpenGl*, struct Matrix4 matrix, struct Vector3 origin);
+	void Draw(const struct Vertices* vertices, const struct Index* index, const struct Texture* color);
 
 #endif

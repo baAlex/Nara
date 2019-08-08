@@ -13,26 +13,26 @@ rule link
 
 
 # Automatically generated files
-build ./objects/debug/terrain-fragment.c: generate ./source/shaders/terrain-fragment.glsl
-build ./objects/debug/terrain-vertex.c:   generate ./source/shaders/terrain-vertex.glsl
-build ./objects/debug/red-fragment.c:     generate ./source/shaders/red-fragment.glsl
-build ./objects/debug/red-vertex.c:       generate ./source/shaders/red-vertex.glsl
+build ./objects/debug/shaders/terrain-fragment.c: generate ./source/shaders/terrain-fragment.glsl
+build ./objects/debug/shaders/terrain-vertex.c:   generate ./source/shaders/terrain-vertex.glsl
+build ./objects/debug/shaders/red-fragment.c:     generate ./source/shaders/red-fragment.glsl
+build ./objects/debug/shaders/red-vertex.c:       generate ./source/shaders/red-vertex.glsl
 
-build ./objects/debug/terrain-fragment.o: compile ./objects/debug/terrain-fragment.c
-build ./objects/debug/terrain-vertex.o:   compile ./objects/debug/terrain-vertex.c
-build ./objects/debug/red-fragment.o:     compile ./objects/debug/red-fragment.c
-build ./objects/debug/red-vertex.o:       compile ./objects/debug/red-vertex.c
+build ./objects/debug/shaders/terrain-fragment.o: compile ./objects/debug/shaders/terrain-fragment.c
+build ./objects/debug/shaders/terrain-vertex.o:   compile ./objects/debug/shaders/terrain-vertex.c
+build ./objects/debug/shaders/red-fragment.o:     compile ./objects/debug/shaders/red-fragment.c
+build ./objects/debug/shaders/red-vertex.o:       compile ./objects/debug/shaders/red-vertex.c
 
 # Lib Japan
-build ./objects/debug/buffer.o:     compile ./source/lib-japan/source/buffer.c
-build ./objects/debug/dictionary.o: compile ./source/lib-japan/source/dictionary.c
-build ./objects/debug/endianness.o: compile ./source/lib-japan/source/endianness.c
-build ./objects/debug/image.o:      compile ./source/lib-japan/source/image.c
-build ./objects/debug/image-sgi.o:  compile ./source/lib-japan/source/image-sgi.c
-build ./objects/debug/list.o:       compile ./source/lib-japan/source/list.c
-build ./objects/debug/matrix.o:     compile ./source/lib-japan/source/matrix.c
-build ./objects/debug/status.o:     compile ./source/lib-japan/source/status.c
-build ./objects/debug/vector.o:     compile ./source/lib-japan/source/vector.c
+build ./objects/debug/lib-japan/buffer.o:     compile ./source/lib-japan/source/buffer.c
+build ./objects/debug/lib-japan/dictionary.o: compile ./source/lib-japan/source/dictionary.c
+build ./objects/debug/lib-japan/endianness.o: compile ./source/lib-japan/source/endianness.c
+build ./objects/debug/lib-japan/image.o:      compile ./source/lib-japan/source/image.c
+build ./objects/debug/lib-japan/image-sgi.o:  compile ./source/lib-japan/source/image-sgi.c
+build ./objects/debug/lib-japan/list.o:       compile ./source/lib-japan/source/list.c
+build ./objects/debug/lib-japan/matrix.o:     compile ./source/lib-japan/source/matrix.c
+build ./objects/debug/lib-japan/status.o:     compile ./source/lib-japan/source/status.c
+build ./objects/debug/lib-japan/vector.o:     compile ./source/lib-japan/source/vector.c
 
 # Nara-dbg
 build ./objects/debug/nara.o:           compile ./source/nara.c
@@ -45,21 +45,11 @@ build ./objects/debug/terrain.o:        compile ./source/terrain.c
 build ./objects/debug/camera.o:         compile ./source/game/camera.c
 build ./objects/debug/point.o:          compile ./source/game/point.c
 
+# Sdk-dbg
+build ./objects/debug/sdk.o:    compile ./source-sdk/sdk.c
+
 # Link
 build nara-dbg: link ./objects/debug/nara.o $
-./objects/debug/terrain-fragment.o $
-./objects/debug/terrain-vertex.o $
-./objects/debug/red-fragment.o $
-./objects/debug/red-vertex.o $
-./objects/debug/buffer.o $
-./objects/debug/dictionary.o $
-./objects/debug/endianness.o $
-./objects/debug/image.o $
-./objects/debug/image-sgi.o $
-./objects/debug/list.o $
-./objects/debug/matrix.o $
-./objects/debug/status.o $
-./objects/debug/vector.o $
 ./objects/debug/context.o $
 ./objects/debug/context-input.o $
 ./objects/debug/context-opengl.o $
@@ -67,4 +57,28 @@ build nara-dbg: link ./objects/debug/nara.o $
 ./objects/debug/entity.o $
 ./objects/debug/terrain.o $
 ./objects/debug/camera.o $
-./objects/debug/point.o
+./objects/debug/point.o $
+./objects/debug/shaders/terrain-fragment.o $
+./objects/debug/shaders/terrain-vertex.o $
+./objects/debug/shaders/red-fragment.o $
+./objects/debug/shaders/red-vertex.o $
+./objects/debug/lib-japan/buffer.o $
+./objects/debug/lib-japan/dictionary.o $
+./objects/debug/lib-japan/endianness.o $
+./objects/debug/lib-japan/image.o $
+./objects/debug/lib-japan/image-sgi.o $
+./objects/debug/lib-japan/list.o $
+./objects/debug/lib-japan/matrix.o $
+./objects/debug/lib-japan/status.o $
+./objects/debug/lib-japan/vector.o
+
+build sdk-dbg: link ./objects/debug/sdk.o $
+./objects/debug/lib-japan/buffer.o $
+./objects/debug/lib-japan/dictionary.o $
+./objects/debug/lib-japan/endianness.o $
+./objects/debug/lib-japan/image.o $
+./objects/debug/lib-japan/image-sgi.o $
+./objects/debug/lib-japan/list.o $
+./objects/debug/lib-japan/matrix.o $
+./objects/debug/lib-japan/status.o $
+./objects/debug/lib-japan/vector.o

@@ -5,7 +5,6 @@ attribute vec2 vertex_uv;
 
 uniform mat4 projection;
 uniform mat4 camera_projection;
-uniform vec3 camera_components[2]; // 0 = Target, 1 = Origin
 
 void main()
 {

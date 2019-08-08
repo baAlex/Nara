@@ -1,5 +1,7 @@
 nara
 nara-dbg
+sdk
+sdk-dbg
 objects/
 dev/
 .vscode/

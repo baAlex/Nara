@@ -105,7 +105,7 @@ static void sSetCamera(const struct Entity* camera, struct Context* s_context)
 
 	translation = Matrix4Translate(Vector3Invert(camera->co.position));
 
-	ContextSetCameraAsMatrix(s_context, Matrix4Multiply(projection, translation));
+	ContextSetCameraAsMatrix(s_context, Matrix4Multiply(projection, translation), camera->co.position);
 }
 
 
@@ -150,9 +150,9 @@ int main()
 
 		terrain_options.heightmap_filename = "./resources/heightmap.sgi";
 		terrain_options.colormap_filename = "./resources/colormap.sgi";
-		terrain_options.width = 10000; // 10 km
-		terrain_options.height = 10000;
-		terrain_options.elevation = 4000; // 4 km
+		terrain_options.width = 1024;
+		terrain_options.height = 1024;
+		terrain_options.elevation = 64;
 
 		if ((terrain_program = ProgramCreate((char*)g_terrain_vertex, (char*)g_terrain_fragment, &st)) == NULL ||
 		    (terrain = TerrainCreate(terrain_options, &st)) == NULL)
