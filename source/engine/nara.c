@@ -35,8 +35,9 @@ SOFTWARE.
 
 #include "context.h"
 #include "entity.h"
-#include "game/game.h"
 #include "terrain.h"
+
+#include "../game/game.h"
 
 #define FOV 45
 

@@ -12,7 +12,8 @@
 	#include "vector.h"
 	#include "list.h"
 	#include "dictionary.h"
-	#include "game/game.h"
+
+	#include "../game/game.h"
 
 	struct Entity;
 

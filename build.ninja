@@ -13,15 +13,27 @@ rule link
 
 
 # Automatically generated files
-build ./objects/shaders/terrain-fragment.c: generate ./source/shaders/terrain-fragment.glsl
-build ./objects/shaders/terrain-vertex.c:   generate ./source/shaders/terrain-vertex.glsl
-build ./objects/shaders/red-fragment.c:     generate ./source/shaders/red-fragment.glsl
-build ./objects/shaders/red-vertex.c:       generate ./source/shaders/red-vertex.glsl
+build ./objects/engine/terrain-fragment.c: generate ./source/engine/terrain-fragment.glsl
+build ./objects/engine/terrain-vertex.c:   generate ./source/engine/terrain-vertex.glsl
+build ./objects/engine/red-fragment.c:     generate ./source/engine/red-fragment.glsl
+build ./objects/engine/red-vertex.c:       generate ./source/engine/red-vertex.glsl
 
-build ./objects/shaders/terrain-fragment.o: compile ./objects/shaders/terrain-fragment.c
-build ./objects/shaders/terrain-vertex.o:   compile ./objects/shaders/terrain-vertex.c
-build ./objects/shaders/red-fragment.o:     compile ./objects/shaders/red-fragment.c
-build ./objects/shaders/red-vertex.o:       compile ./objects/shaders/red-vertex.c
+# Engine
+build ./objects/engine/nara.o:             compile ./source/engine/nara.c
+build ./objects/engine/context.o:          compile ./source/engine/context.c
+build ./objects/engine/context-input.o:    compile ./source/engine/context-input.c
+build ./objects/engine/context-opengl.o:   compile ./source/engine/context-opengl.c
+build ./objects/engine/context-time.o:     compile ./source/engine/context-time.c
+build ./objects/engine/entity.o:           compile ./source/engine/entity.c
+build ./objects/engine/terrain.o:          compile ./source/engine/terrain.c
+build ./objects/engine/terrain-fragment.o: compile ./objects/engine/terrain-fragment.c
+build ./objects/engine/terrain-vertex.o:   compile ./objects/engine/terrain-vertex.c
+build ./objects/engine/red-fragment.o:     compile ./objects/engine/red-fragment.c
+build ./objects/engine/red-vertex.o:       compile ./objects/engine/red-vertex.c
+
+# Game
+build ./objects/game/camera.o:         compile ./source/game/camera.c
+build ./objects/game/point.o:          compile ./source/game/point.c
 
 # Lib Japan
 build ./objects/lib-japan/buffer.o:     compile ./source/lib-japan/source/buffer.c
@@ -34,34 +46,24 @@ build ./objects/lib-japan/matrix.o:     compile ./source/lib-japan/source/matrix
 build ./objects/lib-japan/status.o:     compile ./source/lib-japan/source/status.c
 build ./objects/lib-japan/vector.o:     compile ./source/lib-japan/source/vector.c
 
-# Nara
-build ./objects/nara.o:           compile ./source/nara.c
-build ./objects/context.o:        compile ./source/context.c
-build ./objects/context-input.o:  compile ./source/context-input.c
-build ./objects/context-opengl.o: compile ./source/context-opengl.c
-build ./objects/context-time.o:   compile ./source/context-time.c
-build ./objects/entity.o:         compile ./source/entity.c
-build ./objects/terrain.o:        compile ./source/terrain.c
-build ./objects/camera.o:         compile ./source/game/camera.c
-build ./objects/point.o:          compile ./source/game/point.c
-
 # Sdk
-build ./objects/sdk.o:    compile ./source-sdk/sdk.c
+build ./objects/sdk/sdk.o:    compile ./source/sdk/sdk.c
 
 # Link
-build nara: link ./objects/nara.o $
-./objects/context.o $
-./objects/context-input.o $
-./objects/context-opengl.o $
-./objects/context-time.o $
-./objects/entity.o $
-./objects/terrain.o $
-./objects/camera.o $
-./objects/point.o $
-./objects/shaders/terrain-fragment.o $
-./objects/shaders/terrain-vertex.o $
-./objects/shaders/red-fragment.o $
-./objects/shaders/red-vertex.o $
+build nara: link $
+./objects/engine/nara.o $
+./objects/engine/context.o $
+./objects/engine/context-input.o $
+./objects/engine/context-opengl.o $
+./objects/engine/context-time.o $
+./objects/engine/entity.o $
+./objects/engine/terrain.o $
+./objects/engine/terrain-fragment.o $
+./objects/engine/terrain-vertex.o $
+./objects/engine/red-fragment.o $
+./objects/engine/red-vertex.o $
+./objects/game/camera.o $
+./objects/game/point.o $
 ./objects/lib-japan/buffer.o $
 ./objects/lib-japan/dictionary.o $
 ./objects/lib-japan/endianness.o $
@@ -72,7 +74,8 @@ build nara: link ./objects/nara.o $
 ./objects/lib-japan/status.o $
 ./objects/lib-japan/vector.o
 
-build sdk: link ./objects/sdk.o $
+build sdk: link $
+./objects/sdk/sdk.o $
 ./objects/lib-japan/buffer.o $
 ./objects/lib-japan/dictionary.o $
 ./objects/lib-japan/endianness.o $
