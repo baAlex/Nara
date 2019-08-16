@@ -9,21 +9,34 @@
 
 	#include "tree.h"
 	#include "vector.h"
-	#include "image.h"
 	#include "status.h"
+
+	#ifndef CONTEXT_H
+	struct Vertex
+	{
+		struct Vector3 pos;
+		struct Vector2 uv;
+	};
+	#endif
+
+	enum NVerticesType
+	{
+		INHERITED_FROM_PARENT = 0,
+		SHARED_WITH_CHILDRENS = 1,
+		OWN_VERTICES = 2
+	};
 
 	struct NTerrainNode
 	{
 		struct Vector2 min;
 		struct Vector2 max;
+		float pattern_dimension;
 
-		struct Buffer index;
-		struct Buffer vertices;
+		// struct Buffer index;
 
-		struct
-		{
-			bool has_vertices:1;
-		};
+		struct Vertex* vertices;
+		size_t vertices_no;
+		enum NVerticesType vertices_type;
 	};
 
 	struct NTerrain
@@ -35,9 +48,12 @@
 		float min_pattern_dimension;
 
 		size_t steps;
+		size_t tiles_no;
+		size_t vertices_buffers_no;
 	};
 
-	struct NTerrain* NTerrainCreate(float dimension, float minimum_tile_dimension, float minimum_pattern_dimension, struct Status* st);
+	struct NTerrain* NTerrainCreate(float dimension, float minimum_tile_dimension, int pattern_subdivisions,
+	                                struct Status* st);
 	void NTerrainDelete(struct NTerrain* terrain);
 
 #endif
