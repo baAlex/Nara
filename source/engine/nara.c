@@ -149,8 +149,8 @@ int main()
 	{
 		struct TerrainOptions terrain_options = {0};
 
-		terrain_options.heightmap_filename = "./resources/heightmap.sgi";
-		terrain_options.colormap_filename = "./resources/colormap.sgi";
+		terrain_options.heightmap_filename = "./assets/heightmap.sgi";
+		terrain_options.colormap_filename = "./assets/colormap.sgi";
 		terrain_options.width = 1024;
 		terrain_options.height = 1024;
 		terrain_options.elevation = 64;
