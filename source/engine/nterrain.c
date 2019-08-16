@@ -30,9 +30,9 @@ SOFTWARE.
 
 #include "nterrain.h"
 #include <math.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
 
 
 /*-----------------------------
@@ -215,12 +215,19 @@ struct NTerrain* NTerrainCreate(float dimension, float min_tile_dimension, int p
 		else
 		{
 			// Can this node keep all childrens vertices? (because indices in OpenGL ES2)
-			if (powf((node->max.x - node->min.x) / terrain->min_pattern_dimension, 2.0) < UINT16_MAX)
+			if (powf((node->max.x - node->min.x) / terrain->min_pattern_dimension + 1, 2.0) < UINT16_MAX)
 			{
 				p = item;
 				p_depth = s.depth;
 				node->vertices_type = SHARED_WITH_CHILDRENS;
 				terrain->vertices_buffers_no++;
+
+				// Subdivision
+				node->vertices_no =
+				    (size_t)powf(ceil((node->max.x - node->min.x) / terrain->min_pattern_dimension + 1.0), 2.0);
+				node->vertices = malloc(sizeof(struct Vertex) * node->vertices_no);
+
+				sGenerateVertices(node->vertices, node->min, node->max, terrain->min_pattern_dimension);
 			}
 
 			// Nope, only his own vertices
@@ -229,14 +236,14 @@ struct NTerrain* NTerrainCreate(float dimension, float min_tile_dimension, int p
 				p = NULL;
 				node->vertices_type = OWN_VERTICES;
 				terrain->vertices_buffers_no++;
+
+				// Subdivision
+				node->vertices_no =
+				    (size_t)powf(ceil((node->max.x - node->min.x) / node->pattern_dimension + 1.0), 2.0);
+				node->vertices = malloc(sizeof(struct Vertex) * node->vertices_no);
+
+				sGenerateVertices(node->vertices, node->min, node->max, node->pattern_dimension);
 			}
-
-			// Actual subdivision
-			node->vertices_no = (size_t)ceil((node->max.x - node->min.x) / node->pattern_dimension + 1.0);
-			node->vertices_no *= node->vertices_no;
-			node->vertices = malloc(sizeof(struct Vertex) * node->vertices_no);
-
-			sGenerateVertices(node->vertices, node->min, node->max, node->pattern_dimension);
 		}
 	}
 
