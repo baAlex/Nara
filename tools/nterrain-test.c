@@ -111,7 +111,11 @@ static void sDrawTerrain(struct NTerrain* terrain, struct Canvas* canvas)
 	struct Buffer buffer = {0};
 	struct Tree* item = NULL;
 	struct NTerrainNode* node = NULL;
+
 	size_t prev_depth = 0;
+	size_t index1 = 0;
+	size_t index2 = 0;
+	size_t index3 = 0;
 
 	while ((item = TreeIterate(&s, &buffer)) != NULL)
 	{
@@ -119,19 +123,35 @@ static void sDrawTerrain(struct NTerrain* terrain, struct Canvas* canvas)
 
 		switch (node->vertices_type)
 		{
-		case INHERITED_FROM_PARENT: canvas->color = (struct Vector3){1.0, 1.0, 1.0}; break;
-		case SHARED_WITH_CHILDRENS: canvas->color = (struct Vector3){0.0, 1.0, 0.0}; break;
-		case OWN_VERTICES: canvas->color = (struct Vector3){1.0, 0.0, 0.0}; break;
+		case INHERITED_FROM_PARENT: canvas->color = (struct Vector3){0.5, 0.5, 0.5}; break;
+		case SHARED_WITH_CHILDRENS: canvas->color = (struct Vector3){0.0, 0.5, 0.0}; break;
+		case OWN_VERTICES: canvas->color = (struct Vector3){0.5, 0.0, 0.0}; break;
 		}
 
 		canvas->offset = (struct Vector2i){BORDER, BORDER + (BORDER + terrain->dimension) * s.depth};
+
+		for (size_t i = 0; i < node->index_no; i += 3)
+		{
+			index1 = node->index[i];
+			index2 = node->index[i + 1];
+			index3 = node->index[i + 2];
+
+			sDrawLine(canvas, (struct Vector2i){node->vertices[index1].pos.x, node->vertices[index1].pos.y},
+			          (struct Vector2i){node->vertices[index2].pos.x, node->vertices[index2].pos.y});
+
+			sDrawLine(canvas, (struct Vector2i){node->vertices[index2].pos.x, node->vertices[index2].pos.y},
+			          (struct Vector2i){node->vertices[index3].pos.x, node->vertices[index3].pos.y});
+
+			sDrawLine(canvas, (struct Vector2i){node->vertices[index3].pos.x, node->vertices[index3].pos.y},
+			          (struct Vector2i){node->vertices[index1].pos.x, node->vertices[index1].pos.y});
+		}
+
+		canvas->color = Vector3Scale(canvas->color, 2);
+
 		sDrawLine(canvas, (struct Vector2i){node->min.x, node->min.y}, (struct Vector2i){node->min.x, node->max.y});
 		sDrawLine(canvas, (struct Vector2i){node->min.x, node->max.y}, (struct Vector2i){node->max.x, node->max.y});
 		sDrawLine(canvas, (struct Vector2i){node->max.x, node->max.y}, (struct Vector2i){node->max.x, node->min.y});
 		sDrawLine(canvas, (struct Vector2i){node->max.x, node->min.y}, (struct Vector2i){node->min.x, node->min.y});
-
-		for (size_t i = 0; i < node->vertices_no; i++)
-			sDrawDot(canvas, (struct Vector2i){node->vertices[i].pos.x, node->vertices[i].pos.y});
 	}
 }
 
@@ -162,8 +182,12 @@ static void sPrintInfo(struct NTerrain* terrain)
 
 		if (prev_depth < s.depth || s.depth == 0)
 		{
-			printf(" # Step %lu, dimension: %0.4f, pattern dimension: %0.4f\n", s.depth, node->max.x - node->min.x,
-			       node->pattern_dimension);
+			printf(" # Step %lu:\n", s.depth);
+			printf("    - Dimension: %0.4f\n", (node->max.x - node->min.x));
+			printf("    - Pattern dimension: %0.4f\n", node->pattern_dimension);
+			printf("    - Index length: %lu\n", node->index_no);
+			printf("    - Vertices type: %i\n", node->vertices_type);
+
 			prev_depth = s.depth;
 		}
 	}
@@ -172,9 +196,9 @@ static void sPrintInfo(struct NTerrain* terrain)
 
 /*-----------------------------
 
- NormalTerrain()
+ TestNormalTerrain()
 -----------------------------*/
-void NormalTerrain(void** cmocka_state)
+void TestNormalTerrain(void** cmocka_state)
 {
 // Arbitrary values that did not goes well with subdivisions of three
 // that the terrain code do.
@@ -194,13 +218,13 @@ void NormalTerrain(void** cmocka_state)
 
 	if ((terrain = NTerrainCreate(TERRAIN_DIMENSION, TILE_DIMENSION, PATTERN_SUBDIVISION, &st)) == NULL)
 	{
-		StatusPrint("NormalTerrain", st);
+		StatusPrint("TestNormalTerrain", st);
 		assert_int_equal(st.code, STATUS_SUCCESS);
 	}
 
 	// On early writtings, all the recursive operations took like 100 ms. I can assume
 	// that not only was fault of a large push on the stack, but the fact that the code
-	// did not fit on the Cpu cache. After separate the tile subdivision step from the
+	// did not fit on the Cpu cache. After separating the tile subdivision step from the
 	// pattern subdivision step on the NTerrainCreate() function, the numbers turned
 	// pretty again. Of course I am not really sure, but is a good idea to control the time.
 	timespec_get(&end_time, TIME_UTC);
@@ -211,12 +235,14 @@ void NormalTerrain(void** cmocka_state)
 
 	sPrintInfo(terrain);
 
+	#ifndef NO_SGI
 	if (sInitCanvas(&c, terrain->dimension + BORDER * 2, BORDER + (terrain->dimension + BORDER) * terrain->steps) == 0)
 	{
 		sDrawTerrain(terrain, &c);
-		ImageSaveSgi(c.image, "./NormalTerrain.sgi");
+		ImageSaveSgi(c.image, "./TestNormalTerrain.sgi");
 		ImageDelete(c.image);
 	}
+	#endif
 
 	NTerrainDelete(terrain);
 
@@ -228,9 +254,9 @@ void NormalTerrain(void** cmocka_state)
 
 /*-----------------------------
 
- PreciseTerrain()
+ TestPreciseTerrain()
 -----------------------------*/
-void PreciseTerrain(void** cmocka_state)
+void TestPreciseTerrain(void** cmocka_state)
 {
 // The following values where an hide trouble for sSubdivideTile(). The less
 // or equal comparison: `if ((node_dimension / 3.0) <= min_tile_dimension)`
@@ -240,7 +266,7 @@ void PreciseTerrain(void** cmocka_state)
 // an normal of ~700 it jumps to ~7000. In other cases it simply stall the heap.
 #define TERRAIN_DIMENSION 972.0
 #define TILE_DIMENSION 12.0
-#define PATTERN_SUBDIVISION 4
+#define PATTERN_SUBDIVISION 3
 
 	struct NTerrain* terrain = NULL;
 	struct Status st = {0};
@@ -248,18 +274,20 @@ void PreciseTerrain(void** cmocka_state)
 
 	if ((terrain = NTerrainCreate(TERRAIN_DIMENSION, TILE_DIMENSION, PATTERN_SUBDIVISION, &st)) == NULL)
 	{
-		StatusPrint("PreciseTerrain", st);
+		StatusPrint("TestPreciseTerrain", st);
 		assert_int_equal(st.code, STATUS_SUCCESS);
 	}
 
 	sPrintInfo(terrain);
 
+	#ifndef NO_SGI
 	if (sInitCanvas(&c, terrain->dimension + BORDER * 2, BORDER + (terrain->dimension + BORDER) * terrain->steps) == 0)
 	{
 		sDrawTerrain(terrain, &c);
-		ImageSaveSgi(c.image, "./PreciseTerrain.sgi");
+		ImageSaveSgi(c.image, "./TestPreciseTerrain.sgi");
 		ImageDelete(c.image);
 	}
+	#endif
 
 	NTerrainDelete(terrain);
 
@@ -275,6 +303,6 @@ void PreciseTerrain(void** cmocka_state)
 -----------------------------*/
 int main()
 {
-	const struct CMUnitTest tests[] = {cmocka_unit_test(NormalTerrain), cmocka_unit_test(PreciseTerrain)};
+	const struct CMUnitTest tests[] = {cmocka_unit_test(TestNormalTerrain), cmocka_unit_test(TestPreciseTerrain)};
 	return cmocka_run_group_tests(tests, NULL, NULL);
 }

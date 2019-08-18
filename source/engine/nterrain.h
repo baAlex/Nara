@@ -10,6 +10,7 @@
 	#include "tree.h"
 	#include "vector.h"
 	#include "status.h"
+	#include <stdint.h>
 
 	#ifndef CONTEXT_H
 	struct Vertex
@@ -32,10 +33,12 @@
 		struct Vector2 max;
 		float pattern_dimension;
 
-		// struct Buffer index;
+		uint16_t* index;
+		size_t index_no;
 
 		struct Vertex* vertices;
 		size_t vertices_no;
+
 		enum NVerticesType vertices_type;
 	};
 
