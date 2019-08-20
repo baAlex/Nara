@@ -34,9 +34,9 @@ SOFTWARE.
 #include <string.h>
 
 
-static void sFreeEntityFromList(struct ListItem* item)
+static void sFreeEntityFromList(void* data)
 {
-	struct Entity* entity = item->data;
+	struct Entity* entity = data;
 	struct Class* class = entity->class;
 
 	if (entity->class->func_delete != NULL)
@@ -191,7 +191,7 @@ void EntitiesUpdate(struct List* list, struct EntityInput input)
 
 		if (entity->to_delete == true)
 		{
-			sFreeEntityFromList(entity->item);
+			sFreeEntityFromList(entity);
 
 			entity->item->callback_delete = NULL;
 			ListRemove(entity->item);
