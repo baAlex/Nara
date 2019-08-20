@@ -48,21 +48,30 @@ static inline float sNodeDimension(const struct NTerrainNode* node)
 static void sGenerateIndex(uint16_t* index_out, struct Vector2 min, struct Vector2 max, float pattern_dimension,
                            struct Vector2 org_min, struct Vector2 org_max, float org_pattern_dimension)
 {
-	size_t dimension = (size_t)ceil((max.x - min.x) / pattern_dimension);
-	size_t length = dimension * dimension * 6;
+	// I promise to clean what follows...
+	// All the float conversions are evil, evil! D:
 
-	size_t org_col = 0;
-	size_t org_row = 0;
-	size_t org_dimension = (size_t)ceil((org_max.x - org_min.x) / org_pattern_dimension);
+	size_t squares = (size_t)ceil((max.x - min.x) / pattern_dimension);
+	size_t length = squares * squares * 6;
+	size_t col = 0;
 
-	size_t org_step = (org_dimension / dimension);
+	size_t org_squares = (size_t)ceil((org_max.x - org_min.x) / org_pattern_dimension);
+	size_t org_col_start = (size_t)ceil((min.x - org_min.x) / org_pattern_dimension);
+	size_t org_row = (size_t)ceil((min.y - org_min.y) / org_pattern_dimension);
+	size_t org_col = org_col_start;
+
+	size_t org_step = (org_squares / squares) / round((org_max.x - org_min.x) / (max.x - min.x));
+
+	/*printf("Node sqrs: %lu, Org sqrs: %lu, Node sz: %lu, Org sz: %lu -> Step: %lu (sz diff: %f)\n", squares,
+	       org_squares, (size_t)ceil((max.x - min.x)), (size_t)ceil((org_max.x - org_min.x)), org_step,
+	       round((org_max.x - org_min.x) / (max.x - min.x)));*/
 
 	for (size_t i = 0; i < length; i += 6)
 	{
 		#if 1
-		index_out[i + 0] = org_col + (org_dimension + 1) * org_row;
-		index_out[i + 1] = org_col + (org_dimension + 1) * org_row + org_step;
-		index_out[i + 2] = org_col + (org_dimension + 1) * org_row + org_step + ((org_dimension + 1) * org_step);
+		index_out[i + 0] = org_col + (org_squares + 1) * org_row;
+		index_out[i + 1] = org_col + (org_squares + 1) * org_row + org_step;
+		index_out[i + 2] = org_col + (org_squares + 1) * org_row + org_step + ((org_squares + 1) * org_step);
 		#else
 		index_out[i + 0] = 0;
 		index_out[i + 1] = 0;
@@ -70,21 +79,23 @@ static void sGenerateIndex(uint16_t* index_out, struct Vector2 min, struct Vecto
 		#endif
 
 		#if 1
-		index_out[i + 3] = org_col + ((org_dimension + 1) * org_row) + org_step + (org_dimension + 1) * org_step;
-		index_out[i + 4] = org_col + ((org_dimension + 1) * org_row) + (org_dimension + 1) * org_step;
-		index_out[i + 5] = org_col + ((org_dimension + 1) * org_row);
+		index_out[i + 3] = org_col + ((org_squares + 1) * org_row) + org_step + (org_squares + 1) * org_step;
+		index_out[i + 4] = org_col + ((org_squares + 1) * org_row) + (org_squares + 1) * org_step;
+		index_out[i + 5] = org_col + ((org_squares + 1) * org_row);
 		#else
 		index_out[i + 3] = 0;
 		index_out[i + 4] = 0;
 		index_out[i + 5] = 0;
 		#endif
 
-		// Origin changes
+		// Next step
+		col += 1;
 		org_col += org_step;
 
-		if ((org_col % org_dimension) == 0)
+		if ((col % squares) == 0)
 		{
-			org_col = 0;
+			col = 0;
+			org_col = org_col_start;
 			org_row += org_step;
 		}
 	}
@@ -245,7 +256,7 @@ struct NTerrain* NTerrainCreate(float dimension, float min_tile_dimension, int p
 	sSubdivideTile(terrain->root, min_tile_dimension);
 
 	// Pattern subdivision
-	struct Tree* p = NULL;
+	struct NTerrainNode* last_parent = NULL;
 	size_t p_depth = 0;
 
 	s.start = terrain->root;
@@ -261,20 +272,26 @@ struct NTerrain* NTerrainCreate(float dimension, float min_tile_dimension, int p
 			node->pattern_dimension /= 3.0;
 
 		// Any parent has vertices to share?
-		if (p != NULL && s.depth > p_depth)
+		if (last_parent != NULL && s.depth > p_depth)
 		{
 			node->vertices_type = INHERITED_FROM_PARENT;
 			node->vertices = NULL;
 			node->vertices_no = 0;
-			node->index = NULL;
-			node->index_no = 0;
+
+			// Index
+			node->index_no = (size_t)ceil(sNodeDimension(node) / node->pattern_dimension);
+			node->index_no = node->index_no * node->index_no * 6;
+			node->index = malloc(node->index_no * sizeof(uint16_t));
+
+			sGenerateIndex(node->index, node->min, node->max, node->pattern_dimension, last_parent->min,
+			               last_parent->max, terrain->min_pattern_dimension);
 		}
 		else
 		{
 			// Can this node keep all childrens vertices? (because indices in OpenGL ES2)
 			if (powf(sNodeDimension(node) / terrain->min_pattern_dimension + 1, 2.0) < UINT16_MAX)
 			{
-				p = item;
+				last_parent = node;
 				p_depth = s.depth;
 				node->vertices_type = SHARED_WITH_CHILDRENS;
 
@@ -299,7 +316,7 @@ struct NTerrain* NTerrainCreate(float dimension, float min_tile_dimension, int p
 			// Nope, only his own vertices
 			else
 			{
-				p = NULL;
+				last_parent = NULL;
 				node->vertices_type = OWN_VERTICES;
 
 				terrain->vertices_buffers_no++;

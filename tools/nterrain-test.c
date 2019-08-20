@@ -110,12 +110,15 @@ static void sDrawTerrain(struct NTerrain* terrain, struct Canvas* canvas)
 	struct TreeState s = {.start = terrain->root};
 	struct Buffer buffer = {0};
 	struct Tree* item = NULL;
+
 	struct NTerrainNode* node = NULL;
+	struct NTerrainNode* last_shared_node = NULL;
 
 	size_t prev_depth = 0;
 	size_t index1 = 0;
 	size_t index2 = 0;
 	size_t index3 = 0;
+
 
 	while ((item = TreeIterate(&s, &buffer)) != NULL)
 	{
@@ -123,9 +126,12 @@ static void sDrawTerrain(struct NTerrain* terrain, struct Canvas* canvas)
 
 		switch (node->vertices_type)
 		{
-		case INHERITED_FROM_PARENT: canvas->color = (struct Vector3){0.5, 0.5, 0.5}; break;
-		case SHARED_WITH_CHILDRENS: canvas->color = (struct Vector3){0.0, 0.5, 0.0}; break;
 		case OWN_VERTICES: canvas->color = (struct Vector3){0.5, 0.0, 0.0}; break;
+		case INHERITED_FROM_PARENT: canvas->color = (struct Vector3){0.5, 0.5, 0.5}; break;
+		case SHARED_WITH_CHILDRENS:
+			last_shared_node = node;
+			canvas->color = (struct Vector3){0.0, 0.5, 0.0};
+			break;
 		}
 
 		canvas->offset = (struct Vector2i){BORDER, BORDER + (BORDER + terrain->dimension) * s.depth};
@@ -136,14 +142,37 @@ static void sDrawTerrain(struct NTerrain* terrain, struct Canvas* canvas)
 			index2 = node->index[i + 1];
 			index3 = node->index[i + 2];
 
-			sDrawLine(canvas, (struct Vector2i){node->vertices[index1].pos.x, node->vertices[index1].pos.y},
-			          (struct Vector2i){node->vertices[index2].pos.x, node->vertices[index2].pos.y});
+			if (node->vertices_type != INHERITED_FROM_PARENT)
+			{
+				sDrawLine(canvas, (struct Vector2i){node->vertices[index1].pos.x, node->vertices[index1].pos.y},
+				          (struct Vector2i){node->vertices[index2].pos.x, node->vertices[index2].pos.y});
 
-			sDrawLine(canvas, (struct Vector2i){node->vertices[index2].pos.x, node->vertices[index2].pos.y},
-			          (struct Vector2i){node->vertices[index3].pos.x, node->vertices[index3].pos.y});
+				sDrawLine(canvas, (struct Vector2i){node->vertices[index2].pos.x, node->vertices[index2].pos.y},
+				          (struct Vector2i){node->vertices[index3].pos.x, node->vertices[index3].pos.y});
 
-			sDrawLine(canvas, (struct Vector2i){node->vertices[index3].pos.x, node->vertices[index3].pos.y},
-			          (struct Vector2i){node->vertices[index1].pos.x, node->vertices[index1].pos.y});
+				sDrawLine(canvas, (struct Vector2i){node->vertices[index3].pos.x, node->vertices[index3].pos.y},
+				          (struct Vector2i){node->vertices[index1].pos.x, node->vertices[index1].pos.y});
+			}
+			else
+			{
+				sDrawLine(canvas,
+				          (struct Vector2i){last_shared_node->vertices[index1].pos.x,
+				                            last_shared_node->vertices[index1].pos.y},
+				          (struct Vector2i){last_shared_node->vertices[index2].pos.x,
+				                            last_shared_node->vertices[index2].pos.y});
+
+				sDrawLine(canvas,
+				          (struct Vector2i){last_shared_node->vertices[index2].pos.x,
+				                            last_shared_node->vertices[index2].pos.y},
+				          (struct Vector2i){last_shared_node->vertices[index3].pos.x,
+				                            last_shared_node->vertices[index3].pos.y});
+
+				sDrawLine(canvas,
+				          (struct Vector2i){last_shared_node->vertices[index3].pos.x,
+				                            last_shared_node->vertices[index3].pos.y},
+				          (struct Vector2i){last_shared_node->vertices[index1].pos.x,
+				                            last_shared_node->vertices[index1].pos.y});
+			}
 		}
 
 		canvas->color = Vector3Scale(canvas->color, 2);
@@ -235,14 +264,14 @@ void TestNormalTerrain(void** cmocka_state)
 
 	sPrintInfo(terrain);
 
-	#ifndef NO_SGI
+#ifndef NO_SGI
 	if (sInitCanvas(&c, terrain->dimension + BORDER * 2, BORDER + (terrain->dimension + BORDER) * terrain->steps) == 0)
 	{
 		sDrawTerrain(terrain, &c);
 		ImageSaveSgi(c.image, "./TestNormalTerrain.sgi");
 		ImageDelete(c.image);
 	}
-	#endif
+#endif
 
 	NTerrainDelete(terrain);
 
@@ -272,22 +301,34 @@ void TestPreciseTerrain(void** cmocka_state)
 	struct Status st = {0};
 	struct Canvas c = {0};
 
+	struct timespec start_time = {0};
+	struct timespec end_time = {0};
+	double ms = 0.0;
+
+	timespec_get(&start_time, TIME_UTC);
+
 	if ((terrain = NTerrainCreate(TERRAIN_DIMENSION, TILE_DIMENSION, PATTERN_SUBDIVISION, &st)) == NULL)
 	{
 		StatusPrint("TestPreciseTerrain", st);
 		assert_int_equal(st.code, STATUS_SUCCESS);
 	}
 
+	timespec_get(&end_time, TIME_UTC);
+	ms = end_time.tv_nsec / 1000000.0 + end_time.tv_sec * 1000.0;
+	ms -= start_time.tv_nsec / 1000000.0 + start_time.tv_sec * 1000.0;
+
+	printf("Done in %0.4f ms\n", ms);
+
 	sPrintInfo(terrain);
 
-	#ifndef NO_SGI
+#ifndef NO_SGI
 	if (sInitCanvas(&c, terrain->dimension + BORDER * 2, BORDER + (terrain->dimension + BORDER) * terrain->steps) == 0)
 	{
 		sDrawTerrain(terrain, &c);
 		ImageSaveSgi(c.image, "./TestPreciseTerrain.sgi");
 		ImageDelete(c.image);
 	}
-	#endif
+#endif
 
 	NTerrainDelete(terrain);
 
