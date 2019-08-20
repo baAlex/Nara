@@ -3,7 +3,7 @@ cflags = `pkg-config --cflags glfw3 glesv2` -O0 -std=c11 -Wall -Wextra -pedantic
 lflags = `pkg-config --libs glfw3 glesv2` -lm
 
 rule generate
- command = ruby ./tools/c-ify.rb $in > $out
+ command = python3 ./tools/c-ify.py $in > $out
 
 rule compile
  command = cc $cflags -c $in -o $out
