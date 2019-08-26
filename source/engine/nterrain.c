@@ -67,7 +67,7 @@ static void sGenerateIndex(uint16_t* index_out, struct Vector2 min, struct Vecto
 
 	size_t org_step = (org_squares / squares) / round((org_max.x - org_min.x) / (max.x - min.x));
 
-	/*printf("Node sqrs: %lu, Org sqrs: %lu, Node sz: %lu, Org sz: %lu -> Step: %lu (sz diff: %f)\n", squares,
+	/*printf("Node sqrs: %zu, Org sqrs: %zu, Node sz: %zu, Org sz: %zu -> Step: %zu (sz diff: %f)\n", squares,
 	       org_squares, (size_t)ceil((max.x - min.x)), (size_t)ceil((org_max.x - org_min.x)), org_step,
 	       round((org_max.x - org_min.x) / (max.x - min.x)));*/
 
@@ -135,6 +135,34 @@ static void sGenerateVertices(struct Vertex* vertices_out, struct Vector2 min, s
 		texture_step_y += (float)pattern_dimension / (float)(max.x - min.x);
 		texture_step_x = 0.0;
 	}
+}
+
+
+/*-----------------------------
+
+ sAllocateIndex()
+-----------------------------*/
+static uint16_t* sAllocateIndex(struct NTerrainNode* node)
+{
+	#ifdef TEST
+	node->index_no = (size_t)ceil(sDimension(node) / node->pattern_dimension);
+	node->index_no = node->index_no * node->index_no * 6;
+	return node->index = malloc(node->index_no * sizeof(uint16_t));
+	#endif
+}
+
+
+/*-----------------------------
+
+ sAllocateVertices()
+-----------------------------*/
+static struct Vertex* sAllocateVertices(struct NTerrainNode* node, float pattern_dimension)
+{
+	#ifdef TEST
+	node->vertices_no = (size_t)ceil(sDimension(node) / pattern_dimension + 1.0);
+	node->vertices_no = node->vertices_no * node->vertices_no;
+	return node->vertices = malloc(sizeof(struct Vertex) * node->vertices_no);
+	#endif
 }
 
 
@@ -281,13 +309,8 @@ struct NTerrain* NTerrainCreate(float dimension, float min_tile_dimension, int p
 		{
 			node->vertices_type = INHERITED_FROM_PARENT;
 			node->vertices = NULL;
-			node->vertices_no = 0;
 
-			// Index
-			node->index_no = (size_t)ceil(sDimension(node) / node->pattern_dimension);
-			node->index_no = node->index_no * node->index_no * 6;
-			node->index = malloc(node->index_no * sizeof(uint16_t));
-
+			sAllocateIndex(node);
 			sGenerateIndex(node->index, node->min, node->max, node->pattern_dimension, last_parent->min,
 			               last_parent->max, terrain->min_pattern_dimension);
 		}
@@ -302,18 +325,10 @@ struct NTerrain* NTerrainCreate(float dimension, float min_tile_dimension, int p
 
 				terrain->vertices_buffers_no++;
 
-				// Vertices
-				node->vertices_no = (size_t)ceil(sDimension(node) / terrain->min_pattern_dimension + 1.0);
-				node->vertices_no = node->vertices_no * node->vertices_no;
-				node->vertices = malloc(sizeof(struct Vertex) * node->vertices_no);
-
+				sAllocateVertices(node, terrain->min_pattern_dimension);
 				sGenerateVertices(node->vertices, node->min, node->max, terrain->min_pattern_dimension);
 
-				// Index
-				node->index_no = (size_t)ceil(sDimension(node) / node->pattern_dimension);
-				node->index_no = node->index_no * node->index_no * 6;
-				node->index = malloc(node->index_no * sizeof(uint16_t));
-
+				sAllocateIndex(node);
 				sGenerateIndex(node->index, node->min, node->max, node->pattern_dimension, node->min, node->max,
 				               terrain->min_pattern_dimension);
 			}
@@ -326,18 +341,10 @@ struct NTerrain* NTerrainCreate(float dimension, float min_tile_dimension, int p
 
 				terrain->vertices_buffers_no++;
 
-				// Vertices
-				node->vertices_no = (size_t)ceil(sDimension(node) / node->pattern_dimension + 1.0);
-				node->vertices_no = node->vertices_no * node->vertices_no;
-				node->vertices = malloc(sizeof(struct Vertex) * node->vertices_no);
-
+				sAllocateVertices(node, node->pattern_dimension);
 				sGenerateVertices(node->vertices, node->min, node->max, node->pattern_dimension);
 
-				// Index
-				node->index_no = (size_t)ceil(sDimension(node) / node->pattern_dimension);
-				node->index_no = node->index_no * node->index_no * 6;
-				node->index = malloc(node->index_no * sizeof(uint16_t));
-
+				sAllocateIndex(node);
 				sGenerateIndex(node->index, node->min, node->max, node->pattern_dimension, node->min, node->max,
 				               node->pattern_dimension);
 			}
@@ -389,67 +396,72 @@ void NTerrainDelete(struct NTerrain* terrain)
 
  NTerrainIterate()
 -----------------------------*/
-struct Buffer g_buffer = {0};
-
-void NTerrainIterate(struct NTerrain* terrain, struct Vector2 position, void (*callback)(struct NTerrainNode*, void*),
-                     void* extra_data)
+struct NTerrainNode* NTerrainIterate(struct TreeState* state, struct Buffer* buffer, struct NTerrainNode** out_shared,
+                                     struct Vector2 position)
 {
 	struct Tree** future_parent_heap = NULL;
 
-	struct Tree* future_return = terrain->root->children;
-	size_t future_depth = 1;
-
-	struct Tree* actual = NULL;
-	size_t depth = 0;
-
-	while (1)
+	if (state->start != NULL)
 	{
-		// Actual node (to call)
-		if ((actual = future_return) == NULL)
-			break;
+		state->future_parent[0] = NULL;
+		state->future_depth = 1;
+		state->future_return = state->start;
+		state->actual = state->start;
+		state->start = NULL;
+	}
 
-		depth = future_depth;
-		future_return = NULL;
+again:
 
+	// Actual node (to call)
+	if ((state->actual = state->future_return) == NULL)
+		return NULL;
+
+	state->depth = state->future_depth;
+	state->future_return = NULL;
+
+	if(((struct NTerrainNode*)state->actual->data)->vertices_type ==  SHARED_WITH_CHILDRENS)
+		*out_shared = state->actual->data;
+
+	// Future values
+	{
 		// Go in? (childrens)
-		if (actual->children != NULL && Vector2Distance(sMiddle(actual->data), position) <=
-		                                    sDimension(actual->data) * 1.5) // TODO, the 1.5 can be configurable
+		// TODO, the 1.5 can be configurable
+		// TODO, calculate as an circle is too lazy
+		if (state->actual->children != NULL &&
+		    Vector2Distance(sMiddle(state->actual->data), position) <= sDimension(state->actual->data) * 1.5)
 		{
-			if (BufferResize(&g_buffer, (depth + 1) * sizeof(void*)) == NULL) // FIXME, Bug in LibJapan, the +1
-				return;
+			if (BufferResize(buffer, (state->depth + 1) * sizeof(void*)) == NULL) // FIXME, Bug in LibJapan, the +1
+				return NULL;
 
-			future_parent_heap = g_buffer.data;
-			future_parent_heap[depth] = actual->next;
-			future_return = actual->children;
+			future_parent_heap = buffer->data;
+			future_parent_heap[state->depth] = state->actual->next;
+			state->future_return = state->actual->children;
 
-			future_depth++;
-			continue; // We omit actual for being drawing
+			state->future_depth++;
+			goto again; // We omit actual for being drawing
 		}
 
 		// Brothers
-		else if (depth > 0 && actual->next != NULL)
+		else if (state->depth > 0 && state->actual->next != NULL)
 		{
-			future_return = actual->next;
+			state->future_return = state->actual->next;
 		}
 
 		// Go out (next parent)
-		else if (depth > 0)
+		else if (state->depth > 0)
 		{
-			future_parent_heap = g_buffer.data;
+			future_parent_heap = buffer->data;
 
-			while ((future_depth -= 1) > 0)
+			while ((state->future_depth -= 1) > 0)
 			{
-				if (future_parent_heap[future_depth] != NULL)
+				if (future_parent_heap[state->future_depth] != NULL)
 				{
-					future_return = future_parent_heap[future_depth];
+					state->future_return = future_parent_heap[state->future_depth];
 					break;
 				}
 			}
 		}
-
-		// Callback at the end emulation how tree.c works
-		callback(actual->data, extra_data);
 	}
 
-	BufferClean(&g_buffer);
+	return state->actual->data;
 }

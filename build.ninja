@@ -26,6 +26,7 @@ build ./objects/engine/context-opengl.o:   compile ./source/engine/context-openg
 build ./objects/engine/context-time.o:     compile ./source/engine/context-time.c
 build ./objects/engine/entity.o:           compile ./source/engine/entity.c
 build ./objects/engine/terrain.o:          compile ./source/engine/terrain.c
+build ./objects/engine/nterrain.o:          compile ./source/engine/terrain.c
 build ./objects/engine/terrain-fragment.o: compile ./objects/engine/terrain-fragment.c
 build ./objects/engine/terrain-vertex.o:   compile ./objects/engine/terrain-vertex.c
 build ./objects/engine/red-fragment.o:     compile ./objects/engine/red-fragment.c

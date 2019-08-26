@@ -4,84 +4,167 @@
  - Alexander Brandt 2019
 
  $ clang -I./source/lib-japan/include -I./source/engine/ ./source/lib-japan/source/buffer.c
-./source/lib-japan/source/endianness.c ./source/lib-japan/source/image/image.c
-./source/lib-japan/source/image/format-sgi.c ./source/lib-japan/source/status.c
+./source/lib-japan/source/endianness.c ./source/lib-japan/source/status.c
 ./source/lib-japan/source/tree.c ./source/lib-japan/source/vector.c
-./source/engine/nterrain.c ./tools/nterrain-test.c -lm -lcmocka -O0 -g -o ./test
+./source/engine/nterrain.c ./tools/nterrain-test.c -lm -lcmocka -O0 -DTEST -g -o ./test
 
 -----------------------------*/
 
 #include <math.h>
 #include <setjmp.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
 #include <cmocka.h>
 
-#include "image.h"
+#ifndef TEST
+#define TEST
+#endif
+
+#include "buffer.h"
 #include "nterrain.h"
 
 #define BORDER 10
 
+enum CanvasInstructionType
+{
+	SET_OFFSET,
+	SET_COLOR,
+	DRAW_LINE
+};
+
+struct CanvasInstruction
+{
+	enum CanvasInstructionType type;
+
+	union {
+		struct Vector3 color;
+		struct Vector2 offset;
+
+		// DRAW_LINE
+		struct
+		{
+			struct Vector2 a;
+			struct Vector2 b;
+		};
+	};
+};
 
 struct Canvas
 {
-	struct Vector2i offset;
-	struct Vector3 color;
-	struct Image* image;
+	size_t width;
+	size_t height;
+
+	struct Buffer instructions;
+	size_t instructions_no;
 };
 
-
-/*-----------------------------
-
- sDrawDot()
------------------------------*/
-static void sDrawDot(struct Canvas* canvas, struct Vector2i pos)
+static struct Canvas* sCanvasCreate(size_t width, size_t height)
 {
-	uint8_t* pixel = canvas->image->data;
+	struct Canvas* canvas = NULL;
 
-	pixel[(pos.x + canvas->offset.x + canvas->image->width * (pos.y + canvas->offset.y)) * 3 + 0] =
-	    canvas->color.x * 255;
-	pixel[(pos.x + canvas->offset.x + canvas->image->width * (pos.y + canvas->offset.y)) * 3 + 1] =
-	    canvas->color.y * 255;
-	pixel[(pos.x + canvas->offset.x + canvas->image->width * (pos.y + canvas->offset.y)) * 3 + 2] =
-	    canvas->color.z * 255;
+	if ((canvas = calloc(1, sizeof(struct Canvas))) != NULL)
+	{
+		canvas->width = width;
+		canvas->height = height;
+	}
+
+	return canvas;
 }
 
-
-/*-----------------------------
-
- sDrawLine()
------------------------------*/
-static void sDrawLine(struct Canvas* canvas, struct Vector2i a, struct Vector2i b)
+static void sCanvasDelete(struct Canvas* canvas)
 {
-	// https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
-	int dx = abs(b.x - a.x);
-	int sx = (a.x < b.x) ? 1 : -1;
-	int dy = -abs(b.y - a.y);
-	int sy = (a.y < b.y) ? 1 : -1;
-	int err = dx + dy; // error value e_xy
-	int e2;
+	BufferClean(&canvas->instructions);
+	free(canvas);
+}
 
-	while (a.x != b.x || a.y != b.y)
+static void sCanvasSave(struct Canvas* canvas, const char* filename)
+{
+	// https://gitlab.gnome.org/GNOME/gimp/issues/2561
+
+	FILE* fp = fopen(filename, "w");
+	struct CanvasInstruction* instruction = canvas->instructions.data;
+
+	struct Vector2 state_offset = {0};
+	struct Vector3i state_color = {0};
+
+	if (fp != NULL)
 	{
-		sDrawDot(canvas, a);
+		fprintf(fp, "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n");
+		fprintf(fp, "<svg width=\"%zupx\" height=\"%zupx\" xmlns=\"http://www.w3.org/2000/svg\">\n", canvas->width,
+		        canvas->height);
 
-		e2 = 2 * err;
+		fprintf(fp, "<rect x=\"-1\" y=\"-1\" width=\"%zu\" height=\"%zu\" fill=\"black\"/>\n", canvas->width + 2,
+		        canvas->height + 2);
 
-		if (e2 >= dy)
+		for (size_t i = 0; i < canvas->instructions_no; i++)
 		{
-			err += dy;
-			a.x += sx;
+			switch (instruction->type)
+			{
+			case SET_OFFSET: state_offset = instruction->offset; break;
+
+			case SET_COLOR:
+				state_color.x = (int)((float)instruction->color.x * 255.0);
+				state_color.y = (int)((float)instruction->color.y * 255.0);
+				state_color.z = (int)((float)instruction->color.z * 255.0);
+				break;
+
+			case DRAW_LINE:
+				fprintf(fp, "<line x1=\"%.02f\" y1=\"%.02f\" x2=\"%.02f\" y2=\"%.02f\" stroke=\"#%02X%02X%02X\"/>\n",
+				        instruction->a.x + state_offset.x, instruction->a.y + state_offset.y,
+				        instruction->b.x + state_offset.x, instruction->b.y + state_offset.y, state_color.x,
+				        state_color.y, state_color.z);
+				break;
+			}
+
+			instruction++;
 		}
 
-		if (e2 <= dx)
-		{
-			err += dx;
-			a.y += sy;
-		}
+		fprintf(fp, "</svg>\n");
+		fclose(fp);
+	}
+}
+
+static void sCanvasSetOffset(struct Canvas* canvas, struct Vector2 offset)
+{
+	if (BufferResize(&canvas->instructions, (canvas->instructions_no + 1) * sizeof(struct CanvasInstruction)) != NULL)
+	{
+		canvas->instructions_no++;
+		struct CanvasInstruction* instruction = canvas->instructions.data;
+		instruction += (canvas->instructions_no - 1);
+
+		instruction->type = SET_OFFSET;
+		instruction->offset = offset;
+	}
+}
+
+static void sCanvasSetColor(struct Canvas* canvas, struct Vector3 color)
+{
+	if (BufferResize(&canvas->instructions, (canvas->instructions_no + 1) * sizeof(struct CanvasInstruction)) != NULL)
+	{
+		canvas->instructions_no++;
+		struct CanvasInstruction* instruction = canvas->instructions.data;
+		instruction += (canvas->instructions_no - 1);
+
+		instruction->type = SET_COLOR;
+		instruction->color = color;
+	}
+}
+
+static void sCanvasDrawLine(struct Canvas* canvas, struct Vector2 a, struct Vector2 b)
+{
+	if (BufferResize(&canvas->instructions, (canvas->instructions_no + 1) * sizeof(struct CanvasInstruction)) != NULL)
+	{
+		canvas->instructions_no++;
+		struct CanvasInstruction* instruction = canvas->instructions.data;
+		instruction += (canvas->instructions_no - 1);
+
+		instruction->type = DRAW_LINE;
+		instruction->a = a;
+		instruction->b = b;
 	}
 }
 
@@ -100,21 +183,21 @@ static void sDrawTile(struct Canvas* canvas, const struct NTerrainNode* node, co
 	switch (node->vertices_type)
 	{
 	case OWN_VERTICES:
-		canvas->color = (struct Vector3){0.5, 0.0, 0.0};
+		sCanvasSetColor(canvas, (struct Vector3){0.5, 0.0, 0.0});
 		vertices = node->vertices;
 		break;
 	case INHERITED_FROM_PARENT:
-		canvas->color = (struct Vector3){0.5, 0.5, 0.5};
+		sCanvasSetColor(canvas, (struct Vector3){0.5, 0.5, 0.5});
 		vertices = (inherit_from != NULL) ? inherit_from->vertices : NULL;
 		break;
 	case SHARED_WITH_CHILDRENS:
-		canvas->color = (struct Vector3){0.0, 0.5, 0.0};
+		sCanvasSetColor(canvas, (struct Vector3){0.0, 0.5, 0.0});
 		vertices = node->vertices;
 		break;
 	}
 
-	// Inner triangles
-	if (vertices != NULL) // NTerrainIterate() at the moment did not allow to keep the last shared vertices
+	// Inner triangles, omit if the density is lower that 10 'pixels'
+	if (vertices != NULL && node->pattern_dimension > 10.0)
 	{
 		for (size_t i = 0; i < node->index_no; i += 3)
 		{
@@ -122,39 +205,23 @@ static void sDrawTile(struct Canvas* canvas, const struct NTerrainNode* node, co
 			index2 = node->index[i + 1];
 			index3 = node->index[i + 2];
 
-			sDrawLine(canvas, (struct Vector2i){vertices[index1].pos.x, vertices[index1].pos.y},
-			          (struct Vector2i){vertices[index2].pos.x, vertices[index2].pos.y});
+			sCanvasDrawLine(canvas, (struct Vector2){vertices[index1].pos.x, vertices[index1].pos.y},
+			                (struct Vector2){vertices[index2].pos.x, vertices[index2].pos.y});
 
-			sDrawLine(canvas, (struct Vector2i){vertices[index2].pos.x, vertices[index2].pos.y},
-			          (struct Vector2i){vertices[index3].pos.x, vertices[index3].pos.y});
+			sCanvasDrawLine(canvas, (struct Vector2){vertices[index2].pos.x, vertices[index2].pos.y},
+			                (struct Vector2){vertices[index3].pos.x, vertices[index3].pos.y});
 
-			sDrawLine(canvas, (struct Vector2i){vertices[index3].pos.x, vertices[index3].pos.y},
-			          (struct Vector2i){vertices[index1].pos.x, vertices[index1].pos.y});
+			sCanvasDrawLine(canvas, (struct Vector2){vertices[index3].pos.x, vertices[index3].pos.y},
+			                (struct Vector2){vertices[index1].pos.x, vertices[index1].pos.y});
 		}
 	}
 
 	// Outside box
-	canvas->color = Vector3Scale(canvas->color, 2);
-	sDrawLine(canvas, (struct Vector2i){node->min.x, node->min.y}, (struct Vector2i){node->min.x, node->max.y});
-	sDrawLine(canvas, (struct Vector2i){node->min.x, node->max.y}, (struct Vector2i){node->max.x, node->max.y});
-	sDrawLine(canvas, (struct Vector2i){node->max.x, node->max.y}, (struct Vector2i){node->max.x, node->min.y});
-	sDrawLine(canvas, (struct Vector2i){node->max.x, node->min.y}, (struct Vector2i){node->min.x, node->min.y});
-}
-
-
-/*-----------------------------
-
- sInitCanvas()
------------------------------*/
-static int sInitCanvas(struct Canvas* canvas, size_t width, size_t height)
-{
-	if ((canvas->image = ImageCreate(IMAGE_RGB8, width, height)) == NULL)
-		return 1;
-
-	memset(canvas->image->data, 0, canvas->image->size);
-	canvas->offset = (struct Vector2i){0, 0};
-	canvas->color = (struct Vector3){1.0, 1.0, 1.0};
-	return 0;
+	// sCanvasSetColor(canvas, Vector3Scale(sCanvasGetColor(canvas), 2));
+	sCanvasDrawLine(canvas, (struct Vector2){node->min.x, node->min.y}, (struct Vector2){node->min.x, node->max.y});
+	sCanvasDrawLine(canvas, (struct Vector2){node->min.x, node->max.y}, (struct Vector2){node->max.x, node->max.y});
+	sCanvasDrawLine(canvas, (struct Vector2){node->max.x, node->max.y}, (struct Vector2){node->max.x, node->min.y});
+	sCanvasDrawLine(canvas, (struct Vector2){node->max.x, node->min.y}, (struct Vector2){node->min.x, node->min.y});
 }
 
 
@@ -178,7 +245,7 @@ static void sDrawTerrainLayers(struct Canvas* canvas, struct NTerrain* terrain)
 		if (node->vertices_type == SHARED_WITH_CHILDRENS)
 			last_shared_node = node;
 
-		canvas->offset = (struct Vector2i){BORDER, BORDER + (BORDER + terrain->dimension) * s.depth};
+		sCanvasSetOffset(canvas, (struct Vector2){BORDER, BORDER + (BORDER + terrain->dimension) * s.depth});
 		sDrawTile(canvas, node, last_shared_node);
 	}
 
@@ -190,16 +257,21 @@ static void sDrawTerrainLayers(struct Canvas* canvas, struct NTerrain* terrain)
 
  sDrawTerrainLod()
 -----------------------------*/
-static void sDrawCallback(struct NTerrainNode* node, void* raw_canvas)
-{
-	struct Canvas* canvas = raw_canvas;
-	sDrawTile(canvas, node, NULL);
-}
-
 static void sDrawTerrainLod(struct Canvas* canvas, struct NTerrain* terrain, struct Vector2 position)
 {
-	canvas->offset = (struct Vector2i){BORDER, BORDER};
-	NTerrainIterate(terrain, position, sDrawCallback, canvas);
+	struct TreeState s = {.start = terrain->root};
+	struct Buffer buffer = {0};
+
+	struct NTerrainNode* node = NULL;
+	struct NTerrainNode* last_shared_node = NULL;
+
+	while ((node = NTerrainIterate(&s, &buffer, &last_shared_node, position)) != NULL)
+	{
+		sCanvasSetOffset(canvas, (struct Vector2){BORDER, BORDER});
+		sDrawTile(canvas, node, last_shared_node);
+	}
+
+	BufferClean(&buffer);
 }
 
 
@@ -254,8 +326,8 @@ void TestNormalTerrain(void** cmocka_state)
 #define PATTERN_SUBDIVISION 2
 
 	struct NTerrain* terrain = NULL;
+	struct Canvas* c = NULL;
 	struct Status st = {0};
-	struct Canvas c = {0};
 
 	struct timespec start_time = {0};
 	struct timespec end_time = {0};
@@ -282,11 +354,12 @@ void TestNormalTerrain(void** cmocka_state)
 
 	sPrintInfo(terrain);
 
-	if (sInitCanvas(&c, terrain->dimension + BORDER * 2, BORDER + (terrain->dimension + BORDER) * terrain->steps) == 0)
+	if ((c = sCanvasCreate(terrain->dimension + BORDER * 2, BORDER + (terrain->dimension + BORDER) * terrain->steps)) !=
+	    NULL)
 	{
-		sDrawTerrainLayers(&c, terrain);
-		ImageSaveSgi(c.image, "./TestNormalTerrain.sgi");
-		ImageDelete(c.image);
+		sDrawTerrainLayers(c, terrain);
+		sCanvasSave(c, "./TestNormalTerrain.svg");
+		sCanvasDelete(c);
 	}
 
 	NTerrainDelete(terrain);
@@ -303,19 +376,23 @@ void TestNormalTerrain(void** cmocka_state)
 -----------------------------*/
 void TestPreciseTerrain(void** cmocka_state)
 {
-// The following values where an hide trouble for sSubdivideTile(). The less
-// or equal comparison: `if ((node_dimension / 3.0) <= min_tile_dimension)`
-// fixed them. But I still are worried about the loss of precision.
+	// The following values where an hide trouble for sSubdivideTile(). The less
+	// or equal comparison: `if ((node_dimension / 3.0) <= min_tile_dimension)`
+	// fixed them. But I'm still worried about the loss of precision.
 
-// Put an eye on the mallocs operations number that Valgrind reports. From
-// an normal of ~700 it jumps to ~7000. In other cases it simply stall the heap.
+	// EDIT: With vertices, buffers plus the tree node, the mallocs skyrocketed.
+	// Compare the numbers against sPrintInfo().
+
+	// [OLD] Put an eye on the mallocs operations number that Valgrind reports. From
+	// an normal of ~700 it jumps to ~7000. In other cases it simply stall the heap.
+
 #define TERRAIN_DIMENSION 972.0
 #define TILE_DIMENSION 12.0
 #define PATTERN_SUBDIVISION 3
 
 	struct NTerrain* terrain = NULL;
+	struct Canvas* c = NULL;
 	struct Status st = {0};
-	struct Canvas c = {0};
 
 	struct timespec start_time = {0};
 	struct timespec end_time = {0};
@@ -337,11 +414,12 @@ void TestPreciseTerrain(void** cmocka_state)
 
 	sPrintInfo(terrain);
 
-	if (sInitCanvas(&c, terrain->dimension + BORDER * 2, BORDER + (terrain->dimension + BORDER) * terrain->steps) == 0)
+	if ((c = sCanvasCreate(terrain->dimension + BORDER * 2, BORDER + (terrain->dimension + BORDER) * terrain->steps)) !=
+	    NULL)
 	{
-		sDrawTerrainLayers(&c, terrain);
-		ImageSaveSgi(c.image, "./TestPreciseTerrain.sgi");
-		ImageDelete(c.image);
+		sDrawTerrainLayers(c, terrain);
+		sCanvasSave(c, "./TestPreciseTerrain.svg");
+		sCanvasDelete(c);
 	}
 
 	NTerrainDelete(terrain);
@@ -359,12 +437,12 @@ void TestPreciseTerrain(void** cmocka_state)
 void TestIteration1(void** cmocka_state)
 {
 #define TERRAIN_DIMENSION 972.0
-#define TILE_DIMENSION 12.0
-#define PATTERN_SUBDIVISION 3
+#define TILE_DIMENSION 6.0
+#define PATTERN_SUBDIVISION 2
 
 	struct NTerrain* terrain = NULL;
+	struct Canvas* c = NULL;
 	struct Status st = {0};
-	struct Canvas c = {0};
 
 	if ((terrain = NTerrainCreate(TERRAIN_DIMENSION, TILE_DIMENSION, PATTERN_SUBDIVISION, &st)) == NULL)
 	{
@@ -372,11 +450,13 @@ void TestIteration1(void** cmocka_state)
 		assert_int_equal(st.code, STATUS_SUCCESS);
 	}
 
-	if (sInitCanvas(&c, terrain->dimension + BORDER * 2, terrain->dimension + BORDER * 2) == 0)
+	sPrintInfo(terrain);
+
+	if ((c = sCanvasCreate(terrain->dimension + BORDER * 2, terrain->dimension + BORDER * 2)) != NULL)
 	{
-		sDrawTerrainLod(&c, terrain, (struct Vector2){terrain->dimension / 3, terrain->dimension / 2});
-		ImageSaveSgi(c.image, "./TestIteration1.sgi");
-		ImageDelete(c.image);
+		sDrawTerrainLod(c, terrain, (struct Vector2){terrain->dimension / 3, terrain->dimension / 2});
+		sCanvasSave(c, "./TestIteration1.svg");
+		sCanvasDelete(c);
 	}
 
 	NTerrainDelete(terrain);
@@ -394,12 +474,12 @@ void TestIteration1(void** cmocka_state)
 void TestIteration2(void** cmocka_state)
 {
 #define TERRAIN_DIMENSION 972.0
-#define TILE_DIMENSION 12.0
-#define PATTERN_SUBDIVISION 3
+#define TILE_DIMENSION 6.0
+#define PATTERN_SUBDIVISION 2
 
 	struct NTerrain* terrain = NULL;
+	struct Canvas* c = NULL;
 	struct Status st = {0};
-	struct Canvas c = {0};
 
 	if ((terrain = NTerrainCreate(TERRAIN_DIMENSION, TILE_DIMENSION, PATTERN_SUBDIVISION, &st)) == NULL)
 	{
@@ -407,11 +487,11 @@ void TestIteration2(void** cmocka_state)
 		assert_int_equal(st.code, STATUS_SUCCESS);
 	}
 
-	if (sInitCanvas(&c, terrain->dimension + BORDER * 2, terrain->dimension + BORDER * 2) == 0)
+	if ((c = sCanvasCreate(terrain->dimension + BORDER * 2, terrain->dimension + BORDER * 2)) != NULL)
 	{
-		sDrawTerrainLod(&c, terrain, (struct Vector2){terrain->dimension, terrain->dimension});
-		ImageSaveSgi(c.image, "./TestIteration2.sgi");
-		ImageDelete(c.image);
+		sDrawTerrainLod(c, terrain, (struct Vector2){terrain->dimension, terrain->dimension});
+		sCanvasSave(c, "./TestIteration2.svg");
+		sCanvasDelete(c);
 	}
 
 	NTerrainDelete(terrain);
