@@ -35,9 +35,14 @@ SOFTWARE.
 #include <string.h>
 
 
-static inline float sNodeDimension(const struct NTerrainNode* node)
+static inline float sDimension(const struct NTerrainNode* node)
 {
 	return (node->max.x - node->min.x);
+}
+
+static inline struct Vector2 sMiddle(const struct NTerrainNode* node)
+{
+	return (struct Vector2){node->min.x + sDimension(node) / 2.0, node->min.y + sDimension(node) / 2.0};
 }
 
 
@@ -144,7 +149,7 @@ static void sSubdivideTile(struct Tree* item, float min_tile_dimension)
 	struct Tree* new_item = NULL;
 
 	// TODO: With all the loss of precision, can the equal comparision fail? (I think that yes? no?)
-	if ((sNodeDimension(node) / 3.0) <= min_tile_dimension)
+	if ((sDimension(node) / 3.0) <= min_tile_dimension)
 		return;
 
 	for (int i = 0; i < 9; i++)
@@ -157,56 +162,56 @@ static void sSubdivideTile(struct Tree* item, float min_tile_dimension)
 		case 0: // North West
 			new_node->min.x = node->min.x;
 			new_node->min.y = node->min.y;
-			new_node->max.x = node->min.x + sNodeDimension(node) / 3.0;
-			new_node->max.y = node->min.y + sNodeDimension(node) / 3.0;
+			new_node->max.x = node->min.x + sDimension(node) / 3.0;
+			new_node->max.y = node->min.y + sDimension(node) / 3.0;
 			break;
 		case 1: // North
-			new_node->min.x = node->min.x + sNodeDimension(node) / 3.0;
+			new_node->min.x = node->min.x + sDimension(node) / 3.0;
 			new_node->min.y = node->min.y;
-			new_node->max.x = node->min.x + sNodeDimension(node) / 3.0 * 2.0;
-			new_node->max.y = node->min.y + sNodeDimension(node) / 3.0;
+			new_node->max.x = node->min.x + sDimension(node) / 3.0 * 2.0;
+			new_node->max.y = node->min.y + sDimension(node) / 3.0;
 			break;
 		case 2: // North East
-			new_node->min.x = node->min.x + sNodeDimension(node) / 3.0 * 2.0;
+			new_node->min.x = node->min.x + sDimension(node) / 3.0 * 2.0;
 			new_node->min.y = node->min.y;
-			new_node->max.x = node->min.x + sNodeDimension(node) / 3.0 * 3.0;
-			new_node->max.y = node->min.y + sNodeDimension(node) / 3.0;
+			new_node->max.x = node->min.x + sDimension(node) / 3.0 * 3.0;
+			new_node->max.y = node->min.y + sDimension(node) / 3.0;
 			break;
 		case 3: // West
 			new_node->min.x = node->min.x;
-			new_node->min.y = node->min.y + sNodeDimension(node) / 3.0;
-			new_node->max.x = node->min.x + sNodeDimension(node) / 3.0;
-			new_node->max.y = node->min.y + sNodeDimension(node) / 3.0 * 2.0;
+			new_node->min.y = node->min.y + sDimension(node) / 3.0;
+			new_node->max.x = node->min.x + sDimension(node) / 3.0;
+			new_node->max.y = node->min.y + sDimension(node) / 3.0 * 2.0;
 			break;
 		case 4: // Center
-			new_node->min.x = node->min.x + sNodeDimension(node) / 3.0;
-			new_node->min.y = node->min.y + sNodeDimension(node) / 3.0;
-			new_node->max.x = node->min.x + sNodeDimension(node) / 3.0 * 2.0;
-			new_node->max.y = node->min.y + sNodeDimension(node) / 3.0 * 2.0;
+			new_node->min.x = node->min.x + sDimension(node) / 3.0;
+			new_node->min.y = node->min.y + sDimension(node) / 3.0;
+			new_node->max.x = node->min.x + sDimension(node) / 3.0 * 2.0;
+			new_node->max.y = node->min.y + sDimension(node) / 3.0 * 2.0;
 			break;
 		case 5: // East
-			new_node->min.x = node->min.x + sNodeDimension(node) / 3.0 * 2.0;
-			new_node->min.y = node->min.y + sNodeDimension(node) / 3.0;
-			new_node->max.x = node->min.x + sNodeDimension(node) / 3.0 * 3.0;
-			new_node->max.y = node->min.y + sNodeDimension(node) / 3.0 * 2.0;
+			new_node->min.x = node->min.x + sDimension(node) / 3.0 * 2.0;
+			new_node->min.y = node->min.y + sDimension(node) / 3.0;
+			new_node->max.x = node->min.x + sDimension(node) / 3.0 * 3.0;
+			new_node->max.y = node->min.y + sDimension(node) / 3.0 * 2.0;
 			break;
 		case 6: // South West
 			new_node->min.x = node->min.x;
-			new_node->min.y = node->min.y + sNodeDimension(node) / 3.0 * 2.0;
-			new_node->max.x = node->min.x + sNodeDimension(node) / 3.0;
-			new_node->max.y = node->min.y + sNodeDimension(node) / 3.0 * 3.0;
+			new_node->min.y = node->min.y + sDimension(node) / 3.0 * 2.0;
+			new_node->max.x = node->min.x + sDimension(node) / 3.0;
+			new_node->max.y = node->min.y + sDimension(node) / 3.0 * 3.0;
 			break;
 		case 7: // South
-			new_node->min.x = node->min.x + sNodeDimension(node) / 3.0;
-			new_node->min.y = node->min.y + sNodeDimension(node) / 3.0 * 2.0;
-			new_node->max.x = node->min.x + sNodeDimension(node) / 3.0 * 2.0;
-			new_node->max.y = node->min.y + sNodeDimension(node) / 3.0 * 3.0;
+			new_node->min.x = node->min.x + sDimension(node) / 3.0;
+			new_node->min.y = node->min.y + sDimension(node) / 3.0 * 2.0;
+			new_node->max.x = node->min.x + sDimension(node) / 3.0 * 2.0;
+			new_node->max.y = node->min.y + sDimension(node) / 3.0 * 3.0;
 			break;
 		case 8: // South East
-			new_node->min.x = node->min.x + sNodeDimension(node) / 3.0 * 2.0;
-			new_node->min.y = node->min.y + sNodeDimension(node) / 3.0 * 2.0;
-			new_node->max.x = node->min.x + sNodeDimension(node) / 3.0 * 3.0;
-			new_node->max.y = node->min.y + sNodeDimension(node) / 3.0 * 3.0;
+			new_node->min.x = node->min.x + sDimension(node) / 3.0 * 2.0;
+			new_node->min.y = node->min.y + sDimension(node) / 3.0 * 2.0;
+			new_node->max.x = node->min.x + sDimension(node) / 3.0 * 3.0;
+			new_node->max.y = node->min.y + sDimension(node) / 3.0 * 3.0;
 		}
 
 		sSubdivideTile(new_item, min_tile_dimension);
@@ -266,7 +271,7 @@ struct NTerrain* NTerrainCreate(float dimension, float min_tile_dimension, int p
 		node = item->data;
 		terrain->tiles_no++;
 
-		node->pattern_dimension = sNodeDimension(node);
+		node->pattern_dimension = sDimension(node);
 
 		for (int i = 0; i < pattern_subdivisions; i++)
 			node->pattern_dimension /= 3.0;
@@ -279,7 +284,7 @@ struct NTerrain* NTerrainCreate(float dimension, float min_tile_dimension, int p
 			node->vertices_no = 0;
 
 			// Index
-			node->index_no = (size_t)ceil(sNodeDimension(node) / node->pattern_dimension);
+			node->index_no = (size_t)ceil(sDimension(node) / node->pattern_dimension);
 			node->index_no = node->index_no * node->index_no * 6;
 			node->index = malloc(node->index_no * sizeof(uint16_t));
 
@@ -289,7 +294,7 @@ struct NTerrain* NTerrainCreate(float dimension, float min_tile_dimension, int p
 		else
 		{
 			// Can this node keep all childrens vertices? (because indices in OpenGL ES2)
-			if (powf(sNodeDimension(node) / terrain->min_pattern_dimension + 1, 2.0) < UINT16_MAX)
+			if (powf(sDimension(node) / terrain->min_pattern_dimension + 1, 2.0) < UINT16_MAX)
 			{
 				last_parent = node;
 				p_depth = s.depth;
@@ -298,14 +303,14 @@ struct NTerrain* NTerrainCreate(float dimension, float min_tile_dimension, int p
 				terrain->vertices_buffers_no++;
 
 				// Vertices
-				node->vertices_no = (size_t)ceil(sNodeDimension(node) / terrain->min_pattern_dimension + 1.0);
+				node->vertices_no = (size_t)ceil(sDimension(node) / terrain->min_pattern_dimension + 1.0);
 				node->vertices_no = node->vertices_no * node->vertices_no;
 				node->vertices = malloc(sizeof(struct Vertex) * node->vertices_no);
 
 				sGenerateVertices(node->vertices, node->min, node->max, terrain->min_pattern_dimension);
 
 				// Index
-				node->index_no = (size_t)ceil(sNodeDimension(node) / node->pattern_dimension);
+				node->index_no = (size_t)ceil(sDimension(node) / node->pattern_dimension);
 				node->index_no = node->index_no * node->index_no * 6;
 				node->index = malloc(node->index_no * sizeof(uint16_t));
 
@@ -322,14 +327,14 @@ struct NTerrain* NTerrainCreate(float dimension, float min_tile_dimension, int p
 				terrain->vertices_buffers_no++;
 
 				// Vertices
-				node->vertices_no = (size_t)ceil(sNodeDimension(node) / node->pattern_dimension + 1.0);
+				node->vertices_no = (size_t)ceil(sDimension(node) / node->pattern_dimension + 1.0);
 				node->vertices_no = node->vertices_no * node->vertices_no;
 				node->vertices = malloc(sizeof(struct Vertex) * node->vertices_no);
 
 				sGenerateVertices(node->vertices, node->min, node->max, node->pattern_dimension);
 
 				// Index
-				node->index_no = (size_t)ceil(sNodeDimension(node) / node->pattern_dimension);
+				node->index_no = (size_t)ceil(sDimension(node) / node->pattern_dimension);
 				node->index_no = node->index_no * node->index_no * 6;
 				node->index = malloc(node->index_no * sizeof(uint16_t));
 
@@ -377,4 +382,74 @@ void NTerrainDelete(struct NTerrain* terrain)
 	}
 
 	free(terrain);
+}
+
+
+/*-----------------------------
+
+ NTerrainIterate()
+-----------------------------*/
+struct Buffer g_buffer = {0};
+
+void NTerrainIterate(struct NTerrain* terrain, struct Vector2 position, void (*callback)(struct NTerrainNode*, void*),
+                     void* extra_data)
+{
+	struct Tree** future_parent_heap = NULL;
+
+	struct Tree* future_return = terrain->root->children;
+	size_t future_depth = 1;
+
+	struct Tree* actual = NULL;
+	size_t depth = 0;
+
+	while (1)
+	{
+		// Actual node (to call)
+		if ((actual = future_return) == NULL)
+			break;
+
+		depth = future_depth;
+		future_return = NULL;
+
+		// Go in? (childrens)
+		if (actual->children != NULL && Vector2Distance(sMiddle(actual->data), position) <=
+		                                    sDimension(actual->data) * 1.5) // TODO, the 1.5 can be configurable
+		{
+			if (BufferResize(&g_buffer, (depth + 1) * sizeof(void*)) == NULL) // FIXME, Bug in LibJapan, the +1
+				return;
+
+			future_parent_heap = g_buffer.data;
+			future_parent_heap[depth] = actual->next;
+			future_return = actual->children;
+
+			future_depth++;
+			continue; // We omit actual for being drawing
+		}
+
+		// Brothers
+		else if (depth > 0 && actual->next != NULL)
+		{
+			future_return = actual->next;
+		}
+
+		// Go out (next parent)
+		else if (depth > 0)
+		{
+			future_parent_heap = g_buffer.data;
+
+			while ((future_depth -= 1) > 0)
+			{
+				if (future_parent_heap[future_depth] != NULL)
+				{
+					future_return = future_parent_heap[future_depth];
+					break;
+				}
+			}
+		}
+
+		// Callback at the end emulation how tree.c works
+		callback(actual->data, extra_data);
+	}
+
+	BufferClean(&g_buffer);
 }

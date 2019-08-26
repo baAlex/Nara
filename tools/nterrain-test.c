@@ -4,8 +4,9 @@
  - Alexander Brandt 2019
 
  $ clang -I./source/lib-japan/include -I./source/engine/ ./source/lib-japan/source/buffer.c
-./source/lib-japan/source/endianness.c ./source/lib-japan/source/image.c ./source/lib-japan/source/image-sgi.c
-./source/lib-japan/source/status.c ./source/lib-japan/source/tree.c ./source/lib-japan/source/vector.c
+./source/lib-japan/source/endianness.c ./source/lib-japan/source/image/image.c
+./source/lib-japan/source/image/format-sgi.c ./source/lib-japan/source/status.c
+./source/lib-japan/source/tree.c ./source/lib-japan/source/vector.c
 ./source/engine/nterrain.c ./tools/nterrain-test.c -lm -lcmocka -O0 -g -o ./test
 
 -----------------------------*/
@@ -87,6 +88,62 @@ static void sDrawLine(struct Canvas* canvas, struct Vector2i a, struct Vector2i 
 
 /*-----------------------------
 
+ sDrawTile()
+-----------------------------*/
+static void sDrawTile(struct Canvas* canvas, const struct NTerrainNode* node, const struct NTerrainNode* inherit_from)
+{
+	const struct Vertex* vertices;
+	size_t index1 = 0;
+	size_t index2 = 0;
+	size_t index3 = 0;
+
+	switch (node->vertices_type)
+	{
+	case OWN_VERTICES:
+		canvas->color = (struct Vector3){0.5, 0.0, 0.0};
+		vertices = node->vertices;
+		break;
+	case INHERITED_FROM_PARENT:
+		canvas->color = (struct Vector3){0.5, 0.5, 0.5};
+		vertices = (inherit_from != NULL) ? inherit_from->vertices : NULL;
+		break;
+	case SHARED_WITH_CHILDRENS:
+		canvas->color = (struct Vector3){0.0, 0.5, 0.0};
+		vertices = node->vertices;
+		break;
+	}
+
+	// Inner triangles
+	if (vertices != NULL) // NTerrainIterate() at the moment did not allow to keep the last shared vertices
+	{
+		for (size_t i = 0; i < node->index_no; i += 3)
+		{
+			index1 = node->index[i];
+			index2 = node->index[i + 1];
+			index3 = node->index[i + 2];
+
+			sDrawLine(canvas, (struct Vector2i){vertices[index1].pos.x, vertices[index1].pos.y},
+			          (struct Vector2i){vertices[index2].pos.x, vertices[index2].pos.y});
+
+			sDrawLine(canvas, (struct Vector2i){vertices[index2].pos.x, vertices[index2].pos.y},
+			          (struct Vector2i){vertices[index3].pos.x, vertices[index3].pos.y});
+
+			sDrawLine(canvas, (struct Vector2i){vertices[index3].pos.x, vertices[index3].pos.y},
+			          (struct Vector2i){vertices[index1].pos.x, vertices[index1].pos.y});
+		}
+	}
+
+	// Outside box
+	canvas->color = Vector3Scale(canvas->color, 2);
+	sDrawLine(canvas, (struct Vector2i){node->min.x, node->min.y}, (struct Vector2i){node->min.x, node->max.y});
+	sDrawLine(canvas, (struct Vector2i){node->min.x, node->max.y}, (struct Vector2i){node->max.x, node->max.y});
+	sDrawLine(canvas, (struct Vector2i){node->max.x, node->max.y}, (struct Vector2i){node->max.x, node->min.y});
+	sDrawLine(canvas, (struct Vector2i){node->max.x, node->min.y}, (struct Vector2i){node->min.x, node->min.y});
+}
+
+
+/*-----------------------------
+
  sInitCanvas()
 -----------------------------*/
 static int sInitCanvas(struct Canvas* canvas, size_t width, size_t height)
@@ -103,9 +160,9 @@ static int sInitCanvas(struct Canvas* canvas, size_t width, size_t height)
 
 /*-----------------------------
 
- sDrawTerrain()
+ sDrawTerrainLayers()
 -----------------------------*/
-static void sDrawTerrain(struct NTerrain* terrain, struct Canvas* canvas)
+static void sDrawTerrainLayers(struct Canvas* canvas, struct NTerrain* terrain)
 {
 	struct TreeState s = {.start = terrain->root};
 	struct Buffer buffer = {0};
@@ -114,74 +171,35 @@ static void sDrawTerrain(struct NTerrain* terrain, struct Canvas* canvas)
 	struct NTerrainNode* node = NULL;
 	struct NTerrainNode* last_shared_node = NULL;
 
-	size_t prev_depth = 0;
-	size_t index1 = 0;
-	size_t index2 = 0;
-	size_t index3 = 0;
-
-
 	while ((item = TreeIterate(&s, &buffer)) != NULL)
 	{
 		node = item->data;
 
-		switch (node->vertices_type)
-		{
-		case OWN_VERTICES: canvas->color = (struct Vector3){0.5, 0.0, 0.0}; break;
-		case INHERITED_FROM_PARENT: canvas->color = (struct Vector3){0.5, 0.5, 0.5}; break;
-		case SHARED_WITH_CHILDRENS:
+		if (node->vertices_type == SHARED_WITH_CHILDRENS)
 			last_shared_node = node;
-			canvas->color = (struct Vector3){0.0, 0.5, 0.0};
-			break;
-		}
 
 		canvas->offset = (struct Vector2i){BORDER, BORDER + (BORDER + terrain->dimension) * s.depth};
-
-		for (size_t i = 0; i < node->index_no; i += 3)
-		{
-			index1 = node->index[i];
-			index2 = node->index[i + 1];
-			index3 = node->index[i + 2];
-
-			if (node->vertices_type != INHERITED_FROM_PARENT)
-			{
-				sDrawLine(canvas, (struct Vector2i){node->vertices[index1].pos.x, node->vertices[index1].pos.y},
-				          (struct Vector2i){node->vertices[index2].pos.x, node->vertices[index2].pos.y});
-
-				sDrawLine(canvas, (struct Vector2i){node->vertices[index2].pos.x, node->vertices[index2].pos.y},
-				          (struct Vector2i){node->vertices[index3].pos.x, node->vertices[index3].pos.y});
-
-				sDrawLine(canvas, (struct Vector2i){node->vertices[index3].pos.x, node->vertices[index3].pos.y},
-				          (struct Vector2i){node->vertices[index1].pos.x, node->vertices[index1].pos.y});
-			}
-			else
-			{
-				sDrawLine(canvas,
-				          (struct Vector2i){last_shared_node->vertices[index1].pos.x,
-				                            last_shared_node->vertices[index1].pos.y},
-				          (struct Vector2i){last_shared_node->vertices[index2].pos.x,
-				                            last_shared_node->vertices[index2].pos.y});
-
-				sDrawLine(canvas,
-				          (struct Vector2i){last_shared_node->vertices[index2].pos.x,
-				                            last_shared_node->vertices[index2].pos.y},
-				          (struct Vector2i){last_shared_node->vertices[index3].pos.x,
-				                            last_shared_node->vertices[index3].pos.y});
-
-				sDrawLine(canvas,
-				          (struct Vector2i){last_shared_node->vertices[index3].pos.x,
-				                            last_shared_node->vertices[index3].pos.y},
-				          (struct Vector2i){last_shared_node->vertices[index1].pos.x,
-				                            last_shared_node->vertices[index1].pos.y});
-			}
-		}
-
-		canvas->color = Vector3Scale(canvas->color, 2);
-
-		sDrawLine(canvas, (struct Vector2i){node->min.x, node->min.y}, (struct Vector2i){node->min.x, node->max.y});
-		sDrawLine(canvas, (struct Vector2i){node->min.x, node->max.y}, (struct Vector2i){node->max.x, node->max.y});
-		sDrawLine(canvas, (struct Vector2i){node->max.x, node->max.y}, (struct Vector2i){node->max.x, node->min.y});
-		sDrawLine(canvas, (struct Vector2i){node->max.x, node->min.y}, (struct Vector2i){node->min.x, node->min.y});
+		sDrawTile(canvas, node, last_shared_node);
 	}
+
+	BufferClean(&buffer);
+}
+
+
+/*-----------------------------
+
+ sDrawTerrainLod()
+-----------------------------*/
+static void sDrawCallback(struct NTerrainNode* node, void* raw_canvas)
+{
+	struct Canvas* canvas = raw_canvas;
+	sDrawTile(canvas, node, NULL);
+}
+
+static void sDrawTerrainLod(struct Canvas* canvas, struct NTerrain* terrain, struct Vector2 position)
+{
+	canvas->offset = (struct Vector2i){BORDER, BORDER};
+	NTerrainIterate(terrain, position, sDrawCallback, canvas);
 }
 
 
@@ -264,14 +282,12 @@ void TestNormalTerrain(void** cmocka_state)
 
 	sPrintInfo(terrain);
 
-#ifndef NO_SGI
 	if (sInitCanvas(&c, terrain->dimension + BORDER * 2, BORDER + (terrain->dimension + BORDER) * terrain->steps) == 0)
 	{
-		sDrawTerrain(terrain, &c);
+		sDrawTerrainLayers(&c, terrain);
 		ImageSaveSgi(c.image, "./TestNormalTerrain.sgi");
 		ImageDelete(c.image);
 	}
-#endif
 
 	NTerrainDelete(terrain);
 
@@ -321,14 +337,82 @@ void TestPreciseTerrain(void** cmocka_state)
 
 	sPrintInfo(terrain);
 
-#ifndef NO_SGI
 	if (sInitCanvas(&c, terrain->dimension + BORDER * 2, BORDER + (terrain->dimension + BORDER) * terrain->steps) == 0)
 	{
-		sDrawTerrain(terrain, &c);
+		sDrawTerrainLayers(&c, terrain);
 		ImageSaveSgi(c.image, "./TestPreciseTerrain.sgi");
 		ImageDelete(c.image);
 	}
-#endif
+
+	NTerrainDelete(terrain);
+
+#undef TERRAIN_DIMENSION
+#undef TILE_DIMENSION
+#undef PATTERN_SUBDIVISION
+}
+
+
+/*-----------------------------
+
+ TestIteration1()
+-----------------------------*/
+void TestIteration1(void** cmocka_state)
+{
+#define TERRAIN_DIMENSION 972.0
+#define TILE_DIMENSION 12.0
+#define PATTERN_SUBDIVISION 3
+
+	struct NTerrain* terrain = NULL;
+	struct Status st = {0};
+	struct Canvas c = {0};
+
+	if ((terrain = NTerrainCreate(TERRAIN_DIMENSION, TILE_DIMENSION, PATTERN_SUBDIVISION, &st)) == NULL)
+	{
+		StatusPrint("TestIteration", st);
+		assert_int_equal(st.code, STATUS_SUCCESS);
+	}
+
+	if (sInitCanvas(&c, terrain->dimension + BORDER * 2, terrain->dimension + BORDER * 2) == 0)
+	{
+		sDrawTerrainLod(&c, terrain, (struct Vector2){terrain->dimension / 3, terrain->dimension / 2});
+		ImageSaveSgi(c.image, "./TestIteration1.sgi");
+		ImageDelete(c.image);
+	}
+
+	NTerrainDelete(terrain);
+
+#undef TERRAIN_DIMENSION
+#undef TILE_DIMENSION
+#undef PATTERN_SUBDIVISION
+}
+
+
+/*-----------------------------
+
+ TestIteration2()
+-----------------------------*/
+void TestIteration2(void** cmocka_state)
+{
+#define TERRAIN_DIMENSION 972.0
+#define TILE_DIMENSION 12.0
+#define PATTERN_SUBDIVISION 3
+
+	struct NTerrain* terrain = NULL;
+	struct Status st = {0};
+	struct Canvas c = {0};
+
+	if ((terrain = NTerrainCreate(TERRAIN_DIMENSION, TILE_DIMENSION, PATTERN_SUBDIVISION, &st)) == NULL)
+	{
+		StatusPrint("TestIteration", st);
+		assert_int_equal(st.code, STATUS_SUCCESS);
+	}
+
+	if (sInitCanvas(&c, terrain->dimension + BORDER * 2, terrain->dimension + BORDER * 2) == 0)
+	{
+		sDrawTerrainLod(&c, terrain, (struct Vector2){terrain->dimension, terrain->dimension});
+		ImageSaveSgi(c.image, "./TestIteration2.sgi");
+		ImageDelete(c.image);
+	}
 
 	NTerrainDelete(terrain);
 
@@ -344,6 +428,7 @@ void TestPreciseTerrain(void** cmocka_state)
 -----------------------------*/
 int main()
 {
-	const struct CMUnitTest tests[] = {cmocka_unit_test(TestNormalTerrain), cmocka_unit_test(TestPreciseTerrain)};
+	const struct CMUnitTest tests[] = {cmocka_unit_test(TestNormalTerrain), cmocka_unit_test(TestPreciseTerrain),
+	                                   cmocka_unit_test(TestIteration1), cmocka_unit_test(TestIteration2)};
 	return cmocka_run_group_tests(tests, NULL, NULL);
 }

@@ -36,15 +36,20 @@ build ./objects/debug/game/camera.o:         compile ./source/game/camera.c
 build ./objects/debug/game/point.o:          compile ./source/game/point.c
 
 # Lib Japan
-build ./objects/debug/lib-japan/buffer.o:     compile ./source/lib-japan/source/buffer.c
-build ./objects/debug/lib-japan/dictionary.o: compile ./source/lib-japan/source/dictionary.c
-build ./objects/debug/lib-japan/endianness.o: compile ./source/lib-japan/source/endianness.c
-build ./objects/debug/lib-japan/image.o:      compile ./source/lib-japan/source/image.c
-build ./objects/debug/lib-japan/image-sgi.o:  compile ./source/lib-japan/source/image-sgi.c
-build ./objects/debug/lib-japan/list.o:       compile ./source/lib-japan/source/list.c
-build ./objects/debug/lib-japan/matrix.o:     compile ./source/lib-japan/source/matrix.c
-build ./objects/debug/lib-japan/status.o:     compile ./source/lib-japan/source/status.c
-build ./objects/debug/lib-japan/vector.o:     compile ./source/lib-japan/source/vector.c
+build ./objects/debug/lib-japan/buffer.o:           compile ./source/lib-japan/source/buffer.c
+build ./objects/debug/lib-japan/dictionary.o:       compile ./source/lib-japan/source/dictionary.c
+build ./objects/debug/lib-japan/endianness.o:       compile ./source/lib-japan/source/endianness.c
+build ./objects/debug/lib-japan/list.o:             compile ./source/lib-japan/source/list.c
+build ./objects/debug/lib-japan/matrix.o:           compile ./source/lib-japan/source/matrix.c
+build ./objects/debug/lib-japan/status.o:           compile ./source/lib-japan/source/status.c
+build ./objects/debug/lib-japan/tree.o:             compile ./source/lib-japan/source/tree.c
+build ./objects/debug/lib-japan/vector.o:           compile ./source/lib-japan/source/vector.c
+build ./objects/debug/lib-japan/image/image.o:      compile ./source/lib-japan/source/image/image.c
+build ./objects/debug/lib-japan/image/format-sgi.o: compile ./source/lib-japan/source/image/format-sgi.c
+build ./objects/debug/lib-japan/sound/sound.o:      compile ./source/lib-japan/source/sound/sound.c
+build ./objects/debug/lib-japan/sound/format-au.o:  compile ./source/lib-japan/source/sound/format-au.c
+build ./objects/debug/lib-japan/sound/format-wav.o: compile ./source/lib-japan/source/sound/format-wav.c
+build ./objects/debug/lib-japan/sound/laws.o:       compile ./source/lib-japan/source/sound/laws.c
 
 # Sdk
 build ./objects/debug/sdk/sdk.o:    compile ./source/sdk/sdk.c
@@ -67,21 +72,31 @@ build nara-dbg: link $
 ./objects/debug/lib-japan/buffer.o $
 ./objects/debug/lib-japan/dictionary.o $
 ./objects/debug/lib-japan/endianness.o $
-./objects/debug/lib-japan/image.o $
-./objects/debug/lib-japan/image-sgi.o $
 ./objects/debug/lib-japan/list.o $
 ./objects/debug/lib-japan/matrix.o $
 ./objects/debug/lib-japan/status.o $
-./objects/debug/lib-japan/vector.o
+./objects/debug/lib-japan/tree.o $
+./objects/debug/lib-japan/vector.o $
+./objects/debug/lib-japan/image/image.o $
+./objects/debug/lib-japan/image/format-sgi.o $
+./objects/debug/lib-japan/sound/sound.o $
+./objects/debug/lib-japan/sound/format-au.o $
+./objects/debug/lib-japan/sound/format-wav.o $
+./objects/debug/lib-japan/sound/laws.o
 
 build sdk-dbg: link $
 ./objects/debug/sdk/sdk.o $
 ./objects/debug/lib-japan/buffer.o $
 ./objects/debug/lib-japan/dictionary.o $
 ./objects/debug/lib-japan/endianness.o $
-./objects/debug/lib-japan/image.o $
-./objects/debug/lib-japan/image-sgi.o $
 ./objects/debug/lib-japan/list.o $
 ./objects/debug/lib-japan/matrix.o $
 ./objects/debug/lib-japan/status.o $
-./objects/debug/lib-japan/vector.o
+./objects/debug/lib-japan/tree.o $
+./objects/debug/lib-japan/vector.o $
+./objects/debug/lib-japan/image/image.o $
+./objects/debug/lib-japan/image/format-sgi.o $
+./objects/debug/lib-japan/sound/sound.o $
+./objects/debug/lib-japan/sound/format-au.o $
+./objects/debug/lib-japan/sound/format-wav.o $
+./objects/debug/lib-japan/sound/laws.o

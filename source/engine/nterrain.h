@@ -59,4 +59,6 @@
 	                                struct Status* st);
 	void NTerrainDelete(struct NTerrain* terrain);
 
+	void NTerrainIterate(struct NTerrain* terrain, struct Vector2 position, void (*callback)(struct NTerrainNode*, void*), void* extra_data);
+
 #endif
