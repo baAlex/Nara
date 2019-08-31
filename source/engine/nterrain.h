@@ -38,16 +38,10 @@
 		float pattern_dimension;
 		enum NVerticesType vertices_type;
 
-		#ifdef TEST
-			uint16_t* index;
-			size_t index_no;
-			struct Vertex* vertices;
-			size_t vertices_no;
-		#else
-			struct Vertices* vertices;
-			struct Index* index;
-		#endif
-
+		uint16_t* index;
+		size_t index_no;
+		struct Vertex* vertices;
+		size_t vertices_no;
 	};
 
 	struct NTerrain
@@ -67,5 +61,6 @@
 	void NTerrainDelete(struct NTerrain* terrain);
 
 	struct NTerrainNode* NTerrainIterate(struct TreeState* state, struct Buffer* buffer, struct NTerrainNode** out_shared, struct Vector2 position);
+	void NTerrainShape(struct NTerrain* terrain, float elevation, const char* heightmap);
 
 #endif

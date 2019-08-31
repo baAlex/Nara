@@ -35,7 +35,8 @@ SOFTWARE.
 
 #include "context.h"
 #include "entity.h"
-#include "terrain.h"
+#include "nterrain.h"
+#include "context-private.h" // HACK
 
 #include "../game/game.h"
 
@@ -120,7 +121,8 @@ int main()
 
 	struct List entities = {0};             // In a future these three should
 	struct Program* terrain_program = NULL; // be component of an object representing
-	struct Terrain* terrain = NULL;         // a game map/level. Being loaded from a file
+	struct NTerrain* terrain = NULL;        // a game map/level. Being loaded from a file
+	struct Texture* texture = NULL;
 
 	struct Dictionary* classes = sInitializeClasses(); // TODO: error check
 	struct EntityInput entities_input = {0};
@@ -139,38 +141,55 @@ int main()
 		.scale_mode = SCALE_MODE_STRETCH,
 		.fullscreen = false,
 		.clean_color = {0.80, 0.82, 0.84}
-	},
-	&st);
+	}, &st);
 
 	if (s_context == NULL)
 		goto return_failure;
 
 	// Resources
 	{
-		struct TerrainOptions terrain_options = {0};
-
-		terrain_options.heightmap_filename = "./assets/heightmap.sgi";
-		terrain_options.colormap_filename = "./assets/colormap.sgi";
-		terrain_options.width = 1024;
-		terrain_options.height = 1024;
-		terrain_options.elevation = 64;
-
-		if ((terrain_program = ProgramCreate((char*)g_terrain_vertex, (char*)g_terrain_fragment, &st)) == NULL ||
-		    (terrain = TerrainCreate(terrain_options, &st)) == NULL)
+		if ((terrain_program = ProgramCreate((char*)g_terrain_vertex, (char*)g_terrain_fragment, &st)) == NULL)
 			goto return_failure;
 
-		sSetProjection((struct Vector2i){WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT}, s_context);
-		ContextSetProgram(s_context, terrain_program);
+		if ((terrain = NTerrainCreate(972.0, 9.0, 1, &st)) == NULL)
+			goto return_failure;
+
+		if ((texture = TextureCreate(ImageLoad("./assets/colormap.sgi", &st), &st)) == NULL)
+			goto return_failure;
+
+		NTerrainShape(terrain, 100.0, "./assets/heightmap.sgi");
 
 		camera_entity = EntityCreate(&entities, ClassGet(classes, "Camera"));
 		EntityCreate(&entities, ClassGet(classes, "Point"));
+
+		sSetProjection((struct Vector2i){WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT}, s_context);
+		ContextSetProgram(s_context, terrain_program);
 	}
 
+	printf("Terrain 0x%p:\n", (void*)terrain);
+	printf(" - Dimension: %0.4f\n", terrain->dimension);
+	printf(" - Minimum tile dimension: %0.4f\n", terrain->min_tile_dimension);
+	printf(" - Minimum pattern dimension: %0.4f\n", terrain->min_pattern_dimension);
+	printf(" - Steps: %lu\n", terrain->steps);
+	printf(" - Tiles: %lu\n", terrain->tiles_no);
+	printf(" - Vertices buffers: %lu\n", terrain->vertices_buffers_no);
+
 	// Yay!
+	struct TreeState s = {.start = terrain->root};
+	struct Buffer buffer = {0};
+
+	struct NTerrainNode* node = NULL;
+	struct NTerrainNode* last_shared_node = NULL;
+	struct NTerrainNode* temp = NULL;
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture->ptr);
+
 	while (1)
 	{
 		ContextUpdate(s_context, &s_window_specs, &s_time_specs, &s_input_specs);
-		ContextDraw(s_context, terrain->vertices, terrain->index, terrain->color);
 
 		memcpy(&entities_input, &s_input_specs, sizeof(struct InputSpecifications)); // HACK!
 		entities_input.delta = s_time_specs.miliseconds_betwen / 33.3333;
@@ -200,6 +219,22 @@ int main()
 		if (s_window_specs.resized == true)
 			sSetProjection(s_window_specs.size, s_context);
 
+		// Render
+		s.start = terrain->root;
+
+		while ((node = NTerrainIterate(&s, &buffer, &last_shared_node,
+		                               (struct Vector2){camera_entity->co.position.x, camera_entity->co.position.y})) != NULL)
+		{
+			if(temp != last_shared_node)
+			{
+				temp = last_shared_node;
+				glVertexAttribPointer(ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), last_shared_node->vertices);
+				glVertexAttribPointer(ATTRIBUTE_UV, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), (float*)last_shared_node->vertices + 3);
+			}
+
+			glDrawElements(GL_TRIANGLES, node->index_no, GL_UNSIGNED_SHORT, node->index);
+		}
+
 		// Exit?
 		if (s_window_specs.close == true)
 			break;
@@ -209,7 +244,7 @@ int main()
 	DictionaryDelete(classes);
 	ListClean(&entities);
 	ProgramDelete(terrain_program);
-	TerrainDelete(terrain);
+	NTerrainDelete(terrain);
 	ContextDelete(s_context);
 
 	return EXIT_SUCCESS;
@@ -218,7 +253,9 @@ return_failure:
 
 	StatusPrint("Nara", st);
 	if (terrain != NULL)
-		TerrainDelete(terrain);
+		NTerrainDelete(terrain);
+	if (texture != NULL)
+		TextureDelete(texture);
 	if (terrain_program != NULL)
 		ProgramDelete(terrain_program);
 	if (s_context != NULL)

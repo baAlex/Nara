@@ -135,7 +135,7 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-	 glfwWindowHint(GLFW_SAMPLES, 2);
+	glfwWindowHint(GLFW_SAMPLES, 2);
 
 	if ((context->window =
 	         glfwCreateWindow(options.window_size.x, options.window_size.y, options.caption, NULL, NULL)) == NULL)
@@ -175,7 +175,6 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	printf("%s\n", glGetString(GL_RENDERER));
 	printf("%s\n", glGetString(GL_VERSION));
 	printf("%s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
-	printf("%s\n", glGetString(GL_EXTENSIONS));
 
 	return context;
 

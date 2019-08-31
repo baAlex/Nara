@@ -25,8 +25,7 @@ build ./objects/engine/context-input.o:    compile ./source/engine/context-input
 build ./objects/engine/context-opengl.o:   compile ./source/engine/context-opengl.c
 build ./objects/engine/context-time.o:     compile ./source/engine/context-time.c
 build ./objects/engine/entity.o:           compile ./source/engine/entity.c
-build ./objects/engine/terrain.o:          compile ./source/engine/terrain.c
-build ./objects/engine/nterrain.o:          compile ./source/engine/terrain.c
+build ./objects/engine/nterrain.o:         compile ./source/engine/nterrain.c
 build ./objects/engine/terrain-fragment.o: compile ./objects/engine/terrain-fragment.c
 build ./objects/engine/terrain-vertex.o:   compile ./objects/engine/terrain-vertex.c
 build ./objects/engine/red-fragment.o:     compile ./objects/engine/red-fragment.c
@@ -63,7 +62,7 @@ build nara: link $
 ./objects/engine/context-opengl.o $
 ./objects/engine/context-time.o $
 ./objects/engine/entity.o $
-./objects/engine/terrain.o $
+./objects/engine/nterrain.o $
 ./objects/engine/terrain-fragment.o $
 ./objects/engine/terrain-vertex.o $
 ./objects/engine/red-fragment.o $

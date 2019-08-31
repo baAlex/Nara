@@ -45,7 +45,7 @@ void* GameCameraStart()
 	struct GameCamera* self = malloc(sizeof(struct GameCamera)); // TODO, check error
 
 	self->co.position = (struct Vector3){128.0, 128.0, 256.0};
-	self->co.angle = (struct Vector3){-67.5, 0.0, 45.0};
+	self->co.angle = (struct Vector3){-50.0, 0.0, 45.0};
 
 	return self;
 }

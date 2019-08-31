@@ -112,11 +112,11 @@ static void sGenerateIndex(uint16_t* index_out, struct Vector2 min, struct Vecto
  sGenerateVertices()
 -----------------------------*/
 static void sGenerateVertices(struct Vertex* vertices_out, struct Vector2 min, struct Vector2 max,
-                              float pattern_dimension)
+                              float pattern_dimension, float terrain_dimension)
 {
 	int patterns_no = (max.x - min.x) / pattern_dimension;
-	float texture_step_x = 0;
-	float texture_step_y = 0;
+	float texture_step_x = min.x / terrain_dimension;
+	float texture_step_y = min.y / terrain_dimension;
 
 	for (int row = 0; row < (patterns_no + 1); row++)
 	{
@@ -129,10 +129,10 @@ static void sGenerateVertices(struct Vertex* vertices_out, struct Vector2 min, s
 			vertices_out[col + (patterns_no + 1) * row].pos.y = min.y + (float)(row * pattern_dimension);
 			vertices_out[col + (patterns_no + 1) * row].pos.z = 0.0;
 
-			texture_step_x += (float)pattern_dimension / (float)(max.x - min.x);
+			texture_step_x += (float)pattern_dimension / terrain_dimension;
 		}
 
-		texture_step_y += (float)pattern_dimension / (float)(max.x - min.x);
+		texture_step_y += (float)pattern_dimension / terrain_dimension;
 		texture_step_x = 0.0;
 	}
 }
@@ -144,11 +144,9 @@ static void sGenerateVertices(struct Vertex* vertices_out, struct Vector2 min, s
 -----------------------------*/
 static uint16_t* sAllocateIndex(struct NTerrainNode* node)
 {
-	#ifdef TEST
 	node->index_no = (size_t)ceil(sDimension(node) / node->pattern_dimension);
 	node->index_no = node->index_no * node->index_no * 6;
 	return node->index = malloc(node->index_no * sizeof(uint16_t));
-	#endif
 }
 
 
@@ -158,11 +156,9 @@ static uint16_t* sAllocateIndex(struct NTerrainNode* node)
 -----------------------------*/
 static struct Vertex* sAllocateVertices(struct NTerrainNode* node, float pattern_dimension)
 {
-	#ifdef TEST
 	node->vertices_no = (size_t)ceil(sDimension(node) / pattern_dimension + 1.0);
 	node->vertices_no = node->vertices_no * node->vertices_no;
 	return node->vertices = malloc(sizeof(struct Vertex) * node->vertices_no);
-	#endif
 }
 
 
@@ -271,7 +267,7 @@ struct NTerrain* NTerrainCreate(float dimension, float min_tile_dimension, int p
 
 	terrain->dimension = dimension;
 
-	for (float i = dimension; i > min_tile_dimension; i /= 3.0)
+	for (float i = dimension; i >= min_tile_dimension; i /= 3.0)
 	{
 		terrain->min_tile_dimension = i;
 		terrain->min_pattern_dimension = i;
@@ -326,7 +322,7 @@ struct NTerrain* NTerrainCreate(float dimension, float min_tile_dimension, int p
 				terrain->vertices_buffers_no++;
 
 				sAllocateVertices(node, terrain->min_pattern_dimension);
-				sGenerateVertices(node->vertices, node->min, node->max, terrain->min_pattern_dimension);
+				sGenerateVertices(node->vertices, node->min, node->max, terrain->min_pattern_dimension, terrain->dimension);
 
 				sAllocateIndex(node);
 				sGenerateIndex(node->index, node->min, node->max, node->pattern_dimension, node->min, node->max,
@@ -342,7 +338,7 @@ struct NTerrain* NTerrainCreate(float dimension, float min_tile_dimension, int p
 				terrain->vertices_buffers_no++;
 
 				sAllocateVertices(node, node->pattern_dimension);
-				sGenerateVertices(node->vertices, node->min, node->max, node->pattern_dimension);
+				sGenerateVertices(node->vertices, node->min, node->max, node->pattern_dimension, terrain->dimension);
 
 				sAllocateIndex(node);
 				sGenerateIndex(node->index, node->min, node->max, node->pattern_dimension, node->min, node->max,
@@ -430,6 +426,7 @@ again:
 		if (state->actual->children != NULL &&
 		    Vector2Distance(sMiddle(state->actual->data), position) <= sDimension(state->actual->data) * 1.5)
 		{
+			if (buffer->size < (state->depth + 1) * sizeof(void*))
 			if (BufferResize(buffer, (state->depth + 1) * sizeof(void*)) == NULL) // FIXME, Bug in LibJapan, the +1
 				return NULL;
 
@@ -464,4 +461,68 @@ again:
 	}
 
 	return state->actual->data;
+}
+
+
+/*-----------------------------
+
+ NTerrainShape()
+-----------------------------*/
+static inline float sPixelAsFloat(const struct Image* image, float x, float y)
+{
+	union
+	{
+		uint8_t u8;
+		uint16_t u16;
+	} pixel;
+
+	x *= image->width;
+	y *= image->height;
+
+	switch (image->format)
+	{
+	case IMAGE_GRAY8:
+		pixel.u8 = ((uint8_t*)image->data)[(int)floor(x) + image->width * (int)floor(y)];
+		return (float)pixel.u8 / 255.0;
+	case IMAGE_GRAY16:
+		pixel.u16 = ((uint16_t*)image->data)[(int)floor(x) + image->width * (int)floor(y)];
+		return (float)pixel.u16 / 65535.0;
+	default:
+		break;
+	}
+
+	return 0.0;
+}
+
+void NTerrainShape(struct NTerrain* terrain, float elevation, const char* heightmap_filename)
+{
+	struct Tree* item = NULL;
+	struct Buffer buffer = {0};
+	struct TreeState s = {0};
+	struct NTerrainNode* node = NULL;
+
+	struct Status st = {0};
+	struct Image* image = NULL;
+
+	if((image = ImageLoad(heightmap_filename, &st)) == NULL)
+	{
+		StatusPrint("NTerrainShape", st);
+		return;
+	}
+
+	s.start = terrain->root;
+
+	while ((item = TreeIterate(&s, &buffer)) != NULL)
+	{
+		node = item->data;
+
+		if(node->vertices_type == INHERITED_FROM_PARENT)
+			continue;
+
+		for(size_t i = 0; i < node->vertices_no; i++)
+		{
+			node->vertices[i].pos.z = sPixelAsFloat(image, node->vertices[i].uv.x, node->vertices[i].uv.y);
+			node->vertices[i].pos.z *= elevation;
+		}
+	}
 }

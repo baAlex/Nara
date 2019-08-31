@@ -25,8 +25,7 @@ build ./objects/debug/engine/context-input.o:    compile ./source/engine/context
 build ./objects/debug/engine/context-opengl.o:   compile ./source/engine/context-opengl.c
 build ./objects/debug/engine/context-time.o:     compile ./source/engine/context-time.c
 build ./objects/debug/engine/entity.o:           compile ./source/engine/entity.c
-build ./objects/debug/engine/terrain.o:          compile ./source/engine/terrain.c
-build ./objects/debug/engine/nterrain.o:          compile ./source/engine/terrain.c
+build ./objects/debug/engine/nterrain.o:         compile ./source/engine/nterrain.c
 build ./objects/debug/engine/terrain-fragment.o: compile ./objects/debug/engine/terrain-fragment.c
 build ./objects/debug/engine/terrain-vertex.o:   compile ./objects/debug/engine/terrain-vertex.c
 build ./objects/debug/engine/red-fragment.o:     compile ./objects/debug/engine/red-fragment.c
@@ -63,7 +62,7 @@ build nara-dbg: link $
 ./objects/debug/engine/context-opengl.o $
 ./objects/debug/engine/context-time.o $
 ./objects/debug/engine/entity.o $
-./objects/debug/engine/terrain.o $
+./objects/debug/engine/nterrain.o $
 ./objects/debug/engine/terrain-fragment.o $
 ./objects/debug/engine/terrain-vertex.o $
 ./objects/debug/engine/red-fragment.o $
