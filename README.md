@@ -3,10 +3,12 @@ Nara
 
 The terrain in the screenshots should work as an overworld for an action rpg, but at the moment is more a renderer that a videogame.
 
-![screenshot](./documentation/screenshot-04.jpg)
-![screenshot](./documentation/screenshot-05.jpg)
+And yes, it looks terrible, even compared with old [screenshots](./documentation/screenshot-04.jpg). What happens is that the engine is not taking any measure against gaps between different levels of detail, and of course that the old approach draw everything with the same detail in a non scalable way.
 
-Definitely it doesn't looks like the next Frostbite engine, but using only OpenGL ES2 I want to see this game running on mobile devices (with old-school lightmaps it still looks pretty). And yes, the screenshots delate that there are no lod mechanism on the terrain rendering, I'm working on it ⛰️📐️.
+If you decide to give it a try, note that also you will find poor performance. Is because I'm currently working on cleaning the code before fix these gaps, letting the rendering on a side ⛰️📐️.
+
+![screenshot](./documentation/screenshot-06.jpg)
+![screenshot](./documentation/screenshot-07.jpg)
 
 
 Compilation
