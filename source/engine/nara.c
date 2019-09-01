@@ -36,7 +36,6 @@ SOFTWARE.
 #include "context.h"
 #include "entity.h"
 #include "nterrain.h"
-#include "context-private.h" // HACK
 
 #include "../game/game.h"
 
@@ -107,7 +106,7 @@ static void sSetCamera(const struct Entity* camera, struct Context* s_context)
 
 	translation = Matrix4Translate(Vector3Invert(camera->co.position));
 
-	ContextSetCameraAsMatrix(s_context, Matrix4Multiply(projection, translation), camera->co.position);
+	ContextSetCamera(s_context, Matrix4Multiply(projection, translation), camera->co.position);
 }
 
 
@@ -119,15 +118,14 @@ int main()
 {
 	struct Status st = {0};
 
-	struct List entities = {0};             // In a future these three should
-	struct Program* terrain_program = NULL; // be component of an object representing
-	struct NTerrain* terrain = NULL;        // a game map/level. Being loaded from a file
-	struct Texture* texture = NULL;
+	struct NTerrain* terrain = NULL;
+	struct Program terrain_program = {0};
+	struct Texture terrain_diffuse = {0};
 
-	struct Dictionary* classes = sInitializeClasses(); // TODO: error check
+	struct Dictionary* classes = NULL;
+	struct List entities = {0};
 	struct EntityInput entities_input = {0};
 	struct Entity* camera_entity = NULL;
-
 
 	printf("Nara v0.1\n");
 	printf("- Lib-Japan v%i.%i.%i\n", JAPAN_VERSION_MAJOR, JAPAN_VERSION_MINOR, JAPAN_VERSION_PATCH);
@@ -138,7 +136,6 @@ int main()
 		.caption = "Nara",
 		.window_size = {WINDOWS_MIN_WIDTH * 4, WINDOWS_MIN_HEIGHT * 4},
 		.window_min_size = {WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT},
-		.scale_mode = SCALE_MODE_STRETCH,
 		.fullscreen = false,
 		.clean_color = {0.80, 0.82, 0.84}
 	}, &st);
@@ -148,22 +145,22 @@ int main()
 
 	// Resources
 	{
-		if ((terrain_program = ProgramCreate((char*)g_terrain_vertex, (char*)g_terrain_fragment, &st)) == NULL)
-			goto return_failure;
-
 		if ((terrain = NTerrainCreate(972.0, 9.0, 1, &st)) == NULL)
 			goto return_failure;
 
-		if ((texture = TextureCreate(ImageLoad("./assets/colormap.sgi", &st), &st)) == NULL)
+		if (ProgramInit(&terrain_program, (char*)g_terrain_vertex, (char*)g_terrain_fragment, &st) != 0)
+			goto return_failure;
+
+		if (TextureInit(&terrain_diffuse, "./assets/colormap.sgi", FILTER_BILINEAR, &st) != 0)
 			goto return_failure;
 
 		NTerrainShape(terrain, 100.0, "./assets/heightmap.sgi");
 
+		classes = sInitializeClasses();
 		camera_entity = EntityCreate(&entities, ClassGet(classes, "Camera"));
 		EntityCreate(&entities, ClassGet(classes, "Point"));
 
 		sSetProjection((struct Vector2i){WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT}, s_context);
-		ContextSetProgram(s_context, terrain_program);
 	}
 
 	printf("Terrain 0x%p:\n", (void*)terrain);
@@ -174,7 +171,7 @@ int main()
 	printf(" - Tiles: %lu\n", terrain->tiles_no);
 	printf(" - Vertices buffers: %lu\n", terrain->vertices_buffers_no);
 
-	// Yay!
+	// Game loop
 	struct TreeState s = {.start = terrain->root};
 	struct Buffer buffer = {0};
 
@@ -182,10 +179,11 @@ int main()
 	struct NTerrainNode* last_shared_node = NULL;
 	struct NTerrainNode* temp = NULL;
 
+	ContextSetProgram(s_context, &terrain_program);
+	ContextSetDiffuse(s_context, &terrain_diffuse);
+
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture->ptr);
 
 	while (1)
 	{
@@ -243,7 +241,8 @@ int main()
 	// Bye!
 	DictionaryDelete(classes);
 	ListClean(&entities);
-	ProgramDelete(terrain_program);
+	ProgramFree(&terrain_program);
+	TextureFree(&terrain_diffuse);
 	NTerrainDelete(terrain);
 	ContextDelete(s_context);
 
@@ -254,10 +253,10 @@ return_failure:
 	StatusPrint("Nara", st);
 	if (terrain != NULL)
 		NTerrainDelete(terrain);
-	if (texture != NULL)
-		TextureDelete(texture);
-	if (terrain_program != NULL)
-		ProgramDelete(terrain_program);
+	if (terrain_diffuse.glptr != 0)
+		TextureFree(&terrain_diffuse);
+	if (terrain_program.glptr != 0)
+		ProgramFree(&terrain_program);
 	if (s_context != NULL)
 		ContextDelete(s_context);
 

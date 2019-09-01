@@ -31,9 +31,9 @@ SOFTWARE.
 #include "game.h"
 
 
-#define ANALOG_DEAD_ZONE 0.2
-#define MOVEMENT_SPEED 2.5
-#define LOOK_SPEED 3.0
+#define ANALOG_DEAD_ZONE 0.2f
+#define MOVEMENT_SPEED 2.5f
+#define LOOK_SPEED 3.0f
 
 
 /*-----------------------------
@@ -44,8 +44,8 @@ void* GameCameraStart()
 {
 	struct GameCamera* self = malloc(sizeof(struct GameCamera)); // TODO, check error
 
-	self->co.position = (struct Vector3){128.0, 128.0, 256.0};
-	self->co.angle = (struct Vector3){-50.0, 0.0, 45.0};
+	self->co.position = (struct Vector3){128.0f, 128.0f, 256.0f};
+	self->co.angle = (struct Vector3){-50.0f, 0.0f, 45.0f};
 
 	return self;
 }
@@ -87,8 +87,8 @@ struct EntityCommon GameCameraThink(void* raw_self, const struct EntityInput* in
 	// Stride left, right
 	if (fabs(input->left_analog.h) > ANALOG_DEAD_ZONE)
 	{
-		float x = sinf(DEG_TO_RAD(self->co.angle.z + 90.0));
-		float y = cosf(DEG_TO_RAD(self->co.angle.z + 90.0));
+		float x = sinf(DEG_TO_RAD(self->co.angle.z + 90.0f));
+		float y = cosf(DEG_TO_RAD(self->co.angle.z + 90.0f));
 		float z = 0.0;
 
 		temp_v = Vector3Set(x, y, z);
@@ -102,10 +102,10 @@ struct EntityCommon GameCameraThink(void* raw_self, const struct EntityInput* in
 	{
 		self->co.angle.x += input->right_analog.v * LOOK_SPEED * input->delta;
 
-		if(self->co.angle.x < -180.0)
-			self->co.angle.x = -180.0;
-		if(self->co.angle.x > 0.0)
-			self->co.angle.x = 0.0;
+		if(self->co.angle.x < -180.0f)
+			self->co.angle.x = -180.0f;
+		if(self->co.angle.x > 0.0f)
+			self->co.angle.x = 0.0f;
 	}
 
 	// Look left, right

@@ -35,8 +35,8 @@ void* GamePointStart()
 {
 	struct GamePoint* self = malloc(sizeof(struct GamePoint)); // TODO, check error
 
-	self->co.position = (struct Vector3){0.0, 0.0, 0.0};
-	self->co.angle = (struct Vector3){0.0, 0.0, 0.0};
+	self->co.position = (struct Vector3){0.0f, 0.0f, 0.0f};
+	self->co.angle = (struct Vector3){0.0f, 0.0f, 0.0f};
 
 	return self;
 }

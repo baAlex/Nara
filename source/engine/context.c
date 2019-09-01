@@ -31,6 +31,11 @@ SOFTWARE.
 #include "context-private.h"
 #include <stdio.h>
 
+#ifndef TINY_GL_H
+#define GLFW_INCLUDE_ES2
+#include <GLFW/glfw3.h>
+#endif
+
 struct Context
 {
 	GLFWwindow* window;
@@ -39,38 +44,126 @@ struct Context
 
 	struct ContextOptions options;
 
+	struct Matrix4 projection;
+	struct Matrix4 camera;
+	struct Vector3 camera_origin;
+
+	const struct Program* current_program;
+	const struct Texture* current_diffuse;
+
+	GLint u_projection;        // For current program
+	GLint u_camera_projection; // "
+	GLint u_camera_origin;     // "
+	GLint u_color_texture;     // "
+
 	// Modules:
-	struct ContextOpenGl opengl;
 	struct ContextInput input;
 	struct ContextTime time;
 };
 
 
-inline void ContextSetProgram(struct Context* context, const struct Program* program)
+/*-----------------------------
+
+ ContextSetProgram()
+-----------------------------*/
+void ContextSetProgram(struct Context* context, const struct Program* program)
 {
-	SetProgram(&context->opengl, program);
+	if (program != context->current_program)
+	{
+		context->current_program = program;
+		context->u_projection = glGetUniformLocation(program->glptr, "projection");
+		context->u_camera_projection = glGetUniformLocation(context->current_program->glptr, "camera_projection");
+		context->u_camera_origin = glGetUniformLocation(context->current_program->glptr, "camera_origin");
+		context->u_color_texture = glGetUniformLocation(context->current_program->glptr, "color_texture");
+
+		glUseProgram(program->glptr);
+
+		glUniformMatrix4fv(context->u_projection, 1, GL_FALSE, &context->projection.e[0][0]);
+		glUniformMatrix4fv(context->u_camera_projection, 1, GL_FALSE, &context->camera.e[0][0]);
+		glUniform3fv(context->u_camera_origin, 1, (float*)&context->camera_origin);
+		glUniform1i(context->u_color_texture, 0); // Texture unit 0
+	}
 }
 
+
+/*-----------------------------
+
+ ContextSetProjection()
+-----------------------------*/
 inline void ContextSetProjection(struct Context* context, struct Matrix4 matrix)
 {
-	SetProjection(&context->opengl, matrix);
+	memcpy(&context->projection, &matrix, sizeof(struct Matrix4));
+
+	if (context->current_program != NULL)
+		glUniformMatrix4fv(context->u_projection, 1, GL_FALSE, &context->projection.e[0][0]);
 }
 
-inline void ContextSetCamera(struct Context* context, struct Vector3 target, struct Vector3 origin)
+
+/*-----------------------------
+
+ ContextSetDiffuse()
+-----------------------------*/
+inline void ContextSetDiffuse(struct Context* context, const struct Texture* diffuse)
 {
-	SetCamera(&context->opengl, target, origin);
+	if (diffuse != context->current_diffuse)
+	{
+		context->current_diffuse = diffuse;
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, context->current_diffuse->glptr);
+	}
 }
 
-inline void ContextSetCameraAsMatrix(struct Context* context, struct Matrix4 matrix, struct Vector3 origin)
+
+/*-----------------------------
+
+ ContextSetCameraLookAt()
+-----------------------------*/
+inline void ContextSetCameraLookAt(struct Context* context, struct Vector3 target, struct Vector3 origin)
 {
-	SetCameraAsMatrix(&context->opengl, matrix, origin);
+	context->camera_origin = origin;
+	context->camera = Matrix4LookAt(origin, target, (struct Vector3){0.0, 0.0, 1.0});
+
+	if (context->current_program != NULL)
+	{
+		glUniformMatrix4fv(context->u_camera_projection, 1, GL_FALSE, &context->camera.e[0][0]);
+		glUniform3fv(context->u_camera_origin, 1, (float*)&context->camera_origin);
+	}
 }
 
-void ContextDraw(struct Context* context, const struct Vertices* vertices, const struct Index* index,
-                 const struct Texture* color)
+
+/*-----------------------------
+
+ ContextSetCameraMatrix()
+-----------------------------*/
+inline void ContextSetCameraMatrix(struct Context* context, struct Matrix4 matrix, struct Vector3 origin)
+{
+	context->camera_origin = origin;
+	context->camera = matrix;
+
+	if (context->current_program != NULL)
+	{
+		glUniformMatrix4fv(context->u_camera_projection, 1, GL_FALSE, &context->camera.e[0][0]);
+		glUniform3fv(context->u_camera_origin, 1, (float*)&context->camera_origin);
+	}
+}
+
+
+/*-----------------------------
+
+ ContextDraw()
+-----------------------------*/
+void ContextDraw(struct Context* context, const struct Vertices* vertices, const struct Index* index)
 {
 	(void)context;
-	Draw(vertices, index, color);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vertices->glptr);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index->glptr);
+
+	glVertexAttribPointer(ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), NULL);
+	glVertexAttribPointer(ATTRIBUTE_UV, 2, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), ((float*)NULL) + 3);
+
+	// glDrawElements(GL_LINES, index->length, GL_UNSIGNED_SHORT, NULL);
+	glDrawElements(GL_TRIANGLES, index->length, GL_UNSIGNED_SHORT, NULL);
 }
 
 
@@ -96,8 +189,7 @@ static inline void sResizeCallback(GLFWwindow* window, int new_width, int new_he
 {
 	struct Context* context = glfwGetWindowUserPointer(window);
 
-	ViewportResize(context->options.scale_mode, new_width, new_height, context->options.steps_size.x,
-	               context->options.steps_size.y);
+	glViewport(0, 0, (GLint)new_width, (GLint)new_height);
 
 	context->window_size.x = new_width;
 	context->window_size.y = new_height;
@@ -164,11 +256,11 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	// Modules initialization
 	ContextInputInitialization(&context->input);
 	ContextTimeInitialization(&context->time);
-	ContextOpenGlInitialization(&context->opengl, options.clean_color);
+
+	TinyGlInit(options.clean_color);
 
 	context->window_size = context->options.window_size;
-	ViewportResize(context->options.scale_mode, context->options.window_size.x, context->options.window_size.y,
-	               context->options.steps_size.x, context->options.steps_size.y);
+	sResizeCallback(context->window, context->options.window_size.x, context->options.window_size.y);
 
 	// Bye!
 	printf("%s\n", glGetString(GL_VENDOR));
@@ -205,7 +297,7 @@ void ContextUpdate(struct Context* context, struct WindowSpecifications* out_win
                    struct TimeSpecifications* out_time, struct InputSpecifications* out_input)
 {
 	glfwSwapBuffers(context->window);
-	ContextOpenGlStep(&context->opengl);
+	TinyGlClean();
 
 	// Window module abstraction (the context is the window)
 	{

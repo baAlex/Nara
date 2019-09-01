@@ -200,7 +200,7 @@ static inline float sKeysToAxe(int action, int current_key, float current_axe, i
 		else if(current_key == key_negative)
 			current_axe -= 1.0;
 	}
-	else if (action != GLFW_REPEAT)
+	else
 	{
 		if(current_key == key_positive)
 			current_axe -= 1.0;
@@ -213,18 +213,21 @@ static inline float sKeysToAxe(int action, int current_key, float current_axe, i
 
 void ReceiveKeyboardKey(struct ContextInput* state, int key, int action)
 {
+	if(action == GLFW_REPEAT)
+		return;
+
 	// Two states old school buttons
 	switch (key)
 	{
-	case GLFW_KEY_Q: state->key_specs.lb = (action == GLFW_PRESS || action == GLFW_REPEAT) ? true : false; break;
-	case GLFW_KEY_E: state->key_specs.rb = (action == GLFW_PRESS || action == GLFW_REPEAT) ? true : false; break;
+	case GLFW_KEY_Q: state->key_specs.lb = (action == GLFW_PRESS) ? true : false; break;
+	case GLFW_KEY_E: state->key_specs.rb = (action == GLFW_PRESS) ? true : false; break;
 
-	case GLFW_KEY_SPACE: state->key_specs.view = (action == GLFW_PRESS || action == GLFW_REPEAT) ? true : false; break;
-	case GLFW_KEY_ENTER: state->key_specs.menu = (action == GLFW_PRESS || action == GLFW_REPEAT) ? true : false; break;
+	case GLFW_KEY_SPACE: state->key_specs.view = (action == GLFW_PRESS) ? true : false; break;
+	case GLFW_KEY_ENTER: state->key_specs.menu = (action == GLFW_PRESS) ? true : false; break;
 
-	case GLFW_KEY_F1: state->key_specs.guide = (action == GLFW_PRESS || action == GLFW_REPEAT) ? true : false; break;
-	case GLFW_KEY_T: state->key_specs.ls = (action == GLFW_PRESS || action == GLFW_REPEAT) ? true : false; break;
-	case GLFW_KEY_Y: state->key_specs.rs = (action == GLFW_PRESS || action == GLFW_REPEAT) ? true : false; break;
+	case GLFW_KEY_F1: state->key_specs.guide = (action == GLFW_PRESS) ? true : false; break;
+	case GLFW_KEY_T: state->key_specs.ls = (action == GLFW_PRESS) ? true : false; break;
+	case GLFW_KEY_Y: state->key_specs.rs = (action == GLFW_PRESS) ? true : false; break;
 
 	default: break;
 	}

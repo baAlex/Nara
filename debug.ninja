@@ -1,5 +1,6 @@
 
 cflags = `pkg-config --cflags glfw3 glesv2` -O0 -std=c11 -Wall -Wextra -pedantic -g -DDEBUG -I./source/lib-japan/include
+cflags_strict = `pkg-config --cflags glfw3 glesv2` -O0 -std=c11 -Wall -Wextra -Wconversion -pedantic -g -DDEBUG -I./source/lib-japan/include
 lflags = `pkg-config --libs glfw3 glesv2` -lm
 
 rule generate
@@ -7,6 +8,9 @@ rule generate
 
 rule compile
  command = cc $cflags -c $in -o $out
+
+rule compile_strict
+ command = cc $cflags_strict -c $in -o $out
 
 rule link
  command = cc $in $lflags -o $out
@@ -22,45 +26,45 @@ build ./objects/debug/engine/red-vertex.c:       generate ./source/engine/red-ve
 build ./objects/debug/engine/nara.o:             compile ./source/engine/nara.c
 build ./objects/debug/engine/context.o:          compile ./source/engine/context.c
 build ./objects/debug/engine/context-input.o:    compile ./source/engine/context-input.c
-build ./objects/debug/engine/context-opengl.o:   compile ./source/engine/context-opengl.c
 build ./objects/debug/engine/context-time.o:     compile ./source/engine/context-time.c
-build ./objects/debug/engine/entity.o:           compile ./source/engine/entity.c
+build ./objects/debug/engine/tiny-gl.o:          compile_strict ./source/engine/tiny-gl.c
+build ./objects/debug/engine/entity.o:           compile_strict ./source/engine/entity.c
 build ./objects/debug/engine/nterrain.o:         compile ./source/engine/nterrain.c
-build ./objects/debug/engine/terrain-fragment.o: compile ./objects/debug/engine/terrain-fragment.c
-build ./objects/debug/engine/terrain-vertex.o:   compile ./objects/debug/engine/terrain-vertex.c
-build ./objects/debug/engine/red-fragment.o:     compile ./objects/debug/engine/red-fragment.c
-build ./objects/debug/engine/red-vertex.o:       compile ./objects/debug/engine/red-vertex.c
+build ./objects/debug/engine/terrain-fragment.o: compile_strict ./objects/debug/engine/terrain-fragment.c
+build ./objects/debug/engine/terrain-vertex.o:   compile_strict ./objects/debug/engine/terrain-vertex.c
+build ./objects/debug/engine/red-fragment.o:     compile_strict ./objects/debug/engine/red-fragment.c
+build ./objects/debug/engine/red-vertex.o:       compile_strict ./objects/debug/engine/red-vertex.c
 
 # Game
-build ./objects/debug/game/camera.o:         compile ./source/game/camera.c
-build ./objects/debug/game/point.o:          compile ./source/game/point.c
+build ./objects/debug/game/camera.o: compile_strict ./source/game/camera.c
+build ./objects/debug/game/point.o:  compile_strict ./source/game/point.c
 
 # Lib Japan
-build ./objects/debug/lib-japan/buffer.o:           compile ./source/lib-japan/source/buffer.c
-build ./objects/debug/lib-japan/dictionary.o:       compile ./source/lib-japan/source/dictionary.c
-build ./objects/debug/lib-japan/endianness.o:       compile ./source/lib-japan/source/endianness.c
-build ./objects/debug/lib-japan/list.o:             compile ./source/lib-japan/source/list.c
-build ./objects/debug/lib-japan/matrix.o:           compile ./source/lib-japan/source/matrix.c
-build ./objects/debug/lib-japan/status.o:           compile ./source/lib-japan/source/status.c
-build ./objects/debug/lib-japan/tree.o:             compile ./source/lib-japan/source/tree.c
-build ./objects/debug/lib-japan/vector.o:           compile ./source/lib-japan/source/vector.c
-build ./objects/debug/lib-japan/image/image.o:      compile ./source/lib-japan/source/image/image.c
-build ./objects/debug/lib-japan/image/format-sgi.o: compile ./source/lib-japan/source/image/format-sgi.c
-build ./objects/debug/lib-japan/sound/sound.o:      compile ./source/lib-japan/source/sound/sound.c
-build ./objects/debug/lib-japan/sound/format-au.o:  compile ./source/lib-japan/source/sound/format-au.c
-build ./objects/debug/lib-japan/sound/format-wav.o: compile ./source/lib-japan/source/sound/format-wav.c
-build ./objects/debug/lib-japan/sound/laws.o:       compile ./source/lib-japan/source/sound/laws.c
+build ./objects/debug/lib-japan/buffer.o:           compile_strict ./source/lib-japan/source/buffer.c
+build ./objects/debug/lib-japan/dictionary.o:       compile_strict ./source/lib-japan/source/dictionary.c
+build ./objects/debug/lib-japan/endianness.o:       compile_strict ./source/lib-japan/source/endianness.c
+build ./objects/debug/lib-japan/list.o:             compile_strict ./source/lib-japan/source/list.c
+build ./objects/debug/lib-japan/matrix.o:           compile_strict ./source/lib-japan/source/matrix.c
+build ./objects/debug/lib-japan/status.o:           compile_strict ./source/lib-japan/source/status.c
+build ./objects/debug/lib-japan/tree.o:             compile_strict ./source/lib-japan/source/tree.c
+build ./objects/debug/lib-japan/vector.o:           compile_strict ./source/lib-japan/source/vector.c
+build ./objects/debug/lib-japan/image/image.o:      compile_strict ./source/lib-japan/source/image/image.c
+build ./objects/debug/lib-japan/image/format-sgi.o: compile_strict ./source/lib-japan/source/image/format-sgi.c
+build ./objects/debug/lib-japan/sound/sound.o:      compile_strict ./source/lib-japan/source/sound/sound.c
+build ./objects/debug/lib-japan/sound/format-au.o:  compile_strict ./source/lib-japan/source/sound/format-au.c
+build ./objects/debug/lib-japan/sound/format-wav.o: compile_strict ./source/lib-japan/source/sound/format-wav.c
+build ./objects/debug/lib-japan/sound/laws.o:       compile_strict ./source/lib-japan/source/sound/laws.c
 
 # Sdk
-build ./objects/debug/sdk/sdk.o:    compile ./source/sdk/sdk.c
+build ./objects/debug/sdk/sdk.o: compile ./source/sdk/sdk.c
 
 # Link
 build nara-dbg: link $
 ./objects/debug/engine/nara.o $
 ./objects/debug/engine/context.o $
 ./objects/debug/engine/context-input.o $
-./objects/debug/engine/context-opengl.o $
 ./objects/debug/engine/context-time.o $
+./objects/debug/engine/tiny-gl.o $
 ./objects/debug/engine/entity.o $
 ./objects/debug/engine/nterrain.o $
 ./objects/debug/engine/terrain-fragment.o $

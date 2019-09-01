@@ -16,11 +16,11 @@
 	#include "matrix.h"
 
 	#ifndef M_PI
-	#define M_PI 3.14159265358979323846264338327950288
+	#define M_PI 3.14159265358979323846264338327950288f
 	#endif
 
-	#define DEG_TO_RAD(d) ((d)*M_PI / 180.0)
-	#define RAD_TO_DEG(r) ((r)*180.0 / M_PI)
+	#define DEG_TO_RAD(d) ((d)*M_PI / 180.0f)
+	#define RAD_TO_DEG(r) ((r)*180.0f / M_PI)
 
 	struct EntityInput
 	{

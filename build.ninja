@@ -1,5 +1,5 @@
 
-cflags = `pkg-config --cflags glfw3 glesv2` -O3 -flto -Wall -mtune=generic -I./source/lib-japan/include
+cflags = `pkg-config --cflags glfw3 glesv2` -O3 -flto -mtune=generic -I./source/lib-japan/include
 lflags = `pkg-config --libs glfw3 glesv2` -lm
 
 rule generate
@@ -22,8 +22,8 @@ build ./objects/engine/red-vertex.c:       generate ./source/engine/red-vertex.g
 build ./objects/engine/nara.o:             compile ./source/engine/nara.c
 build ./objects/engine/context.o:          compile ./source/engine/context.c
 build ./objects/engine/context-input.o:    compile ./source/engine/context-input.c
-build ./objects/engine/context-opengl.o:   compile ./source/engine/context-opengl.c
 build ./objects/engine/context-time.o:     compile ./source/engine/context-time.c
+build ./objects/engine/tiny-gl.o:          compile ./source/engine/tiny-gl.c
 build ./objects/engine/entity.o:           compile ./source/engine/entity.c
 build ./objects/engine/nterrain.o:         compile ./source/engine/nterrain.c
 build ./objects/engine/terrain-fragment.o: compile ./objects/engine/terrain-fragment.c
@@ -32,8 +32,8 @@ build ./objects/engine/red-fragment.o:     compile ./objects/engine/red-fragment
 build ./objects/engine/red-vertex.o:       compile ./objects/engine/red-vertex.c
 
 # Game
-build ./objects/game/camera.o:         compile ./source/game/camera.c
-build ./objects/game/point.o:          compile ./source/game/point.c
+build ./objects/game/camera.o: compile ./source/game/camera.c
+build ./objects/game/point.o:  compile ./source/game/point.c
 
 # Lib Japan
 build ./objects/lib-japan/buffer.o:           compile ./source/lib-japan/source/buffer.c
@@ -52,15 +52,15 @@ build ./objects/lib-japan/sound/format-wav.o: compile ./source/lib-japan/source/
 build ./objects/lib-japan/sound/laws.o:       compile ./source/lib-japan/source/sound/laws.c
 
 # Sdk
-build ./objects/sdk/sdk.o:    compile ./source/sdk/sdk.c
+build ./objects/sdk/sdk.o: compile ./source/sdk/sdk.c
 
 # Link
 build nara: link $
 ./objects/engine/nara.o $
 ./objects/engine/context.o $
 ./objects/engine/context-input.o $
-./objects/engine/context-opengl.o $
 ./objects/engine/context-time.o $
+./objects/engine/tiny-gl.o $
 ./objects/engine/entity.o $
 ./objects/engine/nterrain.o $
 ./objects/engine/terrain-fragment.o $
