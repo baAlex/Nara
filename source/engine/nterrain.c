@@ -35,6 +35,30 @@ SOFTWARE.
 #include <string.h>
 
 
+static inline float sPixelAsFloat(const struct Image* image, float x, float y)
+{
+	union {
+		uint8_t u8;
+		uint16_t u16;
+	} pixel;
+
+	x *= image->width;
+	y *= image->height;
+
+	switch (image->format)
+	{
+	case IMAGE_GRAY8:
+		pixel.u8 = ((uint8_t*)image->data)[(int)floor(x) + image->width * (int)floor(y)];
+		return (float)pixel.u8 / 255.0;
+	case IMAGE_GRAY16:
+		pixel.u16 = ((uint16_t*)image->data)[(int)floor(x) + image->width * (int)floor(y)];
+		return (float)pixel.u16 / 65535.0;
+	default: break;
+	}
+
+	return 0.0;
+}
+
 static inline float sDimension(const struct NTerrainNode* node)
 {
 	return (node->max.x - node->min.x);
@@ -50,60 +74,58 @@ static inline struct Vector2 sMiddle(const struct NTerrainNode* node)
 
  sGenerateIndex()
 -----------------------------*/
-static void sGenerateIndex(uint16_t* index_out, struct Vector2 min, struct Vector2 max, float pattern_dimension,
-                           struct Vector2 org_min, struct Vector2 org_max, float org_pattern_dimension)
+static struct Index sGenerateIndex(struct Buffer* buffer, struct Vector2 min, struct Vector2 max,
+                                   float pattern_dimension, struct Vector2 org_min, struct Vector2 org_max,
+                                   float org_pattern_dimension)
 {
-	// I promise to clean what follows...
-	// All the float conversions are evil, evil! D:
-
-	size_t squares = (size_t)ceil((max.x - min.x) / pattern_dimension);
-	size_t length = squares * squares * 6;
+	// Generation on a temporary buffer
+	size_t const squares = (size_t)ceil((max.x - min.x) / pattern_dimension);
+	size_t const length = squares * squares * 6;
 	size_t col = 0;
 
-	size_t org_squares = (size_t)ceil((org_max.x - org_min.x) / org_pattern_dimension);
-	size_t org_col_start = (size_t)ceil((min.x - org_min.x) / org_pattern_dimension);
-	size_t org_row = (size_t)ceil((min.y - org_min.y) / org_pattern_dimension);
-	size_t org_col = org_col_start;
+	BufferResize(buffer, sizeof(uint16_t) * length);
+	uint16_t* temp_data = buffer->data;
 
-	size_t org_step = (org_squares / squares) / round((org_max.x - org_min.x) / (max.x - min.x));
-
-	/*printf("Node sqrs: %zu, Org sqrs: %zu, Node sz: %zu, Org sz: %zu -> Step: %zu (sz diff: %f)\n", squares,
-	       org_squares, (size_t)ceil((max.x - min.x)), (size_t)ceil((org_max.x - org_min.x)), org_step,
-	       round((org_max.x - org_min.x) / (max.x - min.x)));*/
-
-	for (size_t i = 0; i < length; i += 6)
 	{
-		#if 1
-		index_out[i + 0] = org_col + (org_squares + 1) * org_row;
-		index_out[i + 1] = org_col + (org_squares + 1) * org_row + org_step;
-		index_out[i + 2] = org_col + (org_squares + 1) * org_row + org_step + ((org_squares + 1) * org_step);
-		#else
-		index_out[i + 0] = 0;
-		index_out[i + 1] = 0;
-		index_out[i + 2] = 0;
-		#endif
+		size_t const org_squares = (size_t)ceil((org_max.x - org_min.x) / org_pattern_dimension);
+		size_t const org_col_start = (size_t)ceil((min.x - org_min.x) / org_pattern_dimension);
+		size_t const org_step = (org_squares / squares) / round((org_max.x - org_min.x) / (max.x - min.x));
 
-		#if 1
-		index_out[i + 3] = org_col + ((org_squares + 1) * org_row) + org_step + (org_squares + 1) * org_step;
-		index_out[i + 4] = org_col + ((org_squares + 1) * org_row) + (org_squares + 1) * org_step;
-		index_out[i + 5] = org_col + ((org_squares + 1) * org_row);
-		#else
-		index_out[i + 3] = 0;
-		index_out[i + 4] = 0;
-		index_out[i + 5] = 0;
-		#endif
+		size_t org_row = (size_t)ceil((min.y - org_min.y) / org_pattern_dimension);
+		size_t org_col = org_col_start;
 
-		// Next step
-		col += 1;
-		org_col += org_step;
+		/*printf("Node sqrs: %zu, Org sqrs: %zu, Node sz: %zu, Org sz: %zu -> Step: %zu (sz diff: %f)\n", squares,
+		       org_squares, (size_t)ceil((max.x - min.x)), (size_t)ceil((org_max.x - org_min.x)), org_step,
+		       round((org_max.x - org_min.x) / (max.x - min.x)));*/
 
-		if ((col % squares) == 0)
+		for (size_t i = 0; i < length; i += 6)
 		{
-			col = 0;
-			org_col = org_col_start;
-			org_row += org_step;
+			temp_data[i + 0] = org_col + (org_squares + 1) * org_row;
+			temp_data[i + 1] = org_col + (org_squares + 1) * org_row + org_step;
+			temp_data[i + 2] = org_col + (org_squares + 1) * org_row + org_step + ((org_squares + 1) * org_step);
+
+			temp_data[i + 3] = org_col + ((org_squares + 1) * org_row) + org_step + (org_squares + 1) * org_step;
+			temp_data[i + 4] = org_col + ((org_squares + 1) * org_row) + (org_squares + 1) * org_step;
+			temp_data[i + 5] = org_col + ((org_squares + 1) * org_row);
+
+			// Next step
+			col += 1;
+			org_col += org_step;
+
+			if ((col % squares) == 0)
+			{
+				col = 0;
+				org_col = org_col_start;
+				org_row += org_step;
+			}
 		}
 	}
+
+	// Copy to the final index
+	struct Index index = {0};
+	IndexInit(&index, temp_data, length, NULL); // TODO: Check error
+
+	return index;
 }
 
 
@@ -111,54 +133,46 @@ static void sGenerateIndex(uint16_t* index_out, struct Vector2 min, struct Vecto
 
  sGenerateVertices()
 -----------------------------*/
-static void sGenerateVertices(struct Vertex* vertices_out, struct Vector2 min, struct Vector2 max,
-                              float pattern_dimension, float terrain_dimension)
+static struct Vertices sGenerateVertices(struct Buffer* buffer, struct Vector2 min, struct Vector2 max,
+                                         float pattern_dimension, float terrain_dimension, struct Image* heightmap,
+                                         float elevation)
 {
-	int patterns_no = (max.x - min.x) / pattern_dimension;
-	float texture_step_x = min.x / terrain_dimension;
-	float texture_step_y = min.y / terrain_dimension;
+	// Generation on a temporary buffer
+	int const patterns_no = (max.x - min.x) / pattern_dimension;
 
-	for (int row = 0; row < (patterns_no + 1); row++)
+	BufferResize(buffer, sizeof(struct Vertex) * (patterns_no + 1) * (patterns_no + 1));
+	struct Vertex* temp_data = buffer->data;
+
 	{
-		for (int col = 0; col < (patterns_no + 1); col++)
+		float texture_step_x = min.x / terrain_dimension;
+		float texture_step_y = min.y / terrain_dimension;
+
+
+		for (int row = 0; row < (patterns_no + 1); row++)
 		{
-			vertices_out[col + (patterns_no + 1) * row].uv.x = texture_step_x;
-			vertices_out[col + (patterns_no + 1) * row].uv.y = texture_step_y;
+			for (int col = 0; col < (patterns_no + 1); col++)
+			{
+				temp_data[col + (patterns_no + 1) * row].uv.x = texture_step_x;
+				temp_data[col + (patterns_no + 1) * row].uv.y = texture_step_y;
 
-			vertices_out[col + (patterns_no + 1) * row].pos.x = min.x + (float)(col * pattern_dimension);
-			vertices_out[col + (patterns_no + 1) * row].pos.y = min.y + (float)(row * pattern_dimension);
-			vertices_out[col + (patterns_no + 1) * row].pos.z = 0.0;
+				temp_data[col + (patterns_no + 1) * row].pos.x = min.x + (float)(col * pattern_dimension);
+				temp_data[col + (patterns_no + 1) * row].pos.y = min.y + (float)(row * pattern_dimension);
+				temp_data[col + (patterns_no + 1) * row].pos.z =
+				    sPixelAsFloat(heightmap, texture_step_x, texture_step_y) * elevation;
 
-			texture_step_x += (float)pattern_dimension / terrain_dimension;
+				texture_step_x += (float)pattern_dimension / terrain_dimension;
+			}
+
+			texture_step_y += (float)pattern_dimension / terrain_dimension;
+			texture_step_x = 0.0;
 		}
-
-		texture_step_y += (float)pattern_dimension / terrain_dimension;
-		texture_step_x = 0.0;
 	}
-}
 
+	// Copy to the final index
+	struct Vertices vertices = {0};
+	VerticesInit(&vertices, temp_data, (patterns_no + 1) * (patterns_no + 1), NULL); // TODO: Check error
 
-/*-----------------------------
-
- sAllocateIndex()
------------------------------*/
-static uint16_t* sAllocateIndex(struct NTerrainNode* node)
-{
-	node->index_no = (size_t)ceil(sDimension(node) / node->pattern_dimension);
-	node->index_no = node->index_no * node->index_no * 6;
-	return node->index = malloc(node->index_no * sizeof(uint16_t));
-}
-
-
-/*-----------------------------
-
- sAllocateVertices()
------------------------------*/
-static struct Vertex* sAllocateVertices(struct NTerrainNode* node, float pattern_dimension)
-{
-	node->vertices_no = (size_t)ceil(sDimension(node) / pattern_dimension + 1.0);
-	node->vertices_no = node->vertices_no * node->vertices_no;
-	return node->vertices = malloc(sizeof(struct Vertex) * node->vertices_no);
+	return vertices;
 }
 
 
@@ -247,7 +261,8 @@ static void sSubdivideTile(struct Tree* item, float min_tile_dimension)
 
  NTerrainCreate()
 -----------------------------*/
-struct NTerrain* NTerrainCreate(float dimension, float min_tile_dimension, int pattern_subdivisions, struct Status* st)
+struct NTerrain* NTerrainCreate(const char* heightmap, float elevation, float dimension, float min_tile_dimension,
+                                int pattern_subdivisions, struct Status* st)
 {
 	struct NTerrain* terrain = NULL;
 	struct NTerrainNode* node = NULL;
@@ -257,6 +272,11 @@ struct NTerrain* NTerrainCreate(float dimension, float min_tile_dimension, int p
 	struct TreeState s = {0};
 
 	StatusSet(st, "NTerraiNCreate", STATUS_SUCCESS, NULL);
+
+	struct Image* image = NULL;
+
+	if ((image = ImageLoad(heightmap, st)) == NULL)
+		goto return_failure;
 
 	if ((terrain = calloc(1, sizeof(struct NTerrain))) == NULL ||
 	    (terrain->root = TreeCreate(NULL, NULL, sizeof(struct NTerrainNode))) == NULL)
@@ -304,11 +324,8 @@ struct NTerrain* NTerrainCreate(float dimension, float min_tile_dimension, int p
 		if (last_parent != NULL && s.depth > p_depth)
 		{
 			node->vertices_type = INHERITED_FROM_PARENT;
-			node->vertices = NULL;
-
-			sAllocateIndex(node);
-			sGenerateIndex(node->index, node->min, node->max, node->pattern_dimension, last_parent->min,
-			               last_parent->max, terrain->min_pattern_dimension);
+			node->index = sGenerateIndex(&terrain->buffer, node->min, node->max, node->pattern_dimension,
+			                             last_parent->min, last_parent->max, terrain->min_pattern_dimension);
 		}
 		else
 		{
@@ -317,32 +334,29 @@ struct NTerrain* NTerrainCreate(float dimension, float min_tile_dimension, int p
 			{
 				last_parent = node;
 				p_depth = s.depth;
-				node->vertices_type = SHARED_WITH_CHILDRENS;
 
+				node->vertices_type = SHARED_WITH_CHILDRENS;
 				terrain->vertices_buffers_no++;
 
-				sAllocateVertices(node, terrain->min_pattern_dimension);
-				sGenerateVertices(node->vertices, node->min, node->max, terrain->min_pattern_dimension, terrain->dimension);
-
-				sAllocateIndex(node);
-				sGenerateIndex(node->index, node->min, node->max, node->pattern_dimension, node->min, node->max,
-				               terrain->min_pattern_dimension);
+				node->vertices =
+				    sGenerateVertices(&terrain->buffer, node->min, node->max, terrain->min_pattern_dimension,
+				                      terrain->dimension, image, elevation);
+				node->index = sGenerateIndex(&terrain->buffer, node->min, node->max, node->pattern_dimension, node->min,
+				                             node->max, terrain->min_pattern_dimension);
 			}
 
 			// Nope, only his own vertices
 			else
 			{
 				last_parent = NULL;
-				node->vertices_type = OWN_VERTICES;
 
+				node->vertices_type = OWN_VERTICES;
 				terrain->vertices_buffers_no++;
 
-				sAllocateVertices(node, node->pattern_dimension);
-				sGenerateVertices(node->vertices, node->min, node->max, node->pattern_dimension, terrain->dimension);
-
-				sAllocateIndex(node);
-				sGenerateIndex(node->index, node->min, node->max, node->pattern_dimension, node->min, node->max,
-				               node->pattern_dimension);
+				node->vertices = sGenerateVertices(&terrain->buffer, node->min, node->max, node->pattern_dimension,
+				                                   terrain->dimension, image, elevation);
+				node->index = sGenerateIndex(&terrain->buffer, node->min, node->max, node->pattern_dimension, node->min,
+				                             node->max, node->pattern_dimension);
 			}
 		}
 	}
@@ -374,11 +388,8 @@ void NTerrainDelete(struct NTerrain* terrain)
 		{
 			node = item->data;
 
-			if (node->index != NULL)
-				free(node->index);
-
-			if (node->vertices != NULL)
-				free(node->vertices);
+			IndexFree(&node->index);
+			VerticesFree(&node->vertices);
 		}
 
 		TreeDelete(terrain->root);
@@ -392,7 +403,7 @@ void NTerrainDelete(struct NTerrain* terrain)
 
  NTerrainIterate()
 -----------------------------*/
-struct NTerrainNode* NTerrainIterate(struct TreeState* state, struct Buffer* buffer, struct NTerrainNode** out_shared,
+struct NTerrainNode* NTerrainIterate(struct TreeState* state, struct Buffer* buffer, struct NTerrainNode** out_lastwvertices,
                                      struct Vector2 position)
 {
 	struct Tree** future_parent_heap = NULL;
@@ -415,8 +426,9 @@ again:
 	state->depth = state->future_depth;
 	state->future_return = NULL;
 
-	if(((struct NTerrainNode*)state->actual->data)->vertices_type ==  SHARED_WITH_CHILDRENS)
-		*out_shared = state->actual->data;
+	if (((struct NTerrainNode*)state->actual->data)->vertices_type == SHARED_WITH_CHILDRENS ||
+	    ((struct NTerrainNode*)state->actual->data)->vertices_type == OWN_VERTICES)
+		*out_lastwvertices = state->actual->data;
 
 	// Future values
 	{
@@ -427,8 +439,8 @@ again:
 		    Vector2Distance(sMiddle(state->actual->data), position) <= sDimension(state->actual->data) * 1.5)
 		{
 			if (buffer->size < (state->depth + 1) * sizeof(void*))
-			if (BufferResize(buffer, (state->depth + 1) * sizeof(void*)) == NULL) // FIXME, Bug in LibJapan, the +1
-				return NULL;
+				if (BufferResize(buffer, (state->depth + 1) * sizeof(void*)) == NULL) // FIXME, Bug in LibJapan, the +1
+					return NULL;
 
 			future_parent_heap = buffer->data;
 			future_parent_heap[state->depth] = state->actual->next;
@@ -461,68 +473,4 @@ again:
 	}
 
 	return state->actual->data;
-}
-
-
-/*-----------------------------
-
- NTerrainShape()
------------------------------*/
-static inline float sPixelAsFloat(const struct Image* image, float x, float y)
-{
-	union
-	{
-		uint8_t u8;
-		uint16_t u16;
-	} pixel;
-
-	x *= image->width;
-	y *= image->height;
-
-	switch (image->format)
-	{
-	case IMAGE_GRAY8:
-		pixel.u8 = ((uint8_t*)image->data)[(int)floor(x) + image->width * (int)floor(y)];
-		return (float)pixel.u8 / 255.0;
-	case IMAGE_GRAY16:
-		pixel.u16 = ((uint16_t*)image->data)[(int)floor(x) + image->width * (int)floor(y)];
-		return (float)pixel.u16 / 65535.0;
-	default:
-		break;
-	}
-
-	return 0.0;
-}
-
-void NTerrainShape(struct NTerrain* terrain, float elevation, const char* heightmap_filename)
-{
-	struct Tree* item = NULL;
-	struct Buffer buffer = {0};
-	struct TreeState s = {0};
-	struct NTerrainNode* node = NULL;
-
-	struct Status st = {0};
-	struct Image* image = NULL;
-
-	if((image = ImageLoad(heightmap_filename, &st)) == NULL)
-	{
-		StatusPrint("NTerrainShape", st);
-		return;
-	}
-
-	s.start = terrain->root;
-
-	while ((item = TreeIterate(&s, &buffer)) != NULL)
-	{
-		node = item->data;
-
-		if(node->vertices_type == INHERITED_FROM_PARENT)
-			continue;
-
-		for(size_t i = 0; i < node->vertices_no; i++)
-		{
-			node->vertices[i].pos.z = sPixelAsFloat(image, node->vertices[i].uv.x, node->vertices[i].uv.y);
-			node->vertices[i].pos.z *= elevation;
-		}
-	}
 }

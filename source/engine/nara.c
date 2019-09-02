@@ -145,7 +145,7 @@ int main()
 
 	// Resources
 	{
-		if ((terrain = NTerrainCreate(972.0, 9.0, 1, &st)) == NULL)
+		if ((terrain = NTerrainCreate("./assets/heightmap.sgi", 100.0, 972.0, 18.0, 2, &st)) == NULL)
 			goto return_failure;
 
 		if (ProgramInit(&terrain_program, (char*)g_terrain_vertex, (char*)g_terrain_fragment, &st) != 0)
@@ -153,8 +153,6 @@ int main()
 
 		if (TextureInit(&terrain_diffuse, "./assets/colormap.sgi", FILTER_BILINEAR, &st) != 0)
 			goto return_failure;
-
-		NTerrainShape(terrain, 100.0, "./assets/heightmap.sgi");
 
 		classes = sInitializeClasses();
 		camera_entity = EntityCreate(&entities, ClassGet(classes, "Camera"));
@@ -176,14 +174,11 @@ int main()
 	struct Buffer buffer = {0};
 
 	struct NTerrainNode* node = NULL;
-	struct NTerrainNode* last_shared_node = NULL;
+	struct NTerrainNode* last_with_vertices = NULL;
 	struct NTerrainNode* temp = NULL;
 
 	ContextSetProgram(s_context, &terrain_program);
 	ContextSetDiffuse(s_context, &terrain_diffuse);
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 	while (1)
 	{
@@ -220,17 +215,20 @@ int main()
 		// Render
 		s.start = terrain->root;
 
-		while ((node = NTerrainIterate(&s, &buffer, &last_shared_node,
-		                               (struct Vector2){camera_entity->co.position.x, camera_entity->co.position.y})) != NULL)
+		while ((node = NTerrainIterate(&s, &buffer, &last_with_vertices,
+		                               (struct Vector2){camera_entity->co.position.x, camera_entity->co.position.y})) !=
+		       NULL)
 		{
-			if(temp != last_shared_node)
+			if (temp != last_with_vertices)
 			{
-				temp = last_shared_node;
-				glVertexAttribPointer(ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), last_shared_node->vertices);
-				glVertexAttribPointer(ATTRIBUTE_UV, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), (float*)last_shared_node->vertices + 3);
+				temp = last_with_vertices;
+				glBindBuffer(GL_ARRAY_BUFFER, last_with_vertices->vertices.glptr);
+				glVertexAttribPointer(ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), NULL);
+				glVertexAttribPointer(ATTRIBUTE_UV, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), (float*)NULL + 3);
 			}
 
-			glDrawElements(GL_TRIANGLES, node->index_no, GL_UNSIGNED_SHORT, node->index);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, node->index.glptr);
+			glDrawElements(GL_TRIANGLES, node->index.length, GL_UNSIGNED_SHORT, NULL);
 		}
 
 		// Exit?

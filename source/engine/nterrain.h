@@ -12,16 +12,7 @@
 	#include "tree.h"
 	#include "vector.h"
 	#include "status.h"
-
-	#ifdef TEST
-	struct Vertex
-	{
-		struct Vector3 pos;
-		struct Vector2 uv;
-	};
-	#else
-	#include "context.h"
-	#endif
+	#include "tiny-gl.h"
 
 	enum NVerticesType
 	{
@@ -36,12 +27,10 @@
 		struct Vector2 max;
 
 		float pattern_dimension;
-		enum NVerticesType vertices_type;
 
-		uint16_t* index;
-		size_t index_no;
-		struct Vertex* vertices;
-		size_t vertices_no;
+		enum NVerticesType vertices_type;
+		struct Vertices vertices;
+		struct Index index;
 	};
 
 	struct NTerrain
@@ -55,12 +44,15 @@
 		size_t steps;
 		size_t tiles_no;
 		size_t vertices_buffers_no;
+
+		struct Buffer buffer;
 	};
 
-	struct NTerrain* NTerrainCreate(float dimension, float minimum_tile_dimension, int pattern_subdivisions, struct Status* st);
+	struct NTerrain* NTerrainCreate(const char* heightmap, float elevation, float dimension, float minimum_tile_dimension,
+	                                int pattern_subdivisions, struct Status* st);
 	void NTerrainDelete(struct NTerrain* terrain);
 
-	struct NTerrainNode* NTerrainIterate(struct TreeState* state, struct Buffer* buffer, struct NTerrainNode** out_shared, struct Vector2 position);
-	void NTerrainShape(struct NTerrain* terrain, float elevation, const char* heightmap);
+	struct NTerrainNode* NTerrainIterate(struct TreeState* state, struct Buffer* buffer,
+	                                     struct NTerrainNode** out_last_with_vertices, struct Vector2 position);
 
 #endif

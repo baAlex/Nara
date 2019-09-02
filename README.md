@@ -5,10 +5,10 @@ The terrain in the screenshots should work as an overworld for an action rpg, bu
 
 And yes, it looks terrible, even compared with old [screenshots](./documentation/screenshot-04.jpg). What happens is that the engine is not taking any measure against gaps between different levels of detail, and of course that the old approach draw everything with the same detail in a non scalable way.
 
-If you decide to give it a try, note that also you will find poor performance. Is because I'm currently working on cleaning the code before fix these gaps, letting the rendering on a side ⛰️📐️.
+Currently working on cleaning the code before fix these gaps ⛰️📐️.
 
-![screenshot](./documentation/screenshot-06.jpg)
-![screenshot](./documentation/screenshot-07.jpg)
+![screenshot](./documentation/screenshot-08.jpg)
+![screenshot](./documentation/screenshot-09.jpg)
 
 
 Compilation
