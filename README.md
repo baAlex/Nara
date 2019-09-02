@@ -5,7 +5,7 @@ The terrain in the screenshots should work as an overworld for an action rpg, bu
 
 And yes, it looks terrible, even compared with old [screenshots](./documentation/screenshot-04.jpg). What happens is that the engine is not taking any measure against gaps between different levels of detail, and of course that the old approach draw everything with the same detail in a non scalable way.
 
-Currently working on cleaning the code before fix these gaps ⛰️📐️.
+I'm currently working on clearing the code before fix these gaps ⛰️📐️.
 
 ![screenshot](./documentation/screenshot-08.jpg)
 ![screenshot](./documentation/screenshot-09.jpg)
@@ -28,7 +28,7 @@ On Ubuntu (and most Posix variants) *Mesa* provide the OpenGL implementation, so
 sudo apt install libglfw3-dev libgles2-mesa-dev python3 pkg-config ninja-build git
 ```
 
-To clone and compile the repository, with:
+To clone and compile the repository:
 ```
 git clone https://github.com/baAlex/Nara.git
 cd Nara
