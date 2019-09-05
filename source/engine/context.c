@@ -257,12 +257,25 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	ContextInputInitialization(&context->input);
 	ContextTimeInitialization(&context->time);
 
-	TinyGlInit(options.clean_color);
+	// OpenGL initialization
+	glClearColor(options.clean_color.x, options.clean_color.y, options.clean_color.z, 1.0);
 
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+	glEnable(GL_BLEND);
+
+	glDisable(GL_DITHER);
+
+	glEnableVertexAttribArray(ATTRIBUTE_POSITION);
+	glEnableVertexAttribArray(ATTRIBUTE_UV);
+
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendEquation(GL_FUNC_ADD);
+
+	// Bye!
 	context->window_size = context->options.window_size;
 	sResizeCallback(context->window, context->options.window_size.x, context->options.window_size.y);
 
-	// Bye!
 	printf("%s\n", glGetString(GL_VENDOR));
 	printf("%s\n", glGetString(GL_RENDERER));
 	printf("%s\n", glGetString(GL_VERSION));
@@ -297,7 +310,7 @@ void ContextUpdate(struct Context* context, struct WindowSpecifications* out_win
                    struct TimeSpecifications* out_time, struct InputSpecifications* out_input)
 {
 	glfwSwapBuffers(context->window);
-	TinyGlClean();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Window module abstraction (the context is the window)
 	{

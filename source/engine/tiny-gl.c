@@ -34,31 +34,6 @@ SOFTWARE.
 
 /*-----------------------------
 
- TinyGlInit()
------------------------------*/
-inline void TinyGlInit(struct Vector3 clean_color)
-{
-	glClearColor(clean_color.x, clean_color.y, clean_color.z, 1.0);
-
-	glEnableVertexAttribArray(ATTRIBUTE_POSITION);
-	glEnableVertexAttribArray(ATTRIBUTE_UV);
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-}
-
-
-/*-----------------------------
-
- TinyGlClean()
------------------------------*/
-inline void TinyGlClean()
-{
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-}
-
-
-/*-----------------------------
-
  ProgramInit()
 -----------------------------*/
 static inline int sCompileShader(GLuint shader, struct Status* st)
@@ -316,8 +291,8 @@ int TextureInitImage(struct Texture* out, const struct Image* image, enum Filter
 		             GL_UNSIGNED_BYTE, image->data);
 		break;
 	case IMAGE_GRAY8:
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, (GLsizei)image->width, (GLsizei)image->height, 0,
-		             GL_LUMINANCE, GL_UNSIGNED_BYTE, image->data);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, (GLsizei)image->width, (GLsizei)image->height, 0, GL_LUMINANCE,
+		             GL_UNSIGNED_BYTE, image->data);
 		break;
 	case IMAGE_GRAYA8:
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE_ALPHA, (GLsizei)image->width, (GLsizei)image->height, 0,

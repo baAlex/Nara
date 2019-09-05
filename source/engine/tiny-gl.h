@@ -54,10 +54,6 @@
 		GLuint glptr;
 	};
 
-
-	void TinyGlInit(struct Vector3 clean_color);
-	void TinyGlClean();
-
 	int ProgramInit(struct Program* out, const char* vertex_code, const char* fragment_code, struct Status* st);
 	void ProgramFree(struct Program*);
 

@@ -93,25 +93,6 @@ static void sSetProjection(struct Vector2i window_size, struct Context* s_contex
 
 /*-----------------------------
 
- sSetCamera()
------------------------------*/
-static void sSetCamera(const struct Entity* camera, struct Context* s_context)
-{
-	struct Matrix4 projection;
-	struct Matrix4 translation;
-
-	projection = Matrix4Identity();
-	projection = Matrix4RotateX(projection, DEG_TO_RAD(camera->co.angle.x));
-	projection = Matrix4RotateZ(projection, DEG_TO_RAD(camera->co.angle.z));
-
-	translation = Matrix4Translate(Vector3Invert(camera->co.position));
-
-	ContextSetCamera(s_context, Matrix4Multiply(projection, translation), camera->co.position);
-}
-
-
-/*-----------------------------
-
  main()
 -----------------------------*/
 int main()
@@ -126,6 +107,8 @@ int main()
 	struct List entities = {0};
 	struct EntityInput entities_input = {0};
 	struct Entity* camera_entity = NULL;
+
+	struct Matrix4 camera_matrix = Matrix4Identity();
 
 	printf("Nara v0.1\n");
 	printf("- Lib-Japan v%i.%i.%i\n", JAPAN_VERSION_MAJOR, JAPAN_VERSION_MINOR, JAPAN_VERSION_PATCH);
@@ -170,16 +153,6 @@ int main()
 	printf(" - Vertices buffers: %lu\n", terrain->vertices_buffers_no);
 
 	// Game loop
-	struct TreeState s = {.start = terrain->root};
-	struct Buffer buffer = {0};
-
-	struct NTerrainNode* node = NULL;
-	struct NTerrainNode* last_with_vertices = NULL;
-	struct NTerrainNode* temp = NULL;
-
-	ContextSetProgram(s_context, &terrain_program);
-	ContextSetDiffuse(s_context, &terrain_diffuse);
-
 	while (1)
 	{
 		ContextUpdate(s_context, &s_window_specs, &s_time_specs, &s_input_specs);
@@ -206,30 +179,21 @@ int main()
 		if (Vector3Equals(camera_entity->co.position, camera_entity->old_co.position) == false ||
 		    Vector3Equals(camera_entity->co.angle, camera_entity->old_co.angle) == false)
 		{
-			sSetCamera(camera_entity, s_context);
+			camera_matrix = Matrix4Identity();
+			camera_matrix = Matrix4RotateX(camera_matrix, DEG_TO_RAD(camera_entity->co.angle.x));
+			camera_matrix = Matrix4RotateZ(camera_matrix, DEG_TO_RAD(camera_entity->co.angle.z));
+			camera_matrix = Matrix4Multiply(camera_matrix, Matrix4Translate(Vector3Invert(camera_entity->co.position)));
+
+			ContextSetCamera(s_context, camera_matrix, camera_entity->co.position);
 		}
 
 		if (s_window_specs.resized == true)
 			sSetProjection(s_window_specs.size, s_context);
 
 		// Render
-		s.start = terrain->root;
-
-		while ((node = NTerrainIterate(&s, &buffer, &last_with_vertices,
-		                               (struct Vector2){camera_entity->co.position.x, camera_entity->co.position.y})) !=
-		       NULL)
-		{
-			if (temp != last_with_vertices)
-			{
-				temp = last_with_vertices;
-				glBindBuffer(GL_ARRAY_BUFFER, last_with_vertices->vertices.glptr);
-				glVertexAttribPointer(ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), NULL);
-				glVertexAttribPointer(ATTRIBUTE_UV, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), (float*)NULL + 3);
-			}
-
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, node->index.glptr);
-			glDrawElements(GL_TRIANGLES, node->index.length, GL_UNSIGNED_SHORT, NULL);
-		}
+		ContextSetProgram(s_context, &terrain_program);
+		ContextSetDiffuse(s_context, &terrain_diffuse);
+		NTerrainDraw(terrain, camera_entity->co.position);
 
 		// Exit?
 		if (s_window_specs.close == true)

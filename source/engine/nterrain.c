@@ -64,9 +64,13 @@ static inline float sDimension(const struct NTerrainNode* node)
 	return (node->max.x - node->min.x);
 }
 
-static inline struct Vector2 sMiddle(const struct NTerrainNode* node)
+static inline struct Vector3 sMiddle(const struct NTerrainNode* node)
 {
-	return (struct Vector2){node->min.x + sDimension(node) / 2.0, node->min.y + sDimension(node) / 2.0};
+	return (struct Vector3){
+	    .x = node->min.x + (node->max.x - node->min.x) / 2.0,
+	    .y = node->min.y + (node->max.y - node->min.y) / 2.0,
+	    .z = node->min.z + (node->max.z - node->min.z) / 2.0, // TODO: is not generated in any step
+	};
 }
 
 
@@ -74,8 +78,8 @@ static inline struct Vector2 sMiddle(const struct NTerrainNode* node)
 
  sGenerateIndex()
 -----------------------------*/
-static struct Index sGenerateIndex(struct Buffer* buffer, struct Vector2 min, struct Vector2 max,
-                                   float pattern_dimension, struct Vector2 org_min, struct Vector2 org_max,
+static struct Index sGenerateIndex(struct Buffer* buffer, struct Vector3 min, struct Vector3 max,
+                                   float pattern_dimension, struct Vector3 org_min, struct Vector3 org_max,
                                    float org_pattern_dimension)
 {
 	// Generation on a temporary buffer
@@ -133,7 +137,7 @@ static struct Index sGenerateIndex(struct Buffer* buffer, struct Vector2 min, st
 
  sGenerateVertices()
 -----------------------------*/
-static struct Vertices sGenerateVertices(struct Buffer* buffer, struct Vector2 min, struct Vector2 max,
+static struct Vertices sGenerateVertices(struct Buffer* buffer, struct Vector3 min, struct Vector3 max,
                                          float pattern_dimension, float terrain_dimension, struct Image* heightmap,
                                          float elevation)
 {
@@ -194,6 +198,9 @@ static void sSubdivideTile(struct Tree* item, float min_tile_dimension)
 	{
 		new_item = TreeCreate(item, NULL, sizeof(struct NTerrainNode));
 		new_node = new_item->data;
+
+		new_node->min.z = 0.0; // TODO
+		new_node->max.z = 0.0;
 
 		switch (i)
 		{
@@ -299,8 +306,8 @@ struct NTerrain* NTerrainCreate(const char* heightmap, float elevation, float di
 
 	// Tile subdivision
 	node = terrain->root->data;
-	node->min = (struct Vector2){0.0, 0.0};
-	node->max = (struct Vector2){dimension, dimension};
+	node->min = (struct Vector3){0.0, 0.0, 0.0};
+	node->max = (struct Vector3){dimension, dimension, 0.0};
 
 	sSubdivideTile(terrain->root, min_tile_dimension);
 
@@ -403,8 +410,8 @@ void NTerrainDelete(struct NTerrain* terrain)
 
  NTerrainIterate()
 -----------------------------*/
-struct NTerrainNode* NTerrainIterate(struct TreeState* state, struct Buffer* buffer, struct NTerrainNode** out_lastwvertices,
-                                     struct Vector2 position)
+struct NTerrainNode* NTerrainIterate(struct TreeState* state, struct Buffer* buffer,
+                                     struct NTerrainNode** out_with_vertices, struct Vector3 camera_position)
 {
 	struct Tree** future_parent_heap = NULL;
 
@@ -428,7 +435,7 @@ again:
 
 	if (((struct NTerrainNode*)state->actual->data)->vertices_type == SHARED_WITH_CHILDRENS ||
 	    ((struct NTerrainNode*)state->actual->data)->vertices_type == OWN_VERTICES)
-		*out_lastwvertices = state->actual->data;
+		*out_with_vertices = state->actual->data;
 
 	// Future values
 	{
@@ -436,7 +443,7 @@ again:
 		// TODO, the 1.5 can be configurable
 		// TODO, calculate as an circle is too lazy
 		if (state->actual->children != NULL &&
-		    Vector2Distance(sMiddle(state->actual->data), position) <= sDimension(state->actual->data) * 1.5)
+		    Vector3Distance(sMiddle(state->actual->data), camera_position) <= sDimension(state->actual->data) * 1.5)
 		{
 			if (buffer->size < (state->depth + 1) * sizeof(void*))
 				if (BufferResize(buffer, (state->depth + 1) * sizeof(void*)) == NULL) // FIXME, Bug in LibJapan, the +1
@@ -473,4 +480,32 @@ again:
 	}
 
 	return state->actual->data;
+}
+
+
+/*-----------------------------
+
+ NTerrainDraw()
+-----------------------------*/
+void NTerrainDraw(struct NTerrain* terrain, struct Vector3 camera_position)
+{
+	struct TreeState s = {.start = terrain->root};
+
+	struct NTerrainNode* node = NULL;
+	struct NTerrainNode* last_with_vertices = NULL;
+	struct NTerrainNode* temp = NULL;
+
+	while ((node = NTerrainIterate(&s, &terrain->buffer, &last_with_vertices, camera_position)) != NULL)
+	{
+		if (temp != last_with_vertices)
+		{
+			temp = last_with_vertices;
+			glBindBuffer(GL_ARRAY_BUFFER, last_with_vertices->vertices.glptr);
+			glVertexAttribPointer(ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), NULL);
+			glVertexAttribPointer(ATTRIBUTE_UV, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), (float*)NULL + 3);
+		}
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, node->index.glptr);
+		glDrawElements(GL_TRIANGLES, node->index.length, GL_UNSIGNED_SHORT, NULL);
+	}
 }
