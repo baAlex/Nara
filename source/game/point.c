@@ -31,26 +31,53 @@ SOFTWARE.
 #include "game.h"
 
 
-void* GamePointStart()
+struct Point
 {
-	struct GamePoint* self = malloc(sizeof(struct GamePoint)); // TODO, check error
+	struct Vector3 position;
+	struct Vector3 angle;
+};
 
-	self->co.position = (struct Vector3){0.0f, 0.0f, 0.0f};
-	self->co.angle = (struct Vector3){0.0f, 0.0f, 0.0f};
 
-	return self;
+/*-----------------------------
+
+ GamePointStart()
+-----------------------------*/
+void* GamePointStart(const struct EntityCommon* initial_state)
+{
+	struct Point* point = malloc(sizeof(struct Point));
+
+	if (point != NULL)
+	{
+		point->position = initial_state->position;
+		point->angle = initial_state->angle;
+	}
+
+	return point;
 }
 
-void GamePointDelete(void* raw_self)
+
+/*-----------------------------
+
+ GamePointDelete()
+-----------------------------*/
+void GamePointDelete(void* blob)
 {
-	struct GamePoint* self = raw_self;
-	free(self);
+	struct Point* point = blob;
+	free(point);
 }
 
-struct EntityCommon GamePointThink(void* raw_self, const struct EntityInput* input)
+
+/*-----------------------------
+
+ GamePointThink()
+-----------------------------*/
+int GamePointThink(void* blob, const struct EntityInput* input, struct EntityCommon* out_state)
 {
 	(void)input;
+	struct Point* point = blob;
 
-	struct GamePoint* self = raw_self;
-	return self->co;
+	out_state->position = point->position;
+	out_state->angle = point->angle;
+
+	return 0;
 }

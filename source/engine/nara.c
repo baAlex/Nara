@@ -138,8 +138,11 @@ int main()
 			goto return_failure;
 
 		classes = sInitializeClasses();
-		camera_entity = EntityCreate(&entities, ClassGet(classes, "Camera"));
 		EntityCreate(&entities, ClassGet(classes, "Point"));
+
+		camera_entity = EntityCreate(&entities, ClassGet(classes, "Camera"));
+		camera_entity->co.position = (struct Vector3){128.0f, 128.0f, 256.0f};
+		camera_entity->co.angle = (struct Vector3){-50.0f, 0.0f, 45.0f};
 
 		sSetProjection((struct Vector2i){WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT}, s_context);
 	}

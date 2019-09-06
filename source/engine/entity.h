@@ -9,21 +9,40 @@
 
 	#include <stddef.h>
 	#include <stdbool.h>
+
 	#include "vector.h"
 	#include "list.h"
 	#include "dictionary.h"
 
-	#include "../game/game.h"
-
 	struct Entity;
+
+	struct EntityInput
+	{
+		bool a, b, x, y;
+		bool lb, rb;
+		bool view, menu, guide;
+		bool ls, rs;
+
+		struct { float h, v; } pad;
+		struct { float h, v, t; } left_analog;
+		struct { float h, v, t; } right_analog;
+
+		float delta;
+	};
+
+	struct EntityCommon
+	{
+		struct Vector3 position;
+		struct Vector3 angle;
+	};
 
 	struct Class
 	{
 		struct DictionaryItem* item;
 
-		void* (*func_start)();
-		void (*func_delete)(void* blob);
-		struct EntityCommon (*func_think)(void* blob, const struct EntityInput*);
+		void* (*func_start)(const struct EntityCommon*);
+		void (*func_delete)(void*);
+		int (*func_think)(void*, const struct EntityInput*, struct EntityCommon*);
 
 		size_t references;
 		bool to_delete;
@@ -50,6 +69,6 @@
 	struct Entity* EntityCreate(struct List*, struct Class* class);
 	void EntityDelete(struct Entity*); // Marks entity to be deleted after the update cycle
 
-	void EntitiesUpdate(struct List*, struct EntityInput input);
+	void EntitiesUpdate(struct List*, struct EntityInput input); // TODO: pass input as pointer
 
 #endif

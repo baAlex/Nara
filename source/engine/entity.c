@@ -165,7 +165,7 @@ void EntitiesUpdate(struct List* list, struct EntityInput input)
 		else if (entity->class->func_think != NULL)
 		{
 			entity->old_co = entity->co;
-			entity->co = entity->class->func_think(entity->blob, &input);
+			entity->class->func_think(entity->blob, &input, &entity->co); // TODO: Check failure
 		}
 	}
 
@@ -184,7 +184,7 @@ void EntitiesUpdate(struct List* list, struct EntityInput input)
 		if (entity->to_start == true)
 		{
 			if (entity->class->func_start != NULL)
-				entity->blob = entity->class->func_start();
+				entity->blob = entity->class->func_start(&entity->co);
 
 			entity->to_start = false;
 		}
