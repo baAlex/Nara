@@ -3,7 +3,8 @@ name: CI
 on: [push]
 
 jobs:
-  build:
+  builds:
+    name: "Builds"
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v1
@@ -17,6 +18,18 @@ jobs:
       run: ninja
     - name: Compile debug build
       run: ninja -f debug.ninja
+
+  tests:
+    name: "Tests"
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Install dependencies
+      run: |
+        sudo apt install libcmocka-dev pkg-config ninja-build git
+        git submodule init
+        git submodule update
     - name: Compile tests
       run: ninja -f tests.ninja
     - name: Run 'nterrain-tests'
