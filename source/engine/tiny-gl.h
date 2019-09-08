@@ -11,8 +11,10 @@
 	#include "status.h"
 	#include "vector.h"
 
+	#ifndef TEST
 	#define GLFW_INCLUDE_ES2
 	#include <GLFW/glfw3.h>
+	#endif
 
 	#define ATTRIBUTE_POSITION 10
 	#define ATTRIBUTE_UV 11
