@@ -31,6 +31,8 @@ SOFTWARE.
 #include "tiny-gl.h"
 #include <math.h>
 
+#ifndef TEST // All this need to be mocked
+
 
 /*-----------------------------
 
@@ -333,3 +335,5 @@ inline void TextureFree(struct Texture* texture)
 	glDeleteTextures(1, &texture->glptr);
 	texture->glptr = 0;
 }
+
+#endif
