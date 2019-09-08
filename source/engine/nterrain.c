@@ -69,8 +69,18 @@ static inline float sPixelAsFloat(const struct Image* image, struct Vector2 cord
 		void* raw;
 	} data;
 
-	cords.x = fabsf(fmodf(cords.x, 1.0f)) * (float)image->width;
-	cords.y = fabsf(fmodf(cords.y, 1.0f)) * (float)image->height;
+	if (cords.x > 1.0)
+		cords.x = 1.0;
+	if (cords.y > 1.0)
+		cords.y = 1.0;
+	if (cords.x < -1.0)
+		cords.x = -1.0;
+	if (cords.y < -1.0)
+		cords.y = -1.0;
+
+	cords.x = floorf(cords.x * (float)image->width);
+	cords.y = floorf(cords.y * (float)image->height);
+
 	data.raw = image->data;
 
 	switch (image->format)
@@ -192,7 +202,11 @@ static struct Vertices sGenerateVertices(struct Buffer* buffer, const struct NTe
 
 				temp_data[col + (patterns_no + 1) * row].pos.x = node->min.x + (float)col * pattern_dimension;
 				temp_data[col + (patterns_no + 1) * row].pos.y = node->min.y + (float)row * pattern_dimension;
-				temp_data[col + (patterns_no + 1) * row].pos.z = sPixelAsFloat(heightmap, texture_step) * elevation;
+
+				if (heightmap != NULL)
+					temp_data[col + (patterns_no + 1) * row].pos.z = sPixelAsFloat(heightmap, texture_step) * elevation;
+				else
+					temp_data[col + (patterns_no + 1) * row].pos.z = 0.0;
 
 				// Next step
 				texture_step.x += pattern_dimension / terrain_dimension;
@@ -221,8 +235,7 @@ static void sSubdivideTile(struct Tree* item, float min_tile_dimension)
 	struct NTerrainNode* new_node = NULL;
 	struct Tree* new_item = NULL;
 
-	// TODO: With all the loss of precision, can the equal comparision fail? (I think that yes? no?)
-	if ((sDimension(node) / 3.0f) <= min_tile_dimension)
+	if ((sDimension(node) / 3.0f) < min_tile_dimension)
 		return;
 
 	for (int i = 0; i < 9; i++)
@@ -306,7 +319,6 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 	struct NTerrainNode* node = NULL;
 
 	struct Tree* item = NULL;
-	struct Buffer buffer = {0};
 	struct Image* heightmap = NULL;
 
 	struct TreeState state = {0};
@@ -352,7 +364,7 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 	// generating vertices and indexes
 	state.start = terrain->root;
 
-	while ((item = TreeIterate(&state, &buffer)) != NULL)
+	while ((item = TreeIterate(&state, &terrain->buffer)) != NULL)
 	{
 		node = item->data;
 		terrain->tiles_no++;
@@ -417,13 +429,12 @@ return_failure:
 void NTerrainDelete(struct NTerrain* terrain)
 {
 	struct TreeState s = {.start = terrain->root};
-	struct Buffer buffer = {0};
 	struct Tree* item = NULL;
 	struct NTerrainNode* node = NULL;
 
 	if (terrain->root != NULL)
 	{
-		while ((item = TreeIterate(&s, &buffer)) != NULL)
+		while ((item = TreeIterate(&s, &terrain->buffer)) != NULL)
 		{
 			node = item->data;
 
@@ -434,6 +445,7 @@ void NTerrainDelete(struct NTerrain* terrain)
 		TreeDelete(terrain->root);
 	}
 
+	BufferClean(&terrain->buffer);
 	free(terrain);
 }
 
@@ -533,16 +545,16 @@ void NTerrainDraw(struct NTerrain* terrain, struct Vector3 camera_position)
 		{
 			temp = last_with_vertices;
 
-			#ifndef TEST
+#ifndef TEST
 			glBindBuffer(GL_ARRAY_BUFFER, last_with_vertices->vertices.glptr);
 			glVertexAttribPointer(ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), NULL);
 			glVertexAttribPointer(ATTRIBUTE_UV, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), (float*)NULL + 3);
-			#endif
+#endif
 		}
 
-		#ifndef TEST
+#ifndef TEST
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, node->index.glptr);
 		glDrawElements(GL_TRIANGLES, (GLsizei)node->index.length, GL_UNSIGNED_SHORT, NULL);
-		#endif
+#endif
 	}
 }

@@ -17,3 +17,7 @@ jobs:
       run: ninja
     - name: Compile debug build
       run: ninja -f debug.ninja
+    - name: Compile tests
+      run: ninja -f tests.ninja
+    - name: Run 'nterrain-tests'
+      run: ./nterrain-tests

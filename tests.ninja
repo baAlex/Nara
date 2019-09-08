@@ -10,6 +10,7 @@ rule link
 
 # Tests
 build ./objects/tests/tests/nterrain-tests.o: compile ./source/tests/nterrain-tests.c
+build ./objects/tests/tests/canvas.o:         compile ./source/tests/canvas.c
 
 # Engine
 build ./objects/tests/engine/nterrain.o: compile ./source/engine/nterrain.c
@@ -33,6 +34,7 @@ build ./objects/tests/lib-japan/sound/laws.o:       compile ./source/lib-japan/s
 # Link
 build nterrain-tests: link $
 ./objects/tests/tests/nterrain-tests.o $
+./objects/tests/tests/canvas.o $
 ./objects/tests/engine/nterrain.o $
 ./objects/tests/lib-japan/buffer.o $
 ./objects/tests/lib-japan/dictionary.o $
