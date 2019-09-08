@@ -29,7 +29,7 @@ build ./objects/debug/engine/context-input.o:    compile ./source/engine/context
 build ./objects/debug/engine/context-time.o:     compile ./source/engine/context-time.c
 build ./objects/debug/engine/tiny-gl.o:          compile_strict ./source/engine/tiny-gl.c
 build ./objects/debug/engine/entity.o:           compile_strict ./source/engine/entity.c
-build ./objects/debug/engine/nterrain.o:         compile ./source/engine/nterrain.c
+build ./objects/debug/engine/nterrain.o:         compile_strict ./source/engine/nterrain.c
 build ./objects/debug/engine/terrain-fragment.o: compile_strict ./objects/debug/engine/terrain-fragment.c
 build ./objects/debug/engine/terrain-vertex.o:   compile_strict ./objects/debug/engine/terrain-vertex.c
 build ./objects/debug/engine/red-fragment.o:     compile_strict ./objects/debug/engine/red-fragment.c

@@ -2,6 +2,7 @@
 /nara-dbg
 /sdk
 /sdk-dbg
+/nterrain-tests
 /.ninja_deps
 /.ninja_log
 /objects/

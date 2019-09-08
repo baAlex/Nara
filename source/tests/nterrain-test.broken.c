@@ -1,13 +1,7 @@
 /*-----------------------------
 
- [nterrain-test.c]
+ [nterrain-test.broken.c]
  - Alexander Brandt 2019
-
- $ clang -I./source/lib-japan/include -I./source/engine/ ./source/lib-japan/source/buffer.c
-./source/lib-japan/source/endianness.c ./source/lib-japan/source/status.c
-./source/lib-japan/source/tree.c ./source/lib-japan/source/vector.c
-./source/engine/nterrain.c ./tools/nterrain-test.c -lm -lcmocka -O0 -DTEST -g -o ./test
-
 -----------------------------*/
 
 #include <math.h>

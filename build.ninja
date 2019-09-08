@@ -13,90 +13,90 @@ rule link
 
 
 # Automatically generated files
-build ./objects/engine/terrain-fragment.c: generate ./source/engine/terrain-fragment.glsl
-build ./objects/engine/terrain-vertex.c:   generate ./source/engine/terrain-vertex.glsl
-build ./objects/engine/red-fragment.c:     generate ./source/engine/red-fragment.glsl
-build ./objects/engine/red-vertex.c:       generate ./source/engine/red-vertex.glsl
+build ./objects/release/engine/terrain-fragment.c: generate ./source/engine/terrain-fragment.glsl
+build ./objects/release/engine/terrain-vertex.c:   generate ./source/engine/terrain-vertex.glsl
+build ./objects/release/engine/red-fragment.c:     generate ./source/engine/red-fragment.glsl
+build ./objects/release/engine/red-vertex.c:       generate ./source/engine/red-vertex.glsl
 
 # Engine
-build ./objects/engine/nara.o:             compile ./source/engine/nara.c
-build ./objects/engine/context.o:          compile ./source/engine/context.c
-build ./objects/engine/context-input.o:    compile ./source/engine/context-input.c
-build ./objects/engine/context-time.o:     compile ./source/engine/context-time.c
-build ./objects/engine/tiny-gl.o:          compile ./source/engine/tiny-gl.c
-build ./objects/engine/entity.o:           compile ./source/engine/entity.c
-build ./objects/engine/nterrain.o:         compile ./source/engine/nterrain.c
-build ./objects/engine/terrain-fragment.o: compile ./objects/engine/terrain-fragment.c
-build ./objects/engine/terrain-vertex.o:   compile ./objects/engine/terrain-vertex.c
-build ./objects/engine/red-fragment.o:     compile ./objects/engine/red-fragment.c
-build ./objects/engine/red-vertex.o:       compile ./objects/engine/red-vertex.c
+build ./objects/release/engine/nara.o:             compile ./source/engine/nara.c
+build ./objects/release/engine/context.o:          compile ./source/engine/context.c
+build ./objects/release/engine/context-input.o:    compile ./source/engine/context-input.c
+build ./objects/release/engine/context-time.o:     compile ./source/engine/context-time.c
+build ./objects/release/engine/tiny-gl.o:          compile ./source/engine/tiny-gl.c
+build ./objects/release/engine/entity.o:           compile ./source/engine/entity.c
+build ./objects/release/engine/nterrain.o:         compile ./source/engine/nterrain.c
+build ./objects/release/engine/terrain-fragment.o: compile ./objects/release/engine/terrain-fragment.c
+build ./objects/release/engine/terrain-vertex.o:   compile ./objects/release/engine/terrain-vertex.c
+build ./objects/release/engine/red-fragment.o:     compile ./objects/release/engine/red-fragment.c
+build ./objects/release/engine/red-vertex.o:       compile ./objects/release/engine/red-vertex.c
 
 # Game
-build ./objects/game/camera.o: compile ./source/game/camera.c
-build ./objects/game/point.o:  compile ./source/game/point.c
+build ./objects/release/game/camera.o: compile ./source/game/camera.c
+build ./objects/release/game/point.o:  compile ./source/game/point.c
 
 # Lib Japan
-build ./objects/lib-japan/buffer.o:           compile ./source/lib-japan/source/buffer.c
-build ./objects/lib-japan/dictionary.o:       compile ./source/lib-japan/source/dictionary.c
-build ./objects/lib-japan/endianness.o:       compile ./source/lib-japan/source/endianness.c
-build ./objects/lib-japan/list.o:             compile ./source/lib-japan/source/list.c
-build ./objects/lib-japan/matrix.o:           compile ./source/lib-japan/source/matrix.c
-build ./objects/lib-japan/status.o:           compile ./source/lib-japan/source/status.c
-build ./objects/lib-japan/tree.o:             compile ./source/lib-japan/source/tree.c
-build ./objects/lib-japan/vector.o:           compile ./source/lib-japan/source/vector.c
-build ./objects/lib-japan/image/image.o:      compile ./source/lib-japan/source/image/image.c
-build ./objects/lib-japan/image/format-sgi.o: compile ./source/lib-japan/source/image/format-sgi.c
-build ./objects/lib-japan/sound/sound.o:      compile ./source/lib-japan/source/sound/sound.c
-build ./objects/lib-japan/sound/format-au.o:  compile ./source/lib-japan/source/sound/format-au.c
-build ./objects/lib-japan/sound/format-wav.o: compile ./source/lib-japan/source/sound/format-wav.c
-build ./objects/lib-japan/sound/laws.o:       compile ./source/lib-japan/source/sound/laws.c
+build ./objects/release/lib-japan/buffer.o:           compile ./source/lib-japan/source/buffer.c
+build ./objects/release/lib-japan/dictionary.o:       compile ./source/lib-japan/source/dictionary.c
+build ./objects/release/lib-japan/endianness.o:       compile ./source/lib-japan/source/endianness.c
+build ./objects/release/lib-japan/list.o:             compile ./source/lib-japan/source/list.c
+build ./objects/release/lib-japan/matrix.o:           compile ./source/lib-japan/source/matrix.c
+build ./objects/release/lib-japan/status.o:           compile ./source/lib-japan/source/status.c
+build ./objects/release/lib-japan/tree.o:             compile ./source/lib-japan/source/tree.c
+build ./objects/release/lib-japan/vector.o:           compile ./source/lib-japan/source/vector.c
+build ./objects/release/lib-japan/image/image.o:      compile ./source/lib-japan/source/image/image.c
+build ./objects/release/lib-japan/image/format-sgi.o: compile ./source/lib-japan/source/image/format-sgi.c
+build ./objects/release/lib-japan/sound/sound.o:      compile ./source/lib-japan/source/sound/sound.c
+build ./objects/release/lib-japan/sound/format-au.o:  compile ./source/lib-japan/source/sound/format-au.c
+build ./objects/release/lib-japan/sound/format-wav.o: compile ./source/lib-japan/source/sound/format-wav.c
+build ./objects/release/lib-japan/sound/laws.o:       compile ./source/lib-japan/source/sound/laws.c
 
 # Sdk
-build ./objects/sdk/sdk.o: compile ./source/sdk/sdk.c
+build ./objects/release/sdk/sdk.o: compile ./source/sdk/sdk.c
 
 # Link
 build nara: link $
-./objects/engine/nara.o $
-./objects/engine/context.o $
-./objects/engine/context-input.o $
-./objects/engine/context-time.o $
-./objects/engine/tiny-gl.o $
-./objects/engine/entity.o $
-./objects/engine/nterrain.o $
-./objects/engine/terrain-fragment.o $
-./objects/engine/terrain-vertex.o $
-./objects/engine/red-fragment.o $
-./objects/engine/red-vertex.o $
-./objects/game/camera.o $
-./objects/game/point.o $
-./objects/lib-japan/buffer.o $
-./objects/lib-japan/dictionary.o $
-./objects/lib-japan/endianness.o $
-./objects/lib-japan/list.o $
-./objects/lib-japan/matrix.o $
-./objects/lib-japan/status.o $
-./objects/lib-japan/tree.o $
-./objects/lib-japan/vector.o $
-./objects/lib-japan/image/image.o $
-./objects/lib-japan/image/format-sgi.o $
-./objects/lib-japan/sound/sound.o $
-./objects/lib-japan/sound/format-au.o $
-./objects/lib-japan/sound/format-wav.o $
-./objects/lib-japan/sound/laws.o
+./objects/release/engine/nara.o $
+./objects/release/engine/context.o $
+./objects/release/engine/context-input.o $
+./objects/release/engine/context-time.o $
+./objects/release/engine/tiny-gl.o $
+./objects/release/engine/entity.o $
+./objects/release/engine/nterrain.o $
+./objects/release/engine/terrain-fragment.o $
+./objects/release/engine/terrain-vertex.o $
+./objects/release/engine/red-fragment.o $
+./objects/release/engine/red-vertex.o $
+./objects/release/game/camera.o $
+./objects/release/game/point.o $
+./objects/release/lib-japan/buffer.o $
+./objects/release/lib-japan/dictionary.o $
+./objects/release/lib-japan/endianness.o $
+./objects/release/lib-japan/list.o $
+./objects/release/lib-japan/matrix.o $
+./objects/release/lib-japan/status.o $
+./objects/release/lib-japan/tree.o $
+./objects/release/lib-japan/vector.o $
+./objects/release/lib-japan/image/image.o $
+./objects/release/lib-japan/image/format-sgi.o $
+./objects/release/lib-japan/sound/sound.o $
+./objects/release/lib-japan/sound/format-au.o $
+./objects/release/lib-japan/sound/format-wav.o $
+./objects/release/lib-japan/sound/laws.o
 
 build sdk: link $
-./objects/sdk/sdk.o $
-./objects/lib-japan/buffer.o $
-./objects/lib-japan/dictionary.o $
-./objects/lib-japan/endianness.o $
-./objects/lib-japan/list.o $
-./objects/lib-japan/matrix.o $
-./objects/lib-japan/status.o $
-./objects/lib-japan/tree.o $
-./objects/lib-japan/vector.o $
-./objects/lib-japan/image/image.o $
-./objects/lib-japan/image/format-sgi.o $
-./objects/lib-japan/sound/sound.o $
-./objects/lib-japan/sound/format-au.o $
-./objects/lib-japan/sound/format-wav.o $
-./objects/lib-japan/sound/laws.o
+./objects/release/sdk/sdk.o $
+./objects/release/lib-japan/buffer.o $
+./objects/release/lib-japan/dictionary.o $
+./objects/release/lib-japan/endianness.o $
+./objects/release/lib-japan/list.o $
+./objects/release/lib-japan/matrix.o $
+./objects/release/lib-japan/status.o $
+./objects/release/lib-japan/tree.o $
+./objects/release/lib-japan/vector.o $
+./objects/release/lib-japan/image/image.o $
+./objects/release/lib-japan/image/format-sgi.o $
+./objects/release/lib-japan/sound/sound.o $
+./objects/release/lib-japan/sound/format-au.o $
+./objects/release/lib-japan/sound/format-wav.o $
+./objects/release/lib-japan/sound/laws.o
