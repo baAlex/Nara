@@ -15,7 +15,7 @@
 	#define GLFW_INCLUDE_ES2
 	#include <GLFW/glfw3.h>
 	#else
-	typedef unsigned GLuint
+	typedef unsigned GLuint;
 	#endif
 
 	#define ATTRIBUTE_POSITION 10
