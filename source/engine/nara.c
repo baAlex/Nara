@@ -128,7 +128,7 @@ int main()
 
 	// Resources
 	{
-		if ((terrain = NTerrainCreate("./assets/heightmap.sgi", 100.0, 972.0, 18.0, 2, &st)) == NULL)
+		if ((terrain = NTerrainCreate("./assets/heightmap.sgi", 75.0, 972.0, 18.0, 3, &st)) == NULL)
 			goto return_failure;
 
 		if (ProgramInit(&terrain_program, (char*)g_terrain_vertex, (char*)g_terrain_fragment, &st) != 0)

@@ -59,42 +59,61 @@ static inline struct Vector3 sMiddle(const struct NTerrainNode* node)
 
  sPixelAsFloat()
 -----------------------------*/
-static inline float sPixelAsFloat(const struct Image* image, struct Vector2 cords)
+float sPixelAsFloat(const struct Image* image, struct Vector2 cords)
 {
-	// TODO, add a cute linear filter
-
+	// https://en.wikipedia.org/wiki/Bilinear_filtering
 	union {
 		uint8_t* u8;
 		uint16_t* u16;
 		void* raw;
-	} data;
 
-	if (cords.x > 1.0)
-		cords.x = 1.0;
-	if (cords.y > 1.0)
-		cords.y = 1.0;
-	if (cords.x < -1.0)
-		cords.x = -1.0;
-	if (cords.y < -1.0)
-		cords.y = -1.0;
+	} data = {.raw = image->data};
 
-	cords.x = floorf(cords.x * (float)image->width);
-	cords.y = floorf(cords.y * (float)image->height);
+	if (cords.x > 1.0f)
+		cords.x = 1.0f;
+	if (cords.y > 1.0f)
+		cords.y = 1.0f;
+	if (cords.x < -1.0f)
+		cords.x = -1.0f;
+	if (cords.y < -1.0f)
+		cords.y = -1.0f;
 
-	data.raw = image->data;
+	// TODO, think a better replacement for the -1
+	float u = cords.x * (float)(image->width - 1);
+	float v = cords.y * (float)(image->height - 1);
+
+	size_t x = (size_t)floorf(u);
+	size_t y = (size_t)floorf(v);
+
+	float u_ratio = u - floorf(u);
+	float v_ratio = v - floorf(v);
+	float u_opposite = 1.0f - u_ratio;
+	float v_opposite = 1.0f - v_ratio;
+
+	float result = 0.0;
 
 	switch (image->format)
 	{
 	case IMAGE_GRAY8:
-		return (float)(data.u8[(size_t)lroundf(cords.x) + image->width * (size_t)lroundf(cords.y)] / 255.0f);
+		result =
+		    (data.u8[x + image->width * y] * u_opposite + data.u8[x + 1 + image->width * y] * u_ratio) * v_opposite +
+		    (data.u8[x + image->width * (y + 1)] * u_opposite + data.u8[x + 1 + image->width * (y + 1)] * u_ratio) *
+		        v_ratio;
+		result /= 255.0f;
+		break;
 
 	case IMAGE_GRAY16:
-		return (float)(data.u16[(size_t)lroundf(cords.x) + image->width * (size_t)lroundf(cords.y)] / 65535.0f);
+		result =
+		    (data.u16[x + image->width * y] * u_opposite + data.u16[x + 1 + image->width * y] * u_ratio) * v_opposite +
+		    (data.u16[x + image->width * (y + 1)] * u_opposite + data.u16[x + 1 + image->width * (y + 1)] * u_ratio) *
+		        v_ratio;
+		result /= 65535.0f;
+		break;
 
 	default: break;
 	}
 
-	return 0.0;
+	return result;
 }
 
 
@@ -213,7 +232,7 @@ static struct Vertices sGenerateVertices(struct Buffer* buffer, const struct NTe
 			}
 
 			texture_step.y += pattern_dimension / terrain_dimension;
-			texture_step.x = 0.0;
+			texture_step.x = node->min.x / terrain_dimension;
 		}
 	}
 
