@@ -19,10 +19,10 @@ build ./objects/release/engine/red-fragment.c:     generate ./source/engine/red-
 build ./objects/release/engine/red-vertex.c:       generate ./source/engine/red-vertex.glsl
 
 # Engine
-build ./objects/release/engine/nara.o:             compile ./source/engine/nara.c
 build ./objects/release/engine/context.o:          compile ./source/engine/context.c
 build ./objects/release/engine/context-input.o:    compile ./source/engine/context-input.c
-build ./objects/release/engine/context-time.o:     compile ./source/engine/context-time.c
+build ./objects/release/engine/timer.o:            compile ./source/engine/timer.c
+build ./objects/release/engine/mixer.o:            compile ./source/engine/mixer.c
 build ./objects/release/engine/tiny-gl.o:          compile ./source/engine/tiny-gl.c
 build ./objects/release/engine/entity.o:           compile ./source/engine/entity.c
 build ./objects/release/engine/nterrain.o:         compile ./source/engine/nterrain.c
@@ -32,6 +32,7 @@ build ./objects/release/engine/red-fragment.o:     compile ./objects/release/eng
 build ./objects/release/engine/red-vertex.o:       compile ./objects/release/engine/red-vertex.c
 
 # Game
+build ./objects/release/game/nara.o:   compile ./source/game/nara.c
 build ./objects/release/game/camera.o: compile ./source/game/camera.c
 build ./objects/release/game/point.o:  compile ./source/game/point.c
 
@@ -56,10 +57,10 @@ build ./objects/release/sdk/sdk.o: compile ./source/sdk/sdk.c
 
 # Link
 build nara: link $
-./objects/release/engine/nara.o $
 ./objects/release/engine/context.o $
 ./objects/release/engine/context-input.o $
-./objects/release/engine/context-time.o $
+./objects/release/engine/timer.o $
+./objects/release/engine/mixer.o $
 ./objects/release/engine/tiny-gl.o $
 ./objects/release/engine/entity.o $
 ./objects/release/engine/nterrain.o $
@@ -67,6 +68,7 @@ build nara: link $
 ./objects/release/engine/terrain-vertex.o $
 ./objects/release/engine/red-fragment.o $
 ./objects/release/engine/red-vertex.o $
+./objects/release/game/nara.o $
 ./objects/release/game/camera.o $
 ./objects/release/game/point.o $
 ./objects/release/lib-japan/buffer.o $

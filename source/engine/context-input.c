@@ -33,9 +33,9 @@ SOFTWARE.
 
 /*-----------------------------
 
- sFindGamedpad()
+ FindGamedpad()
 -----------------------------*/
-static inline int sFindGamedpad()
+inline int FindGamedpad()
 {
 	int winner = -1; // The first one wins
 
@@ -56,30 +56,19 @@ static inline int sFindGamedpad()
 
 /*-----------------------------
 
- ContextInputInitialization()
------------------------------*/
-void ContextInputInitialization(struct ContextInput* state)
-{
-	memset(state, 0, sizeof(struct ContextInput));
-	state->active_gamepad = sFindGamedpad();
-}
-
-
-/*-----------------------------
-
- ContextInputStep()
+ InputStep()
 -----------------------------*/
 static inline float sCombineAxes(float a, float b)
 {
-	if(signbit((a + b) / 2.f) == 0) // 0 = Positive
+	if (signbit((a + b) / 2.f) == 0) // 0 = Positive
 		return fmaxf(a, b);
 
 	return fminf(a, b);
 }
 
-void ContextInputStep(struct ContextInput* state)
+void InputStep(struct Context* context)
 {
-	// NOTE: Joystick functions did not require PollEvents()
+	// NOTE: Gamepad functions did not require PollEvents()
 
 	const uint8_t* buttons = NULL;
 	const float* axes = NULL;
@@ -87,67 +76,68 @@ void ContextInputStep(struct ContextInput* state)
 	int axes_no = 0;
 
 	bool check_disconnection = false;
-	struct InputSpecifications joy_specs = {0};
+
+	memset(&context->gamepad, 0, sizeof(struct ContextEvents));
 
 	// Gamepad input...
-	if (state->active_gamepad != -1)
+	if (context->active_gamepad != -1)
 	{
 		// While keyboard and mouse uses callbacks, this well... close your eyes
-		if ((buttons = glfwGetJoystickButtons(state->active_gamepad, &buttons_no)) != NULL)
+		if ((buttons = glfwGetJoystickButtons(context->active_gamepad, &buttons_no)) != NULL)
 		{
-			joy_specs.a = (buttons_no >= 1 && buttons[0] == GLFW_TRUE) ? true : false;
-			joy_specs.b = (buttons_no >= 2 && buttons[1] == GLFW_TRUE) ? true : false;
-			joy_specs.x = (buttons_no >= 3 && buttons[2] == GLFW_TRUE) ? true : false;
-			joy_specs.y = (buttons_no >= 4 && buttons[3] == GLFW_TRUE) ? true : false;
+			context->gamepad.a = (buttons_no >= 1 && buttons[0] == GLFW_TRUE) ? true : false;
+			context->gamepad.b = (buttons_no >= 2 && buttons[1] == GLFW_TRUE) ? true : false;
+			context->gamepad.x = (buttons_no >= 3 && buttons[2] == GLFW_TRUE) ? true : false;
+			context->gamepad.y = (buttons_no >= 4 && buttons[3] == GLFW_TRUE) ? true : false;
 
-			joy_specs.lb = (buttons_no >= 5 && buttons[4] == GLFW_TRUE) ? true : false;
-			joy_specs.rb = (buttons_no >= 6 && buttons[5] == GLFW_TRUE) ? true : false;
+			context->gamepad.lb = (buttons_no >= 5 && buttons[4] == GLFW_TRUE) ? true : false;
+			context->gamepad.rb = (buttons_no >= 6 && buttons[5] == GLFW_TRUE) ? true : false;
 
-			joy_specs.view = (buttons_no >= 7 && buttons[6] == GLFW_TRUE) ? true : false;
-			joy_specs.menu = (buttons_no >= 8 && buttons[7] == GLFW_TRUE) ? true : false;
-			joy_specs.guide = (buttons_no >= 9 && buttons[8] == GLFW_TRUE) ? true : false;
+			context->gamepad.view = (buttons_no >= 7 && buttons[6] == GLFW_TRUE) ? true : false;
+			context->gamepad.menu = (buttons_no >= 8 && buttons[7] == GLFW_TRUE) ? true : false;
+			context->gamepad.guide = (buttons_no >= 9 && buttons[8] == GLFW_TRUE) ? true : false;
 
-			joy_specs.ls = (buttons_no >= 5 && buttons[9] == GLFW_TRUE) ? true : false;
-			joy_specs.rs = (buttons_no >= 6 && buttons[10] == GLFW_TRUE) ? true : false;
+			context->gamepad.ls = (buttons_no >= 5 && buttons[9] == GLFW_TRUE) ? true : false;
+			context->gamepad.rs = (buttons_no >= 6 && buttons[10] == GLFW_TRUE) ? true : false;
 		}
 		else
 		{
-			joy_specs.a = joy_specs.b = joy_specs.x = joy_specs.y = false;
-			joy_specs.lb = joy_specs.rb = false;
-			joy_specs.view = joy_specs.menu = joy_specs.guide = false;
-			joy_specs.ls = joy_specs.rs = false;
+			context->gamepad.a = context->gamepad.b = context->gamepad.x = context->gamepad.y = false;
+			context->gamepad.lb = context->gamepad.rb = false;
+			context->gamepad.view = context->gamepad.menu = context->gamepad.guide = false;
+			context->gamepad.ls = context->gamepad.rs = false;
 			check_disconnection = true;
 		}
 
-		if ((axes = glfwGetJoystickAxes(state->active_gamepad, &axes_no)) != NULL)
+		if ((axes = glfwGetJoystickAxes(context->active_gamepad, &axes_no)) != NULL)
 		{
-			joy_specs.left_analog.h = (axes_no >= 1) ? axes[0] : 0.0;
-			joy_specs.left_analog.v = (axes_no >= 2) ? axes[1] : 0.0;
-			joy_specs.left_analog.t = (axes_no >= 3) ? axes[2] : 0.0;
+			context->gamepad.left_analog.h = (axes_no >= 1) ? axes[0] : 0.0;
+			context->gamepad.left_analog.v = (axes_no >= 2) ? axes[1] : 0.0;
+			context->gamepad.left_analog.t = (axes_no >= 3) ? axes[2] : 0.0;
 
-			joy_specs.right_analog.h = (axes_no >= 4) ? axes[3] : 0.0;
-			joy_specs.right_analog.v = (axes_no >= 5) ? axes[4] : 0.0;
-			joy_specs.right_analog.t = (axes_no >= 6) ? axes[5] : 0.0;
+			context->gamepad.right_analog.h = (axes_no >= 4) ? axes[3] : 0.0;
+			context->gamepad.right_analog.v = (axes_no >= 5) ? axes[4] : 0.0;
+			context->gamepad.right_analog.t = (axes_no >= 6) ? axes[5] : 0.0;
 
-			joy_specs.pad.h = (axes_no >= 7) ? axes[6] : 0.0;
-			joy_specs.pad.v = (axes_no >= 8) ? axes[7] : 0.0;
+			context->gamepad.pad.h = (axes_no >= 7) ? axes[6] : 0.0;
+			context->gamepad.pad.v = (axes_no >= 8) ? axes[7] : 0.0;
 		}
 		else
 		{
-			joy_specs.left_analog.h = joy_specs.left_analog.v = 0.0;
-			joy_specs.right_analog.h = joy_specs.right_analog.v = 0.0;
-			joy_specs.left_analog.t = joy_specs.right_analog.t = -1.0;
-			joy_specs.pad.h = joy_specs.pad.v = 0.0;
+			context->gamepad.left_analog.h = context->gamepad.left_analog.v = 0.0;
+			context->gamepad.right_analog.h = context->gamepad.right_analog.v = 0.0;
+			context->gamepad.left_analog.t = context->gamepad.right_analog.t = -1.0;
+			context->gamepad.pad.h = context->gamepad.pad.v = 0.0;
 			check_disconnection = true;
 		}
 
 		// Is disconnected?, lets find a new one
 		if (check_disconnection == true)
 		{
-			if (glfwJoystickPresent(state->active_gamepad) == GLFW_FALSE)
+			if (glfwJoystickPresent(context->active_gamepad) == GLFW_FALSE)
 			{
 				printf("Gamepad disconnected!\n");
-				state->active_gamepad = sFindGamedpad();
+				context->active_gamepad = FindGamedpad();
 			}
 		}
 	}
@@ -155,79 +145,84 @@ void ContextInputStep(struct ContextInput* state)
 	// ... But there are no active gamepad!
 	else
 	{
-		memset(&joy_specs, 0, sizeof(struct InputSpecifications));
+		memset(&context->gamepad, 0, sizeof(struct ContextEvents));
 	}
 
-	// Combine both gamepad and keyboard input into the final specification
-	state->specs.a = (state->key_specs.a == true || joy_specs.a == GLFW_TRUE) ? true : false;
-	state->specs.b = (state->key_specs.b == true || joy_specs.b == GLFW_TRUE) ? true : false;
-	state->specs.x = (state->key_specs.x == true || joy_specs.x == GLFW_TRUE) ? true : false;
-	state->specs.y = (state->key_specs.y == true || joy_specs.y == GLFW_TRUE) ? true : false;
+	// Combine both gamepad and keyboard input into final events
+	context->combined.a = (context->keyboard.a == true || context->gamepad.a == GLFW_TRUE) ? true : false;
+	context->combined.b = (context->keyboard.b == true || context->gamepad.b == GLFW_TRUE) ? true : false;
+	context->combined.x = (context->keyboard.x == true || context->gamepad.x == GLFW_TRUE) ? true : false;
+	context->combined.y = (context->keyboard.y == true || context->gamepad.y == GLFW_TRUE) ? true : false;
 
-	state->specs.lb = (state->key_specs.lb == true || joy_specs.lb == GLFW_TRUE) ? true : false;
-	state->specs.rb = (state->key_specs.rb == true || joy_specs.rb == GLFW_TRUE) ? true : false;
+	context->combined.lb = (context->keyboard.lb == true || context->gamepad.lb == GLFW_TRUE) ? true : false;
+	context->combined.rb = (context->keyboard.rb == true || context->gamepad.rb == GLFW_TRUE) ? true : false;
 
-	state->specs.view = (state->key_specs.view == true || joy_specs.view == GLFW_TRUE) ? true : false;
-	state->specs.menu = (state->key_specs.menu == true || joy_specs.menu == GLFW_TRUE) ? true : false;
-	state->specs.guide = (state->key_specs.guide == true || joy_specs.guide == GLFW_TRUE) ? true : false;
+	context->combined.view = (context->keyboard.view == true || context->gamepad.view == GLFW_TRUE) ? true : false;
+	context->combined.menu = (context->keyboard.menu == true || context->gamepad.menu == GLFW_TRUE) ? true : false;
+	context->combined.guide = (context->keyboard.guide == true || context->gamepad.guide == GLFW_TRUE) ? true : false;
 
-	state->specs.ls = (state->key_specs.ls == true || joy_specs.ls == GLFW_TRUE) ? true : false;
-	state->specs.rs = (state->key_specs.rs == true || joy_specs.rs == GLFW_TRUE) ? true : false;
+	context->combined.ls = (context->keyboard.ls == true || context->gamepad.ls == GLFW_TRUE) ? true : false;
+	context->combined.rs = (context->keyboard.rs == true || context->gamepad.rs == GLFW_TRUE) ? true : false;
 
-	state->specs.left_analog.h = sCombineAxes(joy_specs.left_analog.h, state->key_specs.left_analog.h);
-	state->specs.left_analog.v = sCombineAxes(joy_specs.left_analog.v, state->key_specs.left_analog.v);
-	state->specs.left_analog.t = sCombineAxes(joy_specs.left_analog.t, state->key_specs.left_analog.t);
+	context->combined.left_analog.h = sCombineAxes(context->gamepad.left_analog.h, context->keyboard.left_analog.h);
+	context->combined.left_analog.v = sCombineAxes(context->gamepad.left_analog.v, context->keyboard.left_analog.v);
+	context->combined.left_analog.t = sCombineAxes(context->gamepad.left_analog.t, context->keyboard.left_analog.t);
 
-	state->specs.right_analog.h = sCombineAxes(joy_specs.right_analog.h, state->key_specs.right_analog.h);
-	state->specs.right_analog.v = sCombineAxes(joy_specs.right_analog.v, state->key_specs.right_analog.v);
-	state->specs.right_analog.t = sCombineAxes(joy_specs.right_analog.t, state->key_specs.right_analog.t);
+	context->combined.right_analog.h = sCombineAxes(context->gamepad.right_analog.h, context->keyboard.right_analog.h);
+	context->combined.right_analog.v = sCombineAxes(context->gamepad.right_analog.v, context->keyboard.right_analog.v);
+	context->combined.right_analog.t = sCombineAxes(context->gamepad.right_analog.t, context->keyboard.right_analog.t);
 
-	state->specs.pad.h = sCombineAxes(joy_specs.pad.h, state->key_specs.pad.h);
-	state->specs.pad.v = sCombineAxes(joy_specs.pad.v, state->key_specs.pad.v);
+	context->combined.pad.h = sCombineAxes(context->gamepad.pad.h, context->keyboard.pad.h);
+	context->combined.pad.v = sCombineAxes(context->gamepad.pad.v, context->keyboard.pad.v);
 }
 
 
 /*-----------------------------
 
- ReceiveKeyboardKey()
+ KeyboardCallback()
 -----------------------------*/
 static inline float sKeysToAxe(int action, int current_key, float current_axe, int key_positive, int key_negative)
 {
-	if(action == GLFW_PRESS)
+	if (action == GLFW_PRESS)
 	{
-		if(current_key == key_positive)
+		if (current_key == key_positive)
 			current_axe += 1.0;
-		else if(current_key == key_negative)
+		else if (current_key == key_negative)
 			current_axe -= 1.0;
 	}
 	else
 	{
-		if(current_key == key_positive)
+		if (current_key == key_positive)
 			current_axe -= 1.0;
-		else if(current_key == key_negative)
+		else if (current_key == key_negative)
 			current_axe += 1.0;
 	}
 
 	return current_axe;
 }
 
-void ReceiveKeyboardKey(struct ContextInput* state, int key, int action)
+void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-	if(action == GLFW_REPEAT)
+	(void)scancode;
+	(void)mods;
+
+	struct Context* context = glfwGetWindowUserPointer(window);
+
+	if (action == GLFW_REPEAT)
 		return;
 
 	// Two states old school buttons
 	switch (key)
 	{
-	case GLFW_KEY_Q: state->key_specs.lb = (action == GLFW_PRESS) ? true : false; break;
-	case GLFW_KEY_E: state->key_specs.rb = (action == GLFW_PRESS) ? true : false; break;
+	case GLFW_KEY_Q: context->keyboard.lb = (action == GLFW_PRESS) ? true : false; break;
+	case GLFW_KEY_E: context->keyboard.rb = (action == GLFW_PRESS) ? true : false; break;
 
-	case GLFW_KEY_SPACE: state->key_specs.view = (action == GLFW_PRESS) ? true : false; break;
-	case GLFW_KEY_ENTER: state->key_specs.menu = (action == GLFW_PRESS) ? true : false; break;
+	case GLFW_KEY_SPACE: context->keyboard.view = (action == GLFW_PRESS) ? true : false; break;
+	case GLFW_KEY_ENTER: context->keyboard.menu = (action == GLFW_PRESS) ? true : false; break;
 
-	case GLFW_KEY_F1: state->key_specs.guide = (action == GLFW_PRESS) ? true : false; break;
-	case GLFW_KEY_T: state->key_specs.ls = (action == GLFW_PRESS) ? true : false; break;
-	case GLFW_KEY_Y: state->key_specs.rs = (action == GLFW_PRESS) ? true : false; break;
+	case GLFW_KEY_F1: context->keyboard.guide = (action == GLFW_PRESS) ? true : false; break;
+	case GLFW_KEY_T: context->keyboard.ls = (action == GLFW_PRESS) ? true : false; break;
+	case GLFW_KEY_Y: context->keyboard.rs = (action == GLFW_PRESS) ? true : false; break;
 
 	default: break;
 	}
@@ -236,12 +231,12 @@ void ReceiveKeyboardKey(struct ContextInput* state, int key, int action)
 	// TODO: Left trigger
 	// TODO: right trigger
 
-	state->key_specs.left_analog.v = sKeysToAxe(action, key, state->key_specs.left_analog.v, GLFW_KEY_S, GLFW_KEY_W);
-	state->key_specs.left_analog.h = sKeysToAxe(action, key, state->key_specs.left_analog.h, GLFW_KEY_D, GLFW_KEY_A);
+	context->keyboard.left_analog.v = sKeysToAxe(action, key, context->keyboard.left_analog.v, GLFW_KEY_S, GLFW_KEY_W);
+	context->keyboard.left_analog.h = sKeysToAxe(action, key, context->keyboard.left_analog.h, GLFW_KEY_D, GLFW_KEY_A);
 
-	state->key_specs.right_analog.v = sKeysToAxe(action, key, state->key_specs.right_analog.v, GLFW_KEY_DOWN, GLFW_KEY_UP);
-	state->key_specs.right_analog.h = sKeysToAxe(action, key, state->key_specs.right_analog.h, GLFW_KEY_RIGHT, GLFW_KEY_LEFT);
+	context->keyboard.right_analog.v = sKeysToAxe(action, key, context->keyboard.right_analog.v, GLFW_KEY_DOWN, GLFW_KEY_UP);
+	context->keyboard.right_analog.h = sKeysToAxe(action, key, context->keyboard.right_analog.h, GLFW_KEY_RIGHT, GLFW_KEY_LEFT);
 
-	state->key_specs.pad.v = sKeysToAxe(action, key, state->key_specs.pad.v, GLFW_KEY_K, GLFW_KEY_I);
-	state->key_specs.pad.h = sKeysToAxe(action, key, state->key_specs.pad.h, GLFW_KEY_J, GLFW_KEY_L);
+	context->keyboard.pad.v = sKeysToAxe(action, key, context->keyboard.pad.v, GLFW_KEY_K, GLFW_KEY_I);
+	context->keyboard.pad.h = sKeysToAxe(action, key, context->keyboard.pad.h, GLFW_KEY_J, GLFW_KEY_L);
 }

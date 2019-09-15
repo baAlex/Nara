@@ -31,43 +31,6 @@ SOFTWARE.
 #include "context-private.h"
 #include <stdio.h>
 
-#include <portaudio.h>
-
-#ifndef TINY_GL_H
-#define GLFW_INCLUDE_ES2
-#include <GLFW/glfw3.h>
-#endif
-
-struct Context
-{
-	GLFWwindow* window;
-	PaStream* stream;
-
-	bool audio_avaible;
-
-	struct Vector2i window_size;
-	bool window_resized;
-
-	struct ContextOptions options;
-
-	struct Matrix4 projection;
-	struct Matrix4 camera;
-	struct Vector3 camera_origin;
-
-	const struct Program* current_program;
-	const struct Texture* current_diffuse;
-
-	GLint u_projection;        // For current program
-	GLint u_camera_projection; // "
-	GLint u_camera_origin;     // "
-	GLint u_color_texture;     // "
-
-	// Modules:
-	struct ContextInput input;
-	struct ContextTime time;
-	// struct ContextMixer mixer;
-};
-
 
 /*-----------------------------
 
@@ -176,20 +139,6 @@ void ContextDraw(struct Context* context, const struct Vertices* vertices, const
 
 /*-----------------------------
 
- sKeyboardCallback()
------------------------------*/
-static void sKeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-	struct Context* context = glfwGetWindowUserPointer(window);
-	(void)scancode;
-	(void)mods;
-
-	ReceiveKeyboardKey(&context->input, key, action);
-}
-
-
-/*-----------------------------
-
  sResizeCallback()
 -----------------------------*/
 static inline void sResizeCallback(GLFWwindow* window, int new_width, int new_height)
@@ -285,7 +234,7 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 
 		glfwSetWindowUserPointer(context->window, context);
 		glfwSetFramebufferSizeCallback(context->window, sResizeCallback);
-		glfwSetKeyCallback(context->window, sKeyboardCallback);
+		glfwSetKeyCallback(context->window, KeyboardCallback);
 
 		if (context->options.fullscreen == true)
 		{
@@ -316,8 +265,7 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 		printf("%s\n", glGetString(GL_VERSION));
 		printf("%s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
 
-		ContextInputInitialization(&context->input);
-		ContextTimeInitialization(&context->time);
+		context->active_gamepad = FindGamedpad();
 
 		context->window_size = context->options.window_size;
 		sResizeCallback(context->window, context->options.window_size.x, context->options.window_size.y);
@@ -380,45 +328,24 @@ inline void ContextDelete(struct Context* context)
 
  ContextUpdate()
 -----------------------------*/
-void ContextUpdate(struct Context* context, struct WindowSpecifications* out_window,
-                   struct TimeSpecifications* out_time, struct InputSpecifications* out_input)
+void ContextUpdate(struct Context* context, struct ContextEvents* out_events)
 {
 	glfwSwapBuffers(context->window);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// Window module abstraction (the context is the window)
+	context->window_resized = false;
+
+	glfwPollEvents();
+
+	if (out_events != NULL)
 	{
-		context->window_resized = false;
-		glfwPollEvents();
+		// Input
+		InputStep(context);
+		memcpy(out_events, &context->combined, sizeof(struct ContextEvents));
 
-		if (out_window != NULL)
-		{
-			out_window->size = context->window_size;
-			out_window->resized = context->window_resized;
-			out_window->close = (glfwWindowShouldClose(context->window) == GLFW_TRUE) ? true : false;
-		}
-	}
-
-	// Time module
-	if (out_time != NULL)
-	{
-		ContextTimeStep(&context->time);
-		memcpy(out_time, &context->time.specs, sizeof(struct TimeSpecifications));
-
-		if (context->time.specs.one_second == true)
-		{
-			char buffer[64];
-
-			snprintf(buffer, 64, "%s | %i fps (~%.2f ms)", context->options.caption,
-			         context->time.specs.frames_per_second, context->time.specs.miliseconds_betwen);
-			glfwSetWindowTitle(context->window, buffer);
-		}
-	}
-
-	// Input module (requires glfwPollEvents())
-	if (out_input != NULL)
-	{
-		ContextInputStep(&context->input);
-		memcpy(out_input, &context->input.specs, sizeof(struct InputSpecifications));
+		// Window
+		out_events->window_size = context->window_size;
+		out_events->resized = context->window_resized;
+		out_events->close = (glfwWindowShouldClose(context->window) == GLFW_TRUE) ? true : false;
 	}
 }

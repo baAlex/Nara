@@ -24,48 +24,41 @@ SOFTWARE.
 
 -------------------------------
 
- [context-time.c]
+ [timer.c]
  - Alexander Brandt 2019
 -----------------------------*/
 
-#include "context-private.h"
+#include "timer.h"
+#include <string.h>
 
 
-/*-----------------------------
-
- ContextTimeInitialization()
------------------------------*/
-void ContextTimeInitialization(struct ContextTime* state)
+void TimerInit(struct Timer* timer)
 {
-	memset(state, 0, sizeof(struct ContextTime));
-	timespec_get(&state->last_update, TIME_UTC);
-	timespec_get(&state->second_counter, TIME_UTC);
+	memset(timer, 0, sizeof(struct Timer));
+	timespec_get(&timer->last_update, TIME_UTC);
+	timespec_get(&timer->second_counter, TIME_UTC);
 }
 
 
-/*-----------------------------
-
- ContextTimeStep()
------------------------------*/
-void ContextTimeStep(struct ContextTime* state)
+void TimerStep(struct Timer* timer)
 {
 	struct timespec current_time = {0};
 	timespec_get(&current_time, TIME_UTC);
 
-	state->specs.frame_number++;
+	timer->frame_number++;
 
-	state->specs.miliseconds_betwen = current_time.tv_nsec / 1000000.0 + current_time.tv_sec * 1000.0;
-	state->specs.miliseconds_betwen -= state->last_update.tv_nsec / 1000000.0 + state->last_update.tv_sec * 1000.0;
-	state->specs.one_second = false;
+	timer->miliseconds_betwen = current_time.tv_nsec / 1000000.0 + current_time.tv_sec * 1000.0;
+	timer->miliseconds_betwen -= timer->last_update.tv_nsec / 1000000.0 + timer->last_update.tv_sec * 1000.0;
+	timer->one_second = false;
 
-	if (current_time.tv_sec > state->second_counter.tv_sec)
+	if (current_time.tv_sec > timer->second_counter.tv_sec)
 	{
-		state->second_counter = current_time;
-		state->specs.one_second = true;
+		timer->second_counter = current_time;
+		timer->one_second = true;
 
-		state->specs.frames_per_second = state->specs.frame_number - state->fps_counter;
-		state->fps_counter = state->specs.frame_number;
+		timer->frames_per_second = timer->frame_number - timer->fps_counter;
+		timer->fps_counter = timer->frame_number;
 	}
 
-	state->last_update = current_time;
+	timer->last_update = current_time;
 }

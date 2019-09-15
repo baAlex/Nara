@@ -13,23 +13,9 @@
 	#include "vector.h"
 	#include "tiny-gl.h"
 
-	struct WindowSpecifications
+	struct ContextEvents
 	{
-		struct Vector2i size;
-		bool resized;
-		bool close;
-	};
-
-	struct TimeSpecifications
-	{
-		bool one_second;
-		long frame_number;
-		int frames_per_second;
-		double miliseconds_betwen;
-	};
-
-	struct InputSpecifications
-	{
+		// Input
 		bool a, b, x, y;
 		bool lb, rb;
 		bool view, menu, guide;
@@ -38,6 +24,11 @@
 		struct { float h, v; } pad;
 		struct { float h, v, t; } left_analog;
 		struct { float h, v, t; } right_analog;
+
+		// Window
+		bool resized;
+		bool close;
+		struct Vector2i window_size;
 	};
 
 	struct ContextOptions
@@ -53,8 +44,7 @@
 
 	struct Context* ContextCreate(struct ContextOptions options, struct Status* st);
 	void ContextDelete(struct Context* context);
-	void ContextUpdate(struct Context* context, struct WindowSpecifications* out_window,
-	                   struct TimeSpecifications* out_time, struct InputSpecifications* out_input);
+	void ContextUpdate(struct Context* context, struct ContextEvents* out_events);
 
 	void ContextSetProgram(struct Context* context, const struct Program* program);
 	void ContextSetProjection(struct Context* context, struct Matrix4 matrix);

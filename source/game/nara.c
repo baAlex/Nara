@@ -33,11 +33,13 @@ SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 
-#include "context.h"
-#include "entity.h"
-#include "nterrain.h"
+#include "../engine/context.h"
+#include "../engine/entity.h"
+#include "../engine/mixer.h"
+#include "../engine/nterrain.h"
+#include "../engine/timer.h"
 
-#include "../game/game.h"
+#include "game.h"
 
 #define FOV 45
 
@@ -49,10 +51,9 @@ extern const uint8_t g_terrain_fragment[];
 extern const uint8_t g_red_vertex[];
 extern const uint8_t g_red_fragment[];
 
-static struct WindowSpecifications s_window_specs;
-static struct TimeSpecifications s_time_specs;
-static struct InputSpecifications s_input_specs;
 static struct Context* s_context = NULL;
+static struct ContextEvents s_events;
+static struct Timer s_timer;
 
 
 /*-----------------------------
@@ -113,7 +114,8 @@ int main()
 	printf("Nara v0.1\n");
 
 	// Context initialization
-	s_context = ContextCreate((struct ContextOptions){
+	s_context = ContextCreate((struct ContextOptions)
+	{
 		.caption = "Nara",
 		.window_size = {WINDOWS_MIN_WIDTH * 4, WINDOWS_MIN_HEIGHT * 4},
 		.window_min_size = {WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT},
@@ -123,6 +125,8 @@ int main()
 
 	if (s_context == NULL)
 		goto return_failure;
+
+	TimerInit(&s_timer);
 
 	// Resources
 	{
@@ -156,25 +160,13 @@ int main()
 	// Game loop
 	while (1)
 	{
-		ContextUpdate(s_context, &s_window_specs, &s_time_specs, &s_input_specs);
+		TimerStep(&s_timer);
+		ContextUpdate(s_context, &s_events);
 
-		memcpy(&entities_input, &s_input_specs, sizeof(struct InputSpecifications)); // HACK!
-		entities_input.delta = s_time_specs.miliseconds_betwen / 33.3333;
+		memcpy(&entities_input, &s_events, sizeof(struct EntityInput)); // HACK!
+		entities_input.delta = s_timer.miliseconds_betwen / 33.3333;
 
 		EntitiesUpdate(&entities, entities_input);
-
-		/*printf("%s %s %s %s %s %s %s %s %s %s %s\n", s_input_specs.a ? "a" : "-", s_input_specs.b ? "b" : "-",
-		s_input_specs.x ? "x" : "-", s_input_specs.y ? "y" : "-", s_input_specs.lb ? "lb" : "--", s_input_specs.rb ?
-		"rb" :
-		"--", s_input_specs.view ? "view" : "----", s_input_specs.menu ? "menu" : "----", s_input_specs.guide ? "guide"
-		:
-		"-----", s_input_specs.ls ? "ls" : "--", s_input_specs.rs ? "rs" : "--");
-
-		printf("left [x: %+0.2f, y: %+0.2f, t: %+0.2f], right [x: %+0.2f, y: %+0.2f, t: %+0.2f]\n",
-		s_input_specs.left_analog.h, s_input_specs.left_analog.v, s_input_specs.left_analog.t,
-		s_input_specs.right_analog.h, s_input_specs.right_analog.v, s_input_specs.right_analog.t);
-
-		printf("pad [x: %+0.2f, y: %+0.2f]\n", s_input_specs.pad.h, s_input_specs.pad.v);*/
 
 		// Update view
 		if (Vector3Equals(camera_entity->co.position, camera_entity->old_co.position) == false ||
@@ -188,8 +180,8 @@ int main()
 			ContextSetCamera(s_context, camera_matrix, camera_entity->co.position);
 		}
 
-		if (s_window_specs.resized == true)
-			sSetProjection(s_window_specs.size, s_context);
+		if (s_events.resized == true)
+			sSetProjection(s_events.window_size, s_context);
 
 		// Render
 		ContextSetProgram(s_context, &terrain_program);
@@ -197,7 +189,7 @@ int main()
 		NTerrainDraw(terrain, camera_entity->co.position);
 
 		// Exit?
-		if (s_window_specs.close == true)
+		if (s_events.close == true)
 			break;
 	}
 
