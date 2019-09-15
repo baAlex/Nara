@@ -111,8 +111,6 @@ int main()
 	struct Matrix4 camera_matrix = Matrix4Identity();
 
 	printf("Nara v0.1\n");
-	printf("- Lib-Japan v%i.%i.%i\n", JAPAN_VERSION_MAJOR, JAPAN_VERSION_MINOR, JAPAN_VERSION_PATCH);
-	printf("\n");
 
 	// Context initialization
 	s_context = ContextCreate((struct ContextOptions){

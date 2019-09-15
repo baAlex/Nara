@@ -1,7 +1,7 @@
 
-cflags = `pkg-config --cflags glfw3 glesv2` -O0 -std=c11 -Wall -Wextra -pedantic -g -DDEBUG -I./source/lib-japan/include
-cflags_strict = `pkg-config --cflags glfw3 glesv2` -O0 -std=c11 -Wall -Wextra -Wconversion -pedantic -g -DDEBUG -I./source/lib-japan/include
-lflags = `pkg-config --libs glfw3 glesv2` -lm
+cflags = `pkg-config --cflags glfw3 glesv2 portaudio-2.0` -O0 -std=c11 -Wall -Wextra -pedantic -g -DDEBUG -I./source/lib-japan/include
+cflags_strict = `pkg-config --cflags glfw3 glesv2 portaudio-2.0` -O0 -std=c11 -Wall -Wextra -Wconversion -pedantic -g -DDEBUG -I./source/lib-japan/include
+lflags = `pkg-config --libs glfw3 glesv2 portaudio-2.0` -lm
 
 rule generate
  command = python3 ./tools/c-ify.py $in > $out

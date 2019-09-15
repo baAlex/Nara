@@ -1,6 +1,6 @@
 
-cflags = `pkg-config --cflags glfw3 glesv2` -O3 -flto -mtune=generic -I./source/lib-japan/include
-lflags = `pkg-config --libs glfw3 glesv2` -lm
+cflags = `pkg-config --cflags glfw3 glesv2 portaudio-2.0` -O3 -flto -mtune=generic -I./source/lib-japan/include
+lflags = `pkg-config --libs glfw3 glesv2 portaudio-2.0` -lm
 
 rule generate
  command = python3 ./tools/c-ify.py $in > $out

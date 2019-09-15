@@ -3,9 +3,9 @@ Nara
 
 The terrain in the screenshots should work as an overworld for an action rpg, but at the moment is more a renderer that a videogame.
 
-And yes, it looks terrible, even compared with old [screenshots](./documentation/screenshot-04.jpg). What happens is that the engine is not taking any measure against gaps between different levels of detail, and of course that the old approach draw everything with the same detail in a non scalable way.
+And yes, it looks terrible. What happens is that the engine is not taking any measure against gaps between different levels of detail. But is a detail in a sea of things to do.
 
-I'm currently working on clearing the code before fix these gaps ⛰️📐️.
+Check the implemented features and future work in the [progress tab](https://github.com/baAlex/Nara/projects/4). Any help is welcomed, and of course make this project yours too ⛰️📐️!.
 
 ![screenshot](./documentation/screenshot-08.jpg)
 ![screenshot](./documentation/screenshot-09.jpg)
@@ -14,6 +14,7 @@ I'm currently working on clearing the code before fix these gaps ⛰️📐️.
 Compilation
 -----------
 Runtime dependencies are:
+ - Portaudio
  - GLFW3
  - *An OpenGL ES2 implementation*
 
@@ -25,7 +26,7 @@ Compilation dependencies:
 
 On Ubuntu (and most Posix variants) *Mesa* provide the OpenGL implementation, so you can install all them with:
 ```
-sudo apt install libglfw3-dev libgles2-mesa-dev python3 pkg-config ninja-build git
+sudo apt install libglfw3-dev portaudio19-dev libgles2-mesa-dev python3 pkg-config ninja-build git
 ```
 
 To clone and compile the repository:

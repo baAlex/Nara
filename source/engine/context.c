@@ -31,6 +31,8 @@ SOFTWARE.
 #include "context-private.h"
 #include <stdio.h>
 
+#include <portaudio.h>
+
 #ifndef TINY_GL_H
 #define GLFW_INCLUDE_ES2
 #include <GLFW/glfw3.h>
@@ -39,6 +41,10 @@ SOFTWARE.
 struct Context
 {
 	GLFWwindow* window;
+	PaStream* stream;
+
+	bool audio_avaible;
+
 	struct Vector2i window_size;
 	bool window_resized;
 
@@ -59,6 +65,7 @@ struct Context
 	// Modules:
 	struct ContextInput input;
 	struct ContextTime time;
+	// struct ContextMixer mixer;
 };
 
 
@@ -199,88 +206,145 @@ static inline void sResizeCallback(GLFWwindow* window, int new_width, int new_he
 
 /*-----------------------------
 
+ sStreamCallback()
+-----------------------------*/
+static int sStreamCallback(const void* input, void* output, unsigned long frames_no,
+                           const PaStreamCallbackTimeInfo* time, PaStreamCallbackFlags status, void* data)
+{
+	(void)input;
+	(void)time;
+	(void)status;
+	(void)data;
+
+	struct
+	{
+		float l;
+		float r;
+	} * frame;
+
+	frame = output;
+
+	for (unsigned long i = 0; i < frames_no; i++)
+	{
+		frame[i].l = 0.0f;
+		frame[i].r = 0.0f;
+	}
+
+	return paContinue;
+}
+
+
+/*-----------------------------
+
  ContextCreate()
 -----------------------------*/
 struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 {
 	struct Context* context = NULL;
-	const GLFWvidmode* vid_mode = NULL;
 
 	StatusSet(st, "ContextCreate", STATUS_SUCCESS, NULL);
 
-	// Object/Initialization
 	if ((context = calloc(1, sizeof(struct Context))) == NULL)
 		return NULL;
 
 	memcpy(&context->options, &options, sizeof(struct ContextOptions));
 
-	printf("%s\n", glfwGetVersionString());
+	printf("- Lib-Japan: v%i.%i.%i\n", JAPAN_VERSION_MAJOR, JAPAN_VERSION_MINOR, JAPAN_VERSION_PATCH);
+	printf("- Lib-GLFW: %s\n", glfwGetVersionString());
+	printf("- Lib-Portaudio: %s\n", (Pa_GetVersionInfo() != NULL) ? Pa_GetVersionInfo()->versionText : "");
 
-	if (glfwInit() != GLFW_TRUE)
+	// GLFW
 	{
-		StatusSet(st, "ContextCreate", STATUS_ERROR, "Initialiting GLFW");
-		goto return_failure;
+		const GLFWvidmode* vid_mode = NULL;
+
+		if (glfwInit() != GLFW_TRUE)
+		{
+			StatusSet(st, "ContextCreate", STATUS_ERROR, "Initialiting GLFW");
+			goto return_failure;
+		}
+
+		// Create window
+		glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+		glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+		glfwWindowHint(GLFW_SAMPLES, 2);
+
+		if ((context->window =
+		         glfwCreateWindow(options.window_size.x, options.window_size.y, options.caption, NULL, NULL)) == NULL)
+		{
+			StatusSet(st, "ContextCreate", STATUS_ERROR, "Creating GLFW window");
+			goto return_failure;
+		}
+
+		glfwMakeContextCurrent(context->window);
+		glfwSwapInterval(0);
+
+		glfwSetWindowSizeLimits(context->window, options.window_min_size.x, options.window_min_size.y, GLFW_DONT_CARE,
+		                        GLFW_DONT_CARE);
+
+		glfwSetWindowUserPointer(context->window, context);
+		glfwSetFramebufferSizeCallback(context->window, sResizeCallback);
+		glfwSetKeyCallback(context->window, sKeyboardCallback);
+
+		if (context->options.fullscreen == true)
+		{
+			vid_mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+			glfwSetWindowMonitor(context->window, glfwGetPrimaryMonitor(), 0, 0, vid_mode->width, vid_mode->height,
+			                     GLFW_DONT_CARE);
+		}
+
+		// OpenGL initialization
+		glClearColor(options.clean_color.x, options.clean_color.y, options.clean_color.z, 1.0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_CULL_FACE);
+		glEnable(GL_BLEND);
+
+		glDisable(GL_DITHER);
+
+		glEnableVertexAttribArray(ATTRIBUTE_POSITION);
+		glEnableVertexAttribArray(ATTRIBUTE_UV);
+
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glBlendEquation(GL_FUNC_ADD);
+
+		// Last things to do
+		printf("%s\n", glGetString(GL_VENDOR));
+		printf("%s\n", glGetString(GL_RENDERER));
+		printf("%s\n", glGetString(GL_VERSION));
+		printf("%s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+
+		ContextInputInitialization(&context->input);
+		ContextTimeInitialization(&context->time);
+
+		context->window_size = context->options.window_size;
+		sResizeCallback(context->window, context->options.window_size.x, context->options.window_size.y);
 	}
 
-	// Create window
-	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-	glfwWindowHint(GLFW_SAMPLES, 2);
-
-	if ((context->window =
-	         glfwCreateWindow(options.window_size.x, options.window_size.y, options.caption, NULL, NULL)) == NULL)
+	// Portaudio
+	if (Pa_Initialize() == paNoError)
 	{
-		StatusSet(st, "ContextCreate", STATUS_ERROR, "Creating GLFW window");
-		goto return_failure;
+		context->audio_avaible = true;
+
+		if (Pa_OpenDefaultStream(&context->stream, 0, 2, paFloat32, 48000, paFramesPerBufferUnspecified,
+		                         sStreamCallback, context) == paNoError)
+		{
+			Pa_StartStream(context->stream);
+		}
+		else
+		{
+			context->stream = NULL;
+			context->audio_avaible = false;
+			printf("[Warning] Error creating and audio stream\n");
+		}
 	}
-
-	glfwMakeContextCurrent(context->window);
-	glfwSwapInterval(0);
-
-	glfwSetWindowSizeLimits(context->window, options.window_min_size.x, options.window_min_size.y, GLFW_DONT_CARE,
-	                        GLFW_DONT_CARE);
-
-	glfwSetWindowUserPointer(context->window, context);
-	glfwSetFramebufferSizeCallback(context->window, sResizeCallback);
-	glfwSetKeyCallback(context->window, sKeyboardCallback);
-
-	if (context->options.fullscreen == true)
-	{
-		vid_mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-		glfwSetWindowMonitor(context->window, glfwGetPrimaryMonitor(), 0, 0, vid_mode->width, vid_mode->height,
-		                     GLFW_DONT_CARE);
-	}
-
-	// Modules initialization
-	ContextInputInitialization(&context->input);
-	ContextTimeInitialization(&context->time);
-
-	// OpenGL initialization
-	glClearColor(options.clean_color.x, options.clean_color.y, options.clean_color.z, 1.0);
-
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-	glEnable(GL_BLEND);
-
-	glDisable(GL_DITHER);
-
-	glEnableVertexAttribArray(ATTRIBUTE_POSITION);
-	glEnableVertexAttribArray(ATTRIBUTE_UV);
-
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glBlendEquation(GL_FUNC_ADD);
+	else
+		printf("[Warning] Error initializating Portaudio\n");
 
 	// Bye!
-	context->window_size = context->options.window_size;
-	sResizeCallback(context->window, context->options.window_size.x, context->options.window_size.y);
-
-	printf("%s\n", glGetString(GL_VENDOR));
-	printf("%s\n", glGetString(GL_RENDERER));
-	printf("%s\n", glGetString(GL_VERSION));
-	printf("%s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
-
+	printf("\n");
 	return context;
 
 return_failure:
@@ -295,8 +359,18 @@ return_failure:
 -----------------------------*/
 inline void ContextDelete(struct Context* context)
 {
+	if (context->audio_avaible == true)
+	{
+		if (context->stream != NULL)
+			Pa_StopStream(context->stream);
+
+		Pa_Terminate();
+	}
+
 	if (context->window != NULL)
 		glfwDestroyWindow(context->window);
+
+	glfwTerminate();
 
 	free(context);
 }
