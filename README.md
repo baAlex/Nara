@@ -3,7 +3,7 @@ Nara
 
 The terrain in the screenshots should work as an overworld for an action rpg, but is more a renderer that a videogame.
 
-And yes, it looks terrible. Check implemented features and future work in the [progress tab](https://github.com/baAlex/Nara/projects/4). Any help is welcomed, and of course make this project yours too ⛰️📐️!.
+And yes, it looks terrible. Check implemented features and future work in the [projects tab](https://github.com/baAlex/Nara/projects/4). Any help is welcomed, and of course make this project yours too ⛰️📐️!.
 
 ![screenshot](./documentation/screenshot-terrain.jpg)
 ![screenshot](./documentation/screenshot-wire.jpg)
