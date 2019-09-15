@@ -1,14 +1,14 @@
 Nara
 ====
 
-The terrain in the screenshots should work as an overworld for an action rpg, but at the moment is more a renderer that a videogame.
+The terrain in the screenshots should work as an overworld for an action rpg, but is more a renderer that a videogame.
 
-And yes, it looks terrible. What happens is that the engine is not taking any measure against gaps between different levels of detail. But is a detail in a sea of things to do.
+And yes, it looks terrible. What happens with these gaps is that the engine is not taking any measure against different levels of detail. But these are waves in a sea of things to do.
 
-Check the implemented features and future work in the [progress tab](https://github.com/baAlex/Nara/projects/4). Any help is welcomed, and of course make this project yours too ⛰️📐️!.
+Check implemented features and future work in the [progress tab](https://github.com/baAlex/Nara/projects/4). Any help is welcomed, and of course make this project yours too ⛰️📐️!.
 
-![screenshot](./documentation/screenshot-08.jpg)
-![screenshot](./documentation/screenshot-09.jpg)
+![screenshot](./documentation/screenshot-terrain.jpg)
+![screenshot](./documentation/screenshot-wire.jpg)
 
 
 Compilation
