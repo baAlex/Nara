@@ -215,6 +215,11 @@ void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 	// Two states old school buttons
 	switch (key)
 	{
+	case GLFW_KEY_1: context->keyboard.a = (action == GLFW_PRESS) ? true : false; break;
+	case GLFW_KEY_2: context->keyboard.b = (action == GLFW_PRESS) ? true : false; break;
+	case GLFW_KEY_3: context->keyboard.x = (action == GLFW_PRESS) ? true : false; break;
+	case GLFW_KEY_4: context->keyboard.y = (action == GLFW_PRESS) ? true : false; break;
+
 	case GLFW_KEY_Q: context->keyboard.lb = (action == GLFW_PRESS) ? true : false; break;
 	case GLFW_KEY_E: context->keyboard.rb = (action == GLFW_PRESS) ? true : false; break;
 

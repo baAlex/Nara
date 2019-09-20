@@ -13,11 +13,6 @@
 
 	#include "context.h"
 
-	#ifndef TINY_GL_H
-	#define GLFW_INCLUDE_ES2
-	#include <GLFW/glfw3.h>
-	#endif
-
 	struct Context
 	{
 		GLFWwindow* window;

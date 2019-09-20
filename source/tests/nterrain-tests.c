@@ -17,7 +17,7 @@
 #include <cmocka.h>
 
 #include "../engine/nterrain.h"
-#include "../engine/tiny-gl.h" // Mocked
+#include "../engine/context.h" // Mocked
 
 
 int VerticesInit(struct Vertices* out, const struct Vertex* data, size_t length, struct Status* st)

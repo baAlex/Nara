@@ -11,7 +11,53 @@
 	#include "matrix.h"
 	#include "status.h"
 	#include "vector.h"
-	#include "tiny-gl.h"
+
+	#ifndef TEST
+	#define GLFW_INCLUDE_ES2
+	#include <GLFW/glfw3.h>
+	#else
+	typedef unsigned GLuint;
+	#endif
+
+	#define ATTRIBUTE_POSITION 10
+	#define ATTRIBUTE_UV 11
+
+	enum Filter
+	{
+		FILTER_BILINEAR,
+		FILTER_TRILINEAR,
+		FILTER_PIXEL_BILINEAR,
+		FILTER_PIXEL_TRILINEAR,
+		FILTER_NONE
+	};
+
+	struct Program
+	{
+		GLuint glptr;
+	};
+
+	struct Vertex
+	{
+		struct Vector3 pos;
+		struct Vector2 uv;
+	};
+
+	struct Vertices
+	{
+		GLuint glptr;
+		size_t length; // In elements
+	};
+
+	struct Index
+	{
+		GLuint glptr;
+		size_t length; // In elements
+	};
+
+	struct Texture
+	{
+		GLuint glptr;
+	};
 
 	struct ContextEvents
 	{
@@ -46,18 +92,39 @@
 	void ContextDelete(struct Context* context);
 	void ContextUpdate(struct Context* context, struct ContextEvents* out_events);
 
-	void ContextSetProgram(struct Context* context, const struct Program* program);
-	void ContextSetProjection(struct Context* context, struct Matrix4 matrix);
-	void ContextSetDiffuse(struct Context* context, const struct Texture* diffuse);
-	void ContextSetCameraLookAt(struct Context* context, struct Vector3 target, struct Vector3 origin);
-	void ContextSetCameraMatrix(struct Context* context, struct Matrix4 matrix, struct Vector3 origin);
+	void SetProgram(struct Context* context, const struct Program* program);
+	void SetProjection(struct Context* context, struct Matrix4 matrix);
+	void SetDiffuse(struct Context* context, const struct Texture* diffuse);
+	void SetCameraLookAt(struct Context* context, struct Vector3 target, struct Vector3 origin);
+	void SetCameraMatrix(struct Context* context, struct Matrix4 matrix, struct Vector3 origin);
 
-	void ContextDraw(struct Context* context, const struct Vertices* vertices, const struct Index* index);
+	void Draw(struct Context* context, const struct Vertices* vertices, const struct Index* index);
 
-	#define ContextSetCamera(context, val, origin) _Generic((val), \
-		struct Vector3: ContextSetCameraLookAt, \
-		struct Matrix4: ContextSetCameraMatrix, \
-		default: ContextSetCameraLookAt \
+	#define SetCamera(context, val, origin) _Generic((val), \
+		struct Vector3: SetCameraLookAt, \
+		struct Matrix4: SetCameraMatrix, \
+		default: SetCameraLookAt \
 	)(context, val, origin)
+
+	int ProgramInit(struct Program* out, const char* vertex_code, const char* fragment_code, struct Status* st);
+	void ProgramFree(struct Program*);
+
+	int VerticesInit(struct Vertices* out, const struct Vertex* data, size_t length, struct Status* st);
+	void VerticesFree(struct Vertices*);
+
+	int IndexInit(struct Index* out, const uint16_t* data, size_t length, struct Status* st);
+	void IndexFree(struct Index* index);
+
+	int TextureInitImage(struct Texture* out, const struct Image* image, enum Filter, struct Status* st);
+	int TextureInitFilename(struct Texture* out, const char* image_filename, enum Filter, struct Status* st);
+	void TextureFree(struct Texture* texture);
+
+	#define TextureInit(out, image, filter, st) _Generic((image), \
+		const char*: TextureInitFilename, \
+		char*: TextureInitFilename, \
+		const struct Image*: TextureInitImage, \
+		struct Image*: TextureInitImage, \
+		default: TextureInitImage \
+	)(out, image, filter, st)
 
 #endif

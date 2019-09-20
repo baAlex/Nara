@@ -12,7 +12,7 @@
 	#include "tree.h"
 	#include "vector.h"
 	#include "status.h"
-	#include "tiny-gl.h"
+	#include "context.h"
 
 	enum NVerticesType
 	{

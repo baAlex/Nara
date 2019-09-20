@@ -19,8 +19,10 @@
 
 	struct Mixer* MixerCreate(struct MixerOptions options, struct Status* st);
 	void MixerDelete(struct Mixer* mixer);
-
 	void MixerPanic(struct Mixer* mixer);
+
 	void MixerSetCamera(struct Mixer* mixer, struct Vector3 origin);
+
+	void PlayTone(struct Mixer*, float volume, float panning, float frequency, int duration);
 
 #endif

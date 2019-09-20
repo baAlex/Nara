@@ -183,9 +183,9 @@ void ContextUpdate(struct Context* context, struct ContextEvents* out_events)
 
 /*-----------------------------
 
- ContextSetProgram()
+ SetProgram()
 -----------------------------*/
-void ContextSetProgram(struct Context* context, const struct Program* program)
+void SetProgram(struct Context* context, const struct Program* program)
 {
 	if (program != context->current_program)
 	{
@@ -207,9 +207,9 @@ void ContextSetProgram(struct Context* context, const struct Program* program)
 
 /*-----------------------------
 
- ContextSetProjection()
+ SetProjection()
 -----------------------------*/
-inline void ContextSetProjection(struct Context* context, struct Matrix4 matrix)
+inline void SetProjection(struct Context* context, struct Matrix4 matrix)
 {
 	memcpy(&context->projection, &matrix, sizeof(struct Matrix4));
 
@@ -220,9 +220,9 @@ inline void ContextSetProjection(struct Context* context, struct Matrix4 matrix)
 
 /*-----------------------------
 
- ContextSetDiffuse()
+ SetDiffuse()
 -----------------------------*/
-inline void ContextSetDiffuse(struct Context* context, const struct Texture* diffuse)
+inline void SetDiffuse(struct Context* context, const struct Texture* diffuse)
 {
 	if (diffuse != context->current_diffuse)
 	{
@@ -235,9 +235,9 @@ inline void ContextSetDiffuse(struct Context* context, const struct Texture* dif
 
 /*-----------------------------
 
- ContextSetCameraLookAt()
+ SetCameraLookAt()
 -----------------------------*/
-inline void ContextSetCameraLookAt(struct Context* context, struct Vector3 target, struct Vector3 origin)
+inline void SetCameraLookAt(struct Context* context, struct Vector3 target, struct Vector3 origin)
 {
 	context->camera_origin = origin;
 	context->camera = Matrix4LookAt(origin, target, (struct Vector3){0.0, 0.0, 1.0});
@@ -252,9 +252,9 @@ inline void ContextSetCameraLookAt(struct Context* context, struct Vector3 targe
 
 /*-----------------------------
 
- ContextSetCameraMatrix()
+ SetCameraMatrix()
 -----------------------------*/
-inline void ContextSetCameraMatrix(struct Context* context, struct Matrix4 matrix, struct Vector3 origin)
+inline void SetCameraMatrix(struct Context* context, struct Matrix4 matrix, struct Vector3 origin)
 {
 	context->camera_origin = origin;
 	context->camera = matrix;
@@ -269,9 +269,9 @@ inline void ContextSetCameraMatrix(struct Context* context, struct Matrix4 matri
 
 /*-----------------------------
 
- ContextDraw()
+ Draw()
 -----------------------------*/
-void ContextDraw(struct Context* context, const struct Vertices* vertices, const struct Index* index)
+void Draw(struct Context* context, const struct Vertices* vertices, const struct Index* index)
 {
 	(void)context;
 

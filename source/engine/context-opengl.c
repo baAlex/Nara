@@ -24,11 +24,11 @@ SOFTWARE.
 
 -------------------------------
 
- [tiny-gl.c]
+ [context-opengl.c]
  - Alexander Brandt 2019
 -----------------------------*/
 
-#include "tiny-gl.h"
+#include "context.h"
 #include <math.h>
 
 #ifndef TEST // All this need to be mocked

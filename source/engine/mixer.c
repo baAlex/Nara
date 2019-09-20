@@ -28,19 +28,56 @@ SOFTWARE.
  - Alexander Brandt 2019
 -----------------------------*/
 
-#include "mixer.h"
-#include "misc.h"
+#include <math.h>
 #include <portaudio.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+
+#include "dictionary.h"
+#include "misc.h"
+#include "mixer.h"
+
+#define PLAY_LEN 32
+
+
+struct Sample
+{
+	size_t length;
+	float data[];
+};
+
+struct ToPlay
+{
+	bool active;
+	bool is_synth;
+
+	time_t time;
+	size_t cursor;
+
+	union {
+		struct Sample* sample;
+
+		struct
+		{
+			size_t length;
+			float frequency;
+		} synth;
+	};
+
+	float volume;
+	float panning;
+};
 
 struct Mixer
 {
 	PaStream* stream;
 	struct MixerOptions options;
+	struct Dictionary* samples;
 
 	struct Vector3 origin;
+	struct ToPlay playlist[PLAY_LEN];
 };
 
 struct StereoFrame
@@ -50,42 +87,73 @@ struct StereoFrame
 };
 
 
+static inline float sSaw(float cur, float frequency, float base_frequency)
+{
+	// return sinf(cur * (2.0f * M_PI * frequency) / base_frequency);
+	return (fmodf(cur * frequency * 2.0f / base_frequency + 1.0f, 2.0f) - 1.0f);
+}
+
+
 /*-----------------------------
 
  sCallback
 -----------------------------*/
-static int sCallbackStereo(const void* input, void* output, unsigned long frames_no,
-                           const PaStreamCallbackTimeInfo* time, PaStreamCallbackFlags status, void* data)
+static int sCallback(const void* raw_input, void* raw_output, unsigned long frames_no,
+                     const PaStreamCallbackTimeInfo* time, PaStreamCallbackFlags status, void* raw_mixer)
 {
-	(void)input;
+	(void)raw_input;
 	(void)time;
 	(void)status;
-	(void)data;
 
-	struct StereoFrame* frame = output;
+	struct Mixer* mixer = raw_mixer;
+	float* output = raw_output;
+	float* data = NULL;
 
-	for (unsigned long i = 0; i < frames_no; i++)
+	const size_t channels = (size_t)mixer->options.channels;
+
+	memset(output, 0, sizeof(float) * frames_no * channels);
+
+	for (unsigned long i = 0; i < (frames_no * channels); i += channels)
 	{
-		frame[i].left = 0.0f;
-		frame[i].right = 0.0f;
-	}
+		// Sum all playlist
+		for (size_t pl = 0; pl < PLAY_LEN; pl++)
+		{
+			if (mixer->playlist[pl].active == false)
+				continue;
 
-	return paContinue;
-}
+			if (mixer->playlist[pl].is_synth == false)
+			{
+				data = mixer->playlist[pl].sample->data;
+				data += (mixer->playlist[pl].cursor * channels);
 
-static int sCallbackMono(const void* input, void* output, unsigned long frames_no, const PaStreamCallbackTimeInfo* time,
-                         PaStreamCallbackFlags status, void* data)
-{
-	(void)input;
-	(void)time;
-	(void)status;
-	(void)data;
+				for (size_t ch = 0; ch < channels; ch++)
+					output[i + ch] += (data[ch] * mixer->playlist[pl].volume);
 
-	float* frame = output;
+				if ((mixer->playlist[pl].cursor += 1) > mixer->playlist[pl].sample->length)
+					mixer->playlist[pl].active = false;
+			}
+			else
+			{
+				for (size_t ch = 0; ch < channels; ch++)
+					output[i + ch] += sSaw((float)mixer->playlist[pl].cursor, mixer->playlist[pl].synth.frequency,
+					                       (float)mixer->options.frequency) *
+					                  mixer->playlist[pl].volume;
 
-	for (unsigned long i = 0; i < frames_no; i++)
-	{
-		frame[i] = 0.0f;
+				if ((mixer->playlist[pl].cursor += 1) > mixer->playlist[pl].synth.length)
+					mixer->playlist[pl].active = false;
+			}
+		}
+
+		// Global volume
+		for (size_t ch = 0; ch < channels; ch++)
+		{
+			output[i + ch] *= mixer->options.volume;
+
+			if (output[i + ch] > 1.0f)
+			{
+				// TODO, peak limiter
+			}
+		}
 	}
 
 	return paContinue;
@@ -120,10 +188,8 @@ struct Mixer* MixerCreate(struct MixerOptions options, struct Status* st)
 	}
 
 	// Create stream
-	PaStreamCallback* callback = (options.channels == 1) ? sCallbackMono : sCallbackStereo;
-
 	if (Pa_OpenDefaultStream(&mixer->stream, 0, options.channels, paFloat32, (double)options.frequency,
-	                         paFramesPerBufferUnspecified, callback, mixer) != paNoError)
+	                         paFramesPerBufferUnspecified, sCallback, mixer) != paNoError)
 	{
 		StatusSet(st, "MixerCreate", STATUS_ERROR, "Opening stream");
 		goto return_failure;
@@ -172,4 +238,51 @@ void MixerPanic(struct Mixer* mixer)
 inline void MixerSetCamera(struct Mixer* mixer, struct Vector3 origin)
 {
 	mixer->origin = origin;
+}
+
+
+/*-----------------------------
+
+ PlayTone()
+-----------------------------*/
+void PlayTone(struct Mixer* mixer, float volume, float panning, float frequency, int duration)
+{
+	size_t i = 0;
+	struct ToPlay* oldest_space = NULL;
+	struct ToPlay* space = NULL;
+
+	// Find an space on the playlist
+	oldest_space = &mixer->playlist[i];
+
+	for (i = 0; i < PLAY_LEN; i++)
+	{
+		if (mixer->playlist[i].active == false)
+		{
+			space = &mixer->playlist[i];
+			break;
+		}
+		else
+		{
+			if (mixer->playlist[i].time < oldest_space->time)
+				oldest_space = &mixer->playlist[i];
+		}
+	}
+
+	if (i == PLAY_LEN)
+		space = oldest_space; // Bad luck, lets recycle
+
+	// Yay
+	space->active = false;
+
+	space->cursor = 0;
+	space->sample = NULL;
+	space->is_synth = true;
+
+	space->panning = panning;
+	space->volume = volume;
+	space->synth.length = ((size_t)duration * (size_t)mixer->options.frequency) / 1000;
+	space->synth.frequency = frequency;
+
+	time(&space->time);
+	space->active = true;
 }

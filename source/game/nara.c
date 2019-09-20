@@ -89,8 +89,8 @@ static void sSetProjection(struct Vector2i window_size, struct Context* s_contex
 {
 	struct Matrix4 projection;
 
-	projection = Matrix4Perspective(FOV, (float)window_size.x / (float)window_size.y, 0.1, 20000.0); // 20 km
-	ContextSetProjection(s_context, projection);
+	projection = Matrix4Perspective(FOV, (float)window_size.x / (float)window_size.y, 0.1f, 20000.0f); // 20 km
+	SetProjection(s_context, projection);
 }
 
 
@@ -121,7 +121,7 @@ int main()
 		.window_size = {WINDOWS_MIN_WIDTH * 4, WINDOWS_MIN_HEIGHT * 4},
 		.window_min_size = {WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT},
 		.fullscreen = false,
-		.clean_color = {0.80, 0.82, 0.84}},
+		.clean_color = {0.80f, 0.82f, 0.84f}},
 	&st);
 
 	if (s_context == NULL)
@@ -130,7 +130,7 @@ int main()
 	s_mixer = MixerCreate((struct MixerOptions){
 		.frequency = 48000,
 		.channels = 2,
-		.volume = 1.0f},
+		.volume = 0.8f},
 	&st);
 
 	if (s_mixer == NULL)
@@ -168,13 +168,16 @@ int main()
 	printf(" - Vertices buffers: %lu\n", terrain->vertices_buffers_no);
 
 	// Game loop
+	bool a_release = false;
+	bool b_release = false;
+
 	while (1)
 	{
 		TimerStep(&s_timer);
 		ContextUpdate(s_context, &s_events);
 
 		memcpy(&entities_input, &s_events, sizeof(struct EntityInput)); // HACK!
-		entities_input.delta = s_timer.miliseconds_betwen / 33.3333;
+		entities_input.delta = (float)s_timer.miliseconds_betwen / 33.3333f;
 
 		EntitiesUpdate(&entities, entities_input);
 
@@ -187,16 +190,35 @@ int main()
 			camera_matrix = Matrix4RotateZ(camera_matrix, DegToRad(camera_entity->co.angle.z));
 			camera_matrix = Matrix4Multiply(camera_matrix, Matrix4Translate(Vector3Invert(camera_entity->co.position)));
 
-			ContextSetCamera(s_context, camera_matrix, camera_entity->co.position);
+			SetCamera(s_context, camera_matrix, camera_entity->co.position);
 		}
 
 		if (s_events.resized == true)
 			sSetProjection(s_events.window_size, s_context);
 
 		// Render
-		ContextSetProgram(s_context, &terrain_program);
-		ContextSetDiffuse(s_context, &terrain_diffuse);
+		SetProgram(s_context, &terrain_program);
+		SetDiffuse(s_context, &terrain_diffuse);
 		NTerrainDraw(terrain, camera_entity->co.position);
+
+		// Testing, testing
+		if (a_release == true && s_events.a == true)
+		{
+			PlayTone(s_mixer, 0.1f, 0.0f, 440.0, 1000);
+			a_release = false;
+		}
+
+		if (s_events.a == false)
+			a_release = true;
+
+		if (b_release == true && s_events.b == true)
+		{
+			PlayTone(s_mixer, 0.1f, 0.0f, 220.0, 2000);
+			b_release = false;
+		}
+
+		if (s_events.b == false)
+			b_release = true;
 
 		// Exit?
 		if (s_events.close == true)
