@@ -87,9 +87,9 @@ int GameCameraThink(void* blob, const struct EntityInput* input, struct EntityCo
 	// Forward, backward
 	if (fabs(input->left_analog.v) > ANALOG_DEAD_ZONE)
 	{
-		float x = sinf(DEG_TO_RAD(camera->angle.z)) * sinf(DEG_TO_RAD(camera->angle.x));
-		float y = cosf(DEG_TO_RAD(camera->angle.z)) * sinf(DEG_TO_RAD(camera->angle.x));
-		float z = cosf(DEG_TO_RAD(camera->angle.x));
+		float x = sinf(DegToRad(camera->angle.z)) * sinf(DegToRad(camera->angle.x));
+		float y = cosf(DegToRad(camera->angle.z)) * sinf(DegToRad(camera->angle.x));
+		float z = cosf(DegToRad(camera->angle.x));
 
 		temp_v = Vector3Set(x, y, z);
 		temp_v = Vector3Scale(temp_v, input->left_analog.v * MOVEMENT_SPEED * input->delta);
@@ -100,8 +100,8 @@ int GameCameraThink(void* blob, const struct EntityInput* input, struct EntityCo
 	// Stride left, right
 	if (fabs(input->left_analog.h) > ANALOG_DEAD_ZONE)
 	{
-		float x = sinf(DEG_TO_RAD(camera->angle.z + 90.0f));
-		float y = cosf(DEG_TO_RAD(camera->angle.z + 90.0f));
+		float x = sinf(DegToRad(camera->angle.z + 90.0f));
+		float y = cosf(DegToRad(camera->angle.z + 90.0f));
 		float z = 0.0;
 
 		temp_v = Vector3Set(x, y, z);

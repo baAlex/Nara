@@ -78,6 +78,7 @@ void InputStep(struct Context* context)
 	bool check_disconnection = false;
 
 	memset(&context->gamepad, 0, sizeof(struct ContextEvents));
+	memset(&context->combined, 0, sizeof(struct ContextEvents));
 
 	// Gamepad input...
 	if (context->active_gamepad != -1)

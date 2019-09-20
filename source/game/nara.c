@@ -35,6 +35,7 @@ SOFTWARE.
 
 #include "../engine/context.h"
 #include "../engine/entity.h"
+#include "../engine/misc.h"
 #include "../engine/mixer.h"
 #include "../engine/nterrain.h"
 #include "../engine/timer.h"
@@ -53,6 +54,7 @@ extern const uint8_t g_red_fragment[];
 
 static struct Context* s_context = NULL;
 static struct ContextEvents s_events;
+static struct Mixer* s_mixer = NULL;
 static struct Timer s_timer;
 
 
@@ -113,17 +115,25 @@ int main()
 
 	printf("Nara v0.1\n");
 
-	// Context initialization
-	s_context = ContextCreate((struct ContextOptions)
-	{
+	// Initialization
+	s_context = ContextCreate((struct ContextOptions){
 		.caption = "Nara",
 		.window_size = {WINDOWS_MIN_WIDTH * 4, WINDOWS_MIN_HEIGHT * 4},
 		.window_min_size = {WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT},
 		.fullscreen = false,
-		.clean_color = {0.80, 0.82, 0.84}
-	}, &st);
+		.clean_color = {0.80, 0.82, 0.84}},
+	&st);
 
 	if (s_context == NULL)
+		goto return_failure;
+
+	s_mixer = MixerCreate((struct MixerOptions){
+		.frequency = 48000,
+		.channels = 2,
+		.volume = 1.0f},
+	&st);
+
+	if (s_mixer == NULL)
 		goto return_failure;
 
 	TimerInit(&s_timer);
@@ -173,8 +183,8 @@ int main()
 		    Vector3Equals(camera_entity->co.angle, camera_entity->old_co.angle) == false)
 		{
 			camera_matrix = Matrix4Identity();
-			camera_matrix = Matrix4RotateX(camera_matrix, DEG_TO_RAD(camera_entity->co.angle.x));
-			camera_matrix = Matrix4RotateZ(camera_matrix, DEG_TO_RAD(camera_entity->co.angle.z));
+			camera_matrix = Matrix4RotateX(camera_matrix, DegToRad(camera_entity->co.angle.x));
+			camera_matrix = Matrix4RotateZ(camera_matrix, DegToRad(camera_entity->co.angle.z));
 			camera_matrix = Matrix4Multiply(camera_matrix, Matrix4Translate(Vector3Invert(camera_entity->co.position)));
 
 			ContextSetCamera(s_context, camera_matrix, camera_entity->co.position);
@@ -196,24 +206,17 @@ int main()
 	// Bye!
 	DictionaryDelete(classes);
 	ListClean(&entities);
+
 	ProgramFree(&terrain_program);
 	TextureFree(&terrain_diffuse);
 	NTerrainDelete(terrain);
+
+	MixerDelete(s_mixer);
 	ContextDelete(s_context);
 
 	return EXIT_SUCCESS;
 
 return_failure:
-
 	StatusPrint("Nara", st);
-	if (terrain != NULL)
-		NTerrainDelete(terrain);
-	if (terrain_diffuse.glptr != 0)
-		TextureFree(&terrain_diffuse);
-	if (terrain_program.glptr != 0)
-		ProgramFree(&terrain_program);
-	if (s_context != NULL)
-		ContextDelete(s_context);
-
 	return EXIT_FAILURE;
 }

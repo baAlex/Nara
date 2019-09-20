@@ -22,6 +22,7 @@ build ./objects/release/engine/red-vertex.c:       generate ./source/engine/red-
 build ./objects/release/engine/context.o:          compile ./source/engine/context.c
 build ./objects/release/engine/context-input.o:    compile ./source/engine/context-input.c
 build ./objects/release/engine/timer.o:            compile ./source/engine/timer.c
+build ./objects/release/engine/misc.o:             compile ./source/engine/misc.c
 build ./objects/release/engine/mixer.o:            compile ./source/engine/mixer.c
 build ./objects/release/engine/tiny-gl.o:          compile ./source/engine/tiny-gl.c
 build ./objects/release/engine/entity.o:           compile ./source/engine/entity.c
@@ -60,6 +61,7 @@ build nara: link $
 ./objects/release/engine/context.o $
 ./objects/release/engine/context-input.o $
 ./objects/release/engine/timer.o $
+./objects/release/engine/misc.o $
 ./objects/release/engine/mixer.o $
 ./objects/release/engine/tiny-gl.o $
 ./objects/release/engine/entity.o $

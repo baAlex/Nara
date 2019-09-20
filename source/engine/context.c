@@ -34,6 +34,155 @@ SOFTWARE.
 
 /*-----------------------------
 
+ sResizeCallback()
+-----------------------------*/
+static inline void sResizeCallback(GLFWwindow* window, int new_width, int new_height)
+{
+	struct Context* context = glfwGetWindowUserPointer(window);
+
+	glViewport(0, 0, (GLint)new_width, (GLint)new_height);
+
+	context->window_size.x = new_width;
+	context->window_size.y = new_height;
+	context->window_resized = true;
+}
+
+
+/*-----------------------------
+
+ ContextCreate()
+-----------------------------*/
+struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
+{
+	struct Context* context = NULL;
+	const GLFWvidmode* vid_mode = NULL;
+
+	StatusSet(st, "ContextCreate", STATUS_SUCCESS, NULL);
+	printf("- Lib-GLFW: %s\n", glfwGetVersionString());
+
+	// Initialization
+	if ((context = calloc(1, sizeof(struct Context))) == NULL)
+		return NULL;
+
+	memcpy(&context->options, &options, sizeof(struct ContextOptions));
+
+	if (glfwInit() != GLFW_TRUE)
+	{
+		StatusSet(st, "ContextCreate", STATUS_ERROR, "Initialiting GLFW");
+		goto return_failure;
+	}
+
+	// Create window
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+	glfwWindowHint(GLFW_SAMPLES, 2);
+
+	if ((context->window =
+	         glfwCreateWindow(options.window_size.x, options.window_size.y, options.caption, NULL, NULL)) == NULL)
+	{
+		StatusSet(st, "ContextCreate", STATUS_ERROR, "Creating GLFW window");
+		goto return_failure;
+	}
+
+	glfwMakeContextCurrent(context->window);
+	// glfwSwapInterval(0);
+
+	glfwSetWindowSizeLimits(context->window, options.window_min_size.x, options.window_min_size.y, GLFW_DONT_CARE,
+	                        GLFW_DONT_CARE);
+
+	glfwSetWindowUserPointer(context->window, context);
+	glfwSetFramebufferSizeCallback(context->window, sResizeCallback);
+	glfwSetKeyCallback(context->window, KeyboardCallback);
+
+	if (context->options.fullscreen == true)
+	{
+		vid_mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+		glfwSetWindowMonitor(context->window, glfwGetPrimaryMonitor(), 0, 0, vid_mode->width, vid_mode->height,
+		                     GLFW_DONT_CARE);
+	}
+
+	// OpenGL initialization
+	glClearColor(options.clean_color.x, options.clean_color.y, options.clean_color.z, 1.0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+	glEnable(GL_BLEND);
+
+	glDisable(GL_DITHER);
+
+	glEnableVertexAttribArray(ATTRIBUTE_POSITION);
+	glEnableVertexAttribArray(ATTRIBUTE_UV);
+
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendEquation(GL_FUNC_ADD);
+
+	// Last things to do
+	printf("%s\n", glGetString(GL_VENDOR));
+	printf("%s\n", glGetString(GL_RENDERER));
+	printf("%s\n", glGetString(GL_VERSION));
+	printf("%s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+
+	context->active_gamepad = FindGamedpad();
+
+	context->window_size = context->options.window_size;
+	sResizeCallback(context->window, context->options.window_size.x, context->options.window_size.y);
+
+	// Bye!
+	printf("\n");
+	return context;
+
+return_failure:
+	ContextDelete(context);
+	return NULL;
+}
+
+
+/*-----------------------------
+
+ ContextDelete()
+-----------------------------*/
+inline void ContextDelete(struct Context* context)
+{
+	if (context->window != NULL)
+		glfwDestroyWindow(context->window);
+
+	glfwTerminate();
+	free(context);
+}
+
+
+/*-----------------------------
+
+ ContextUpdate()
+-----------------------------*/
+void ContextUpdate(struct Context* context, struct ContextEvents* out_events)
+{
+	glfwSwapBuffers(context->window);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	context->window_resized = false;
+
+	glfwPollEvents();
+
+	if (out_events != NULL)
+	{
+		// Input
+		InputStep(context);
+		memcpy(out_events, &context->combined, sizeof(struct ContextEvents));
+
+		// Window
+		out_events->window_size = context->window_size;
+		out_events->resized = context->window_resized;
+		out_events->close = (glfwWindowShouldClose(context->window) == GLFW_TRUE) ? true : false;
+	}
+}
+
+
+/*-----------------------------
+
  ContextSetProgram()
 -----------------------------*/
 void ContextSetProgram(struct Context* context, const struct Program* program)
@@ -134,218 +283,4 @@ void ContextDraw(struct Context* context, const struct Vertices* vertices, const
 
 	// glDrawElements(GL_LINES, index->length, GL_UNSIGNED_SHORT, NULL);
 	glDrawElements(GL_TRIANGLES, index->length, GL_UNSIGNED_SHORT, NULL);
-}
-
-
-/*-----------------------------
-
- sResizeCallback()
------------------------------*/
-static inline void sResizeCallback(GLFWwindow* window, int new_width, int new_height)
-{
-	struct Context* context = glfwGetWindowUserPointer(window);
-
-	glViewport(0, 0, (GLint)new_width, (GLint)new_height);
-
-	context->window_size.x = new_width;
-	context->window_size.y = new_height;
-	context->window_resized = true;
-}
-
-
-/*-----------------------------
-
- sStreamCallback()
------------------------------*/
-static int sStreamCallback(const void* input, void* output, unsigned long frames_no,
-                           const PaStreamCallbackTimeInfo* time, PaStreamCallbackFlags status, void* data)
-{
-	(void)input;
-	(void)time;
-	(void)status;
-	(void)data;
-
-	struct
-	{
-		float l;
-		float r;
-	} * frame;
-
-	frame = output;
-
-	for (unsigned long i = 0; i < frames_no; i++)
-	{
-		frame[i].l = 0.0f;
-		frame[i].r = 0.0f;
-	}
-
-	return paContinue;
-}
-
-
-/*-----------------------------
-
- ContextCreate()
------------------------------*/
-struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
-{
-	struct Context* context = NULL;
-
-	StatusSet(st, "ContextCreate", STATUS_SUCCESS, NULL);
-
-	if ((context = calloc(1, sizeof(struct Context))) == NULL)
-		return NULL;
-
-	memcpy(&context->options, &options, sizeof(struct ContextOptions));
-
-	printf("- Lib-Japan: v%i.%i.%i\n", JAPAN_VERSION_MAJOR, JAPAN_VERSION_MINOR, JAPAN_VERSION_PATCH);
-	printf("- Lib-GLFW: %s\n", glfwGetVersionString());
-	printf("- Lib-Portaudio: %s\n", (Pa_GetVersionInfo() != NULL) ? Pa_GetVersionInfo()->versionText : "");
-
-	// GLFW
-	{
-		const GLFWvidmode* vid_mode = NULL;
-
-		if (glfwInit() != GLFW_TRUE)
-		{
-			StatusSet(st, "ContextCreate", STATUS_ERROR, "Initialiting GLFW");
-			goto return_failure;
-		}
-
-		// Create window
-		glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-		glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-		glfwWindowHint(GLFW_SAMPLES, 2);
-
-		if ((context->window =
-		         glfwCreateWindow(options.window_size.x, options.window_size.y, options.caption, NULL, NULL)) == NULL)
-		{
-			StatusSet(st, "ContextCreate", STATUS_ERROR, "Creating GLFW window");
-			goto return_failure;
-		}
-
-		glfwMakeContextCurrent(context->window);
-		glfwSwapInterval(0);
-
-		glfwSetWindowSizeLimits(context->window, options.window_min_size.x, options.window_min_size.y, GLFW_DONT_CARE,
-		                        GLFW_DONT_CARE);
-
-		glfwSetWindowUserPointer(context->window, context);
-		glfwSetFramebufferSizeCallback(context->window, sResizeCallback);
-		glfwSetKeyCallback(context->window, KeyboardCallback);
-
-		if (context->options.fullscreen == true)
-		{
-			vid_mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-			glfwSetWindowMonitor(context->window, glfwGetPrimaryMonitor(), 0, 0, vid_mode->width, vid_mode->height,
-			                     GLFW_DONT_CARE);
-		}
-
-		// OpenGL initialization
-		glClearColor(options.clean_color.x, options.clean_color.y, options.clean_color.z, 1.0);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		glEnable(GL_DEPTH_TEST);
-		glEnable(GL_CULL_FACE);
-		glEnable(GL_BLEND);
-
-		glDisable(GL_DITHER);
-
-		glEnableVertexAttribArray(ATTRIBUTE_POSITION);
-		glEnableVertexAttribArray(ATTRIBUTE_UV);
-
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glBlendEquation(GL_FUNC_ADD);
-
-		// Last things to do
-		printf("%s\n", glGetString(GL_VENDOR));
-		printf("%s\n", glGetString(GL_RENDERER));
-		printf("%s\n", glGetString(GL_VERSION));
-		printf("%s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
-
-		context->active_gamepad = FindGamedpad();
-
-		context->window_size = context->options.window_size;
-		sResizeCallback(context->window, context->options.window_size.x, context->options.window_size.y);
-	}
-
-	// Portaudio
-	if (Pa_Initialize() == paNoError)
-	{
-		context->audio_avaible = true;
-
-		if (Pa_OpenDefaultStream(&context->stream, 0, 2, paFloat32, 48000, paFramesPerBufferUnspecified,
-		                         sStreamCallback, context) == paNoError)
-		{
-			Pa_StartStream(context->stream);
-		}
-		else
-		{
-			context->stream = NULL;
-			context->audio_avaible = false;
-			printf("[Warning] Error creating and audio stream\n");
-		}
-	}
-	else
-		printf("[Warning] Error initializating Portaudio\n");
-
-	// Bye!
-	printf("\n");
-	return context;
-
-return_failure:
-	ContextDelete(context);
-	return NULL;
-}
-
-
-/*-----------------------------
-
- ContextDelete()
------------------------------*/
-inline void ContextDelete(struct Context* context)
-{
-	if (context->audio_avaible == true)
-	{
-		if (context->stream != NULL)
-			Pa_StopStream(context->stream);
-
-		Pa_Terminate();
-	}
-
-	if (context->window != NULL)
-		glfwDestroyWindow(context->window);
-
-	glfwTerminate();
-
-	free(context);
-}
-
-
-/*-----------------------------
-
- ContextUpdate()
------------------------------*/
-void ContextUpdate(struct Context* context, struct ContextEvents* out_events)
-{
-	glfwSwapBuffers(context->window);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	context->window_resized = false;
-
-	glfwPollEvents();
-
-	if (out_events != NULL)
-	{
-		// Input
-		InputStep(context);
-		memcpy(out_events, &context->combined, sizeof(struct ContextEvents));
-
-		// Window
-		out_events->window_size = context->window_size;
-		out_events->resized = context->window_resized;
-		out_events->close = (glfwWindowShouldClose(context->window) == GLFW_TRUE) ? true : false;
-	}
 }

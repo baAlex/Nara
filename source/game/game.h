@@ -14,13 +14,7 @@
 
 	#include "vector.h"
 	#include "matrix.h"
-
-	#ifndef M_PI
-	#define M_PI 3.14159265358979323846264338327950288f
-	#endif
-
-	#define DEG_TO_RAD(d) ((d)*M_PI / 180.0f)
-	#define RAD_TO_DEG(r) ((r)*180.0f / M_PI)
+	#include "../engine/misc.h"
 
 	#ifndef ENTITY_H
 		struct EntityInput // Copy from 'entity.h'

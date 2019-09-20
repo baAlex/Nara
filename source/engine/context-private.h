@@ -13,8 +13,6 @@
 
 	#include "context.h"
 
-	#include <portaudio.h>
-
 	#ifndef TINY_GL_H
 	#define GLFW_INCLUDE_ES2
 	#include <GLFW/glfw3.h>
@@ -23,10 +21,7 @@
 	struct Context
 	{
 		GLFWwindow* window;
-		PaStream* stream;
-
 		struct ContextOptions options; // Set at initialization
-		bool audio_avaible;            // Set at initialization
 
 		struct Vector2i window_size; // sResizeCallback()
 		bool window_resized;         // sResizeCallback()
