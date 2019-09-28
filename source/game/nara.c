@@ -35,11 +35,11 @@ SOFTWARE.
 
 #include "../engine/context.h"
 #include "../engine/entity.h"
-#include "../engine/misc.h"
 #include "../engine/mixer.h"
 #include "../engine/nterrain.h"
 #include "../engine/timer.h"
 
+#include "utilities.h"
 #include "game.h"
 
 #define FOV 45

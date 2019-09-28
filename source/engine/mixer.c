@@ -36,7 +36,7 @@ SOFTWARE.
 #include <time.h>
 
 #include "dictionary.h"
-#include "misc.h"
+#include "utilities.h"
 #include "mixer.h"
 
 #define PLAY_LEN 32

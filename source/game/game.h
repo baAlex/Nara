@@ -14,7 +14,7 @@
 
 	#include "vector.h"
 	#include "matrix.h"
-	#include "../engine/misc.h"
+	#include "utilities.h"
 
 	#ifndef ENTITY_H
 		struct EntityInput // Copy from 'entity.h'

@@ -4,7 +4,7 @@ cflags_strict = `pkg-config --cflags glfw3 glesv2 portaudio-2.0` -O0 -std=c11 -W
 lflags = `pkg-config --libs glfw3 glesv2 portaudio-2.0` -lm
 
 rule generate
- command = python3 ./tools/c-ify.py $in > $out
+ command = python3 ./tools/c-ify.py $in $out
 
 rule compile
  command = cc $cflags -c $in -o $out
@@ -23,11 +23,10 @@ build ./objects/debug/engine/terrain-fragment.c: generate ./source/engine/terrai
 build ./objects/debug/engine/terrain-vertex.c:   generate ./source/engine/terrain-vertex.glsl
 
 # Engine
-build ./objects/debug/engine/context.o:          compile        ./source/engine/context.c
 build ./objects/debug/engine/context-input.o:    compile        ./source/engine/context-input.c
 build ./objects/debug/engine/context-opengl.o:   compile_strict ./source/engine/context-opengl.c
+build ./objects/debug/engine/context.o:          compile        ./source/engine/context.c
 build ./objects/debug/engine/entity.o:           compile_strict ./source/engine/entity.c
-build ./objects/debug/engine/misc.o:             compile_strict ./source/engine/misc.c
 build ./objects/debug/engine/mixer.o:            compile_strict ./source/engine/mixer.c
 build ./objects/debug/engine/nterrain.o:         compile_strict ./source/engine/nterrain.c
 build ./objects/debug/engine/red-fragment.o:     compile_strict ./objects/debug/engine/red-fragment.c
@@ -37,8 +36,8 @@ build ./objects/debug/engine/terrain-vertex.o:   compile_strict ./objects/debug/
 build ./objects/debug/engine/timer.o:            compile        ./source/engine/timer.c
 
 # Game
-build ./objects/debug/game/nara.o:   compile_strict ./source/game/nara.c
 build ./objects/debug/game/camera.o: compile_strict ./source/game/camera.c
+build ./objects/debug/game/nara.o:   compile_strict ./source/game/nara.c
 build ./objects/debug/game/point.o:  compile_strict ./source/game/point.c
 
 # Lib Japan
@@ -55,6 +54,7 @@ build ./objects/debug/lib-japan/sound/laws.o:       compile_strict ./source/lib-
 build ./objects/debug/lib-japan/sound/sound.o:      compile_strict ./source/lib-japan/source/sound/sound.c
 build ./objects/debug/lib-japan/status.o:           compile_strict ./source/lib-japan/source/status.c
 build ./objects/debug/lib-japan/tree.o:             compile_strict ./source/lib-japan/source/tree.c
+build ./objects/debug/lib-japan/utilities.o:        compile_strict ./source/lib-japan/source/utilities.c
 build ./objects/debug/lib-japan/vector.o:           compile_strict ./source/lib-japan/source/vector.c
 
 # Sdk
@@ -62,11 +62,10 @@ build ./objects/debug/sdk/sdk.o: compile ./source/sdk/sdk.c
 
 # Link
 build nara-dbg: link $
-./objects/debug/engine/context.o $
 ./objects/debug/engine/context-input.o $
 ./objects/debug/engine/context-opengl.o $
+./objects/debug/engine/context.o $
 ./objects/debug/engine/entity.o $
-./objects/debug/engine/misc.o $
 ./objects/debug/engine/mixer.o $
 ./objects/debug/engine/nterrain.o $
 ./objects/debug/engine/red-fragment.o $
@@ -74,8 +73,8 @@ build nara-dbg: link $
 ./objects/debug/engine/terrain-fragment.o $
 ./objects/debug/engine/terrain-vertex.o $
 ./objects/debug/engine/timer.o $
-./objects/debug/game/nara.o $
 ./objects/debug/game/camera.o $
+./objects/debug/game/nara.o $
 ./objects/debug/game/point.o $
 ./objects/debug/lib-japan/buffer.o $
 ./objects/debug/lib-japan/dictionary.o $
@@ -90,6 +89,7 @@ build nara-dbg: link $
 ./objects/debug/lib-japan/sound/sound.o $
 ./objects/debug/lib-japan/status.o $
 ./objects/debug/lib-japan/tree.o $
+./objects/debug/lib-japan/utilities.o $
 ./objects/debug/lib-japan/vector.o
 
 build sdk-dbg: link $
@@ -106,5 +106,6 @@ build sdk-dbg: link $
 ./objects/debug/lib-japan/sound/sound.o $
 ./objects/debug/lib-japan/status.o $
 ./objects/debug/lib-japan/tree.o $
+./objects/debug/lib-japan/utilities.o $
 ./objects/debug/lib-japan/vector.o $
 ./objects/debug/sdk/sdk.o
