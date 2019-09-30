@@ -57,6 +57,19 @@ build ./objects/debug/lib-japan/tree.o:             compile_strict ./source/lib-
 build ./objects/debug/lib-japan/utilities.o:        compile_strict ./source/lib-japan/source/utilities.c
 build ./objects/debug/lib-japan/vector.o:           compile_strict ./source/lib-japan/source/vector.c
 
+# Lib Samplerate
+# CPU_CLIPS_POSITIVE = 0 and CPU_CLIPS_NEGATIVE = 0; disables an branch optimization.
+# Nothing really important, but at the first issue I promise to replace this terrible hack.
+# (https://github.com/erikd/libsamplerate/pull/85#issuecomment-520136261)
+build ./objects/debug/lib-samplerate/samplerate.o: compile ./source/lib-samplerate/src/samplerate.c
+ cflags = -O3 -flto -mtune=generic $
+ '-DPACKAGE="NaraLibSamplerate"' '-DVERSION="NaraCustom"' $
+ '-DCPU_CLIPS_POSITIVE=0' '-DCPU_CLIPS_NEGATIVE=0'
+
+build ./objects/debug/lib-samplerate/src_linear.o: compile ./source/lib-samplerate/src/src_linear.c
+build ./objects/debug/lib-samplerate/src_sinc.o:   compile ./source/lib-samplerate/src/src_sinc.c
+build ./objects/debug/lib-samplerate/src_zoh.o:    compile ./source/lib-samplerate/src/src_zoh.c
+
 # Sdk
 build ./objects/debug/sdk/sdk.o: compile ./source/sdk/sdk.c
 
@@ -90,7 +103,11 @@ build nara-dbg: link $
 ./objects/debug/lib-japan/status.o $
 ./objects/debug/lib-japan/tree.o $
 ./objects/debug/lib-japan/utilities.o $
-./objects/debug/lib-japan/vector.o
+./objects/debug/lib-japan/vector.o $
+./objects/debug/lib-samplerate/samplerate.o $
+./objects/debug/lib-samplerate/src_linear.o $
+./objects/debug/lib-samplerate/src_sinc.o $
+./objects/debug/lib-samplerate/src_zoh.o
 
 build sdk-dbg: link $
 ./objects/debug/lib-japan/buffer.o $

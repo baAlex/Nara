@@ -53,6 +53,16 @@ build ./objects/release/lib-japan/tree.o:             compile ./source/lib-japan
 build ./objects/release/lib-japan/utilities.o:        compile ./source/lib-japan/source/utilities.c
 build ./objects/release/lib-japan/vector.o:           compile ./source/lib-japan/source/vector.c
 
+# Lib Samplerate
+build ./objects/release/lib-samplerate/samplerate.o: compile ./source/lib-samplerate/src/samplerate.c
+ cflags = -O3 -flto -mtune=generic $
+ '-DPACKAGE="NaraLibSamplerate"' '-DVERSION="NaraCustom"' $
+ '-DCPU_CLIPS_POSITIVE=0' '-DCPU_CLIPS_NEGATIVE=0'
+
+build ./objects/release/lib-samplerate/src_linear.o: compile ./source/lib-samplerate/src/src_linear.c
+build ./objects/release/lib-samplerate/src_sinc.o:   compile ./source/lib-samplerate/src/src_sinc.c
+build ./objects/release/lib-samplerate/src_zoh.o:    compile ./source/lib-samplerate/src/src_zoh.c
+
 # Sdk
 build ./objects/release/sdk/sdk.o: compile ./source/sdk/sdk.c
 
@@ -86,7 +96,11 @@ build nara: link $
 ./objects/release/lib-japan/status.o $
 ./objects/release/lib-japan/tree.o $
 ./objects/release/lib-japan/utilities.o $
-./objects/release/lib-japan/vector.o
+./objects/release/lib-japan/vector.o $
+./objects/release/lib-samplerate/samplerate.o $
+./objects/release/lib-samplerate/src_linear.o $
+./objects/release/lib-samplerate/src_sinc.o $
+./objects/release/lib-samplerate/src_zoh.o
 
 build sdk: link $
 ./objects/release/lib-japan/buffer.o $
