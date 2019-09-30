@@ -44,7 +44,10 @@ SOFTWARE.
 
 #define FOV 45
 
-#define WINDOWS_MIN_WIDTH 220
+#define WINDOWS_WIDTH 576
+#define WINDOWS_HEIGHT 240
+
+#define WINDOWS_MIN_WIDTH 240
 #define WINDOWS_MIN_HEIGHT 100
 
 extern const uint8_t g_terrain_vertex[];
@@ -118,7 +121,7 @@ int main()
 	// Initialization
 	s_context = ContextCreate((struct ContextOptions){
 		.caption = "Nara",
-		.window_size = {WINDOWS_MIN_WIDTH * 4, WINDOWS_MIN_HEIGHT * 4},
+		.window_size = {WINDOWS_WIDTH, WINDOWS_HEIGHT},
 		.window_min_size = {WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT},
 		.fullscreen = false,
 		.clean_color = {0.80f, 0.82f, 0.84f}},
@@ -146,7 +149,19 @@ int main()
 		if (ProgramInit(&terrain_program, (char*)g_terrain_vertex, (char*)g_terrain_fragment, &st) != 0)
 			goto return_failure;
 
-		if (TextureInit(&terrain_diffuse, "./assets/colormap.sgi", FILTER_BILINEAR, &st) != 0)
+		if (TextureInit(&terrain_diffuse, "./assets/colormap.sgi", FILTER_TRILINEAR, &st) != 0)
+			goto return_failure;
+
+		if (SampleCreate(s_mixer, "./assets/rz1-kick.wav", &st) == NULL)
+			goto return_failure;
+
+		if (SampleCreate(s_mixer, "./assets/rz1-snare.wav", &st) == NULL)
+			goto return_failure;
+
+		if (SampleCreate(s_mixer, "./assets/rz1-closed-hithat.wav", &st) == NULL)
+			goto return_failure;
+
+		if (SampleCreate(s_mixer, "./assets/rz1-snare.wav", &st) == NULL)
 			goto return_failure;
 
 		classes = sInitializeClasses();
@@ -156,7 +171,7 @@ int main()
 		camera_entity->co.position = (struct Vector3){128.0f, 128.0f, 256.0f};
 		camera_entity->co.angle = (struct Vector3){-50.0f, 0.0f, 45.0f};
 
-		sSetProjection((struct Vector2i){WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT}, s_context);
+		sSetProjection((struct Vector2i){WINDOWS_WIDTH, WINDOWS_HEIGHT}, s_context);
 	}
 
 	printf("Terrain 0x%p:\n", (void*)terrain);
@@ -204,7 +219,7 @@ int main()
 		// Testing, testing
 		if (a_release == true && s_events.a == true)
 		{
-			PlayTone(s_mixer, 0.1f, 0.0f, 440.0, 1000);
+			PlayTone(s_mixer, 0.1f, 440.0, 1000);
 			a_release = false;
 		}
 
@@ -213,7 +228,7 @@ int main()
 
 		if (b_release == true && s_events.b == true)
 		{
-			PlayTone(s_mixer, 0.1f, 0.0f, 220.0, 2000);
+			PlayTone(s_mixer, 0.1f, 220.0, 2000);
 			b_release = false;
 		}
 

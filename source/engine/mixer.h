@@ -9,6 +9,7 @@
 
 	#include "vector.h"
 	#include "status.h"
+	#include "sound.h"
 
 	struct MixerOptions
 	{
@@ -19,10 +20,11 @@
 
 	struct Mixer* MixerCreate(struct MixerOptions options, struct Status* st);
 	void MixerDelete(struct Mixer* mixer);
-	void MixerPanic(struct Mixer* mixer);
 
-	void MixerSetCamera(struct Mixer* mixer, struct Vector3 origin);
+	struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct Status* st);
+	void SampleDelete(struct Sample*);
 
-	void PlayTone(struct Mixer*, float volume, float panning, float frequency, int duration);
+	void PlaySample(struct Mixer*, float volume, struct Sample*);
+	void PlayTone(struct Mixer*, float volume, float frequency, int duration);
 
 #endif

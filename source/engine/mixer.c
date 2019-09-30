@@ -36,14 +36,16 @@ SOFTWARE.
 #include <time.h>
 
 #include "dictionary.h"
-#include "utilities.h"
 #include "mixer.h"
+#include "utilities.h"
 
-#define PLAY_LEN 32
+#define PLAY_LEN 8
 
 
 struct Sample
 {
+	struct DictionaryItem* item;
+
 	size_t length;
 	float data[];
 };
@@ -53,7 +55,6 @@ struct ToPlay
 	bool active;
 	bool is_synth;
 
-	time_t time;
 	size_t cursor;
 
 	union {
@@ -67,7 +68,6 @@ struct ToPlay
 	};
 
 	float volume;
-	float panning;
 };
 
 struct Mixer
@@ -76,14 +76,10 @@ struct Mixer
 	struct MixerOptions options;
 	struct Dictionary* samples;
 
-	struct Vector3 origin;
 	struct ToPlay playlist[PLAY_LEN];
-};
+	struct timespec playlist_update;
 
-struct StereoFrame
-{
-	float left;
-	float right;
+	size_t last_index;
 };
 
 
@@ -111,10 +107,11 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 
 	const size_t channels = (size_t)mixer->options.channels;
 
-	memset(output, 0, sizeof(float) * frames_no * channels);
-
 	for (unsigned long i = 0; i < (frames_no * channels); i += channels)
 	{
+		for (size_t ch = 0; ch < channels; ch++)
+			output[i + ch] = 0.0f;
+
 		// Sum all playlist
 		for (size_t pl = 0; pl < PLAY_LEN; pl++)
 		{
@@ -175,6 +172,9 @@ struct Mixer* MixerCreate(struct MixerOptions options, struct Status* st)
 	if ((mixer = calloc(1, sizeof(struct Mixer))) == NULL)
 		return NULL;
 
+	if ((mixer->samples = DictionaryCreate(NULL)) == NULL)
+		goto return_failure;
+
 	options.channels = Clamp(options.channels, 1, 2);
 	options.frequency = Clamp(options.frequency, 6000, 48000);
 	options.volume = Clamp(options.volume, 0.0f, 1.0f);
@@ -217,27 +217,67 @@ inline void MixerDelete(struct Mixer* mixer)
 		Pa_StopStream(mixer->stream);
 
 	Pa_Terminate();
+
+	DictionaryDelete(mixer->samples);
 	free(mixer);
 }
 
 
 /*-----------------------------
 
- MixerPanic()
+ SampleCreate()
 -----------------------------*/
-void MixerPanic(struct Mixer* mixer)
+struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct Status* st)
 {
-	(void)mixer;
-}
+	struct DictionaryItem* item = NULL;
+	struct Sample* sample = NULL;
+	struct SoundEx ex = {0};
+	FILE* file = NULL;
 
+	StatusSet(st, "SampleCreate", STATUS_SUCCESS, NULL);
 
-/*-----------------------------
+	// Alredy exists?
+	item = DictionaryGet(mixer->samples, filename);
 
- MixerSetCamera()
------------------------------*/
-inline void MixerSetCamera(struct Mixer* mixer, struct Vector3 origin)
-{
-	mixer->origin = origin;
+	if (item != NULL)
+		return item->data;
+
+	// Well, lets allocate everything needed
+	size_t total_size = sizeof(struct Sample) + (sizeof(float) * (size_t)mixer->options.channels);
+
+	if ((file = fopen(filename, "rb")) == NULL)
+	{
+		StatusSet(st, "SampleCreate", STATUS_IO_ERROR, NULL);
+		return NULL;
+	}
+
+	if (SoundExLoad(file, &ex, st) != 0)
+		goto return_failure;
+
+	if ((item = DictionaryAdd(mixer->samples, filename, NULL, total_size)) == NULL)
+	{
+		StatusSet(st, "SampleCreate", STATUS_MEMORY_ERROR, NULL);
+		goto return_failure;
+	}
+
+	sample = item->data;
+	sample->item = item;
+
+	sample->length = 1;
+
+	// Resampling
+	{
+	}
+
+	// Bye!
+	fclose(file);
+	return sample;
+
+return_failure:
+	if (file != NULL)
+		fclose(file);
+
+	return NULL;
 }
 
 
@@ -245,31 +285,35 @@ inline void MixerSetCamera(struct Mixer* mixer, struct Vector3 origin)
 
  PlayTone()
 -----------------------------*/
-void PlayTone(struct Mixer* mixer, float volume, float panning, float frequency, int duration)
+void PlayTone(struct Mixer* mixer, float volume, float frequency, int duration)
 {
-	size_t i = 0;
-	struct ToPlay* oldest_space = NULL;
 	struct ToPlay* space = NULL;
 
-	// Find an space on the playlist
-	oldest_space = &mixer->playlist[i];
-
-	for (i = 0; i < PLAY_LEN; i++)
+	// Find an space in the playlist
 	{
-		if (mixer->playlist[i].active == false)
-		{
-			space = &mixer->playlist[i];
-			break;
-		}
-		else
-		{
-			if (mixer->playlist[i].time < oldest_space->time)
-				oldest_space = &mixer->playlist[i];
-		}
-	}
+		size_t ref_i = 0;
+		size_t i = 0;
 
-	if (i == PLAY_LEN)
-		space = oldest_space; // Bad luck, lets recycle
+		for (ref_i = 0; ref_i < PLAY_LEN; ref_i++)
+		{
+			i = (mixer->last_index + ref_i) % PLAY_LEN;
+
+			if (mixer->playlist[i].active == false)
+			{
+				space = &mixer->playlist[i];
+				break;
+			}
+		}
+
+		if (ref_i == PLAY_LEN) // Bad luck, lets recycle
+		{
+			i = (mixer->last_index + 1) % PLAY_LEN;
+			space = &mixer->playlist[i];
+		}
+
+		printf("Play at %zu%s\n", i, (ref_i == PLAY_LEN) ? " (r)" : "");
+		mixer->last_index = (i + 1);
+	}
 
 	// Yay
 	space->active = false;
@@ -278,11 +322,9 @@ void PlayTone(struct Mixer* mixer, float volume, float panning, float frequency,
 	space->sample = NULL;
 	space->is_synth = true;
 
-	space->panning = panning;
 	space->volume = volume;
 	space->synth.length = ((size_t)duration * (size_t)mixer->options.frequency) / 1000;
 	space->synth.frequency = frequency;
 
-	time(&space->time);
 	space->active = true;
 }
