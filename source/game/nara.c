@@ -39,8 +39,8 @@ SOFTWARE.
 #include "../engine/nterrain.h"
 #include "../engine/timer.h"
 
-#include "utilities.h"
 #include "game.h"
+#include "utilities.h"
 
 #define FOV 45
 
@@ -101,6 +101,19 @@ static void sSetProjection(struct Vector2i window_size, struct Context* s_contex
 
  main()
 -----------------------------*/
+static bool sSingleClick(bool evn, bool* state)
+{
+	if (evn == false)
+		*state = true;
+	else if (*state == true)
+	{
+		*state = false;
+		return true;
+	}
+
+	return false;
+}
+
 int main()
 {
 	struct Status st = {0};
@@ -152,16 +165,8 @@ int main()
 		if (TextureInit(&terrain_diffuse, "./assets/colormap.sgi", FILTER_TRILINEAR, &st) != 0)
 			goto return_failure;
 
-		if (SampleCreate(s_mixer, "./assets/rz1-kick.wav", &st) == NULL)
-			goto return_failure;
-
-		if (SampleCreate(s_mixer, "./assets/rz1-snare.wav", &st) == NULL)
-			goto return_failure;
-
-		if (SampleCreate(s_mixer, "./assets/rz1-closed-hithat.wav", &st) == NULL)
-			goto return_failure;
-
-		if (SampleCreate(s_mixer, "./assets/rz1-snare.wav", &st) == NULL)
+		if (SampleCreate(s_mixer, "./assets/rz1-closed-hithat.wav", &st) == NULL ||
+		    SampleCreate(s_mixer, "./assets/rz1-clap.wav", &st) == NULL)
 			goto return_failure;
 
 		classes = sInitializeClasses();
@@ -185,6 +190,8 @@ int main()
 	// Game loop
 	bool a_release = false;
 	bool b_release = false;
+	bool x_release = false;
+	bool y_release = false;
 
 	while (1)
 	{
@@ -217,23 +224,17 @@ int main()
 		NTerrainDraw(terrain, camera_entity->co.position);
 
 		// Testing, testing
-		if (a_release == true && s_events.a == true)
-		{
-			PlayTone(s_mixer, 0.1f, 440.0, 1000);
-			a_release = false;
-		}
+		if (sSingleClick(s_events.a, &a_release) == true)
+			Play(s_mixer, 1.0f, "./assets/rz1-kick.wav");
 
-		if (s_events.a == false)
-			a_release = true;
+		if (sSingleClick(s_events.b, &b_release) == true)
+			Play(s_mixer, 1.0f, "./assets/rz1-snare.wav");
 
-		if (b_release == true && s_events.b == true)
-		{
-			PlayTone(s_mixer, 0.1f, 220.0, 2000);
-			b_release = false;
-		}
+		if (sSingleClick(s_events.x, &x_release) == true)
+			Play(s_mixer, 1.0f, "./assets/rz1-closed-hithat.wav");
 
-		if (s_events.b == false)
-			b_release = true;
+		if (sSingleClick(s_events.y, &y_release) == true)
+			Play(s_mixer, 1.0f, "./assets/rz1-clap.wav");
 
 		// Exit?
 		if (s_events.close == true)

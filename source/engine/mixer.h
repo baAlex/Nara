@@ -25,6 +25,13 @@
 	void SampleDelete(struct Sample*);
 
 	void PlaySample(struct Mixer*, float volume, struct Sample*);
-	void PlayTone(struct Mixer*, float volume, float frequency, int duration);
+	void PlayFile(struct Mixer*, float volume, const char* filename);
+
+	#define Play(mixer, volume, obj) _Generic((obj), \
+		const char*: PlayFile, \
+		char*: PlayFile, \
+		const struct Sample*: PlaySample, \
+		default: PlaySample \
+	)(mixer, volume, obj)
 
 #endif

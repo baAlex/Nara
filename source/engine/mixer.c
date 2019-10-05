@@ -49,26 +49,16 @@ struct Sample
 	struct DictionaryItem* item;
 
 	size_t length;
+	size_t channels;
 	float data[];
 };
 
 struct ToPlay
 {
 	bool active;
-	bool is_synth;
-
 	size_t cursor;
 
-	union {
-		struct Sample* sample;
-
-		struct
-		{
-			size_t length;
-			float frequency;
-		} synth;
-	};
-
+	struct Sample* sample;
 	float volume;
 };
 
@@ -84,13 +74,6 @@ struct Mixer
 
 	size_t last_index;
 };
-
-
-static inline float sSaw(float cur, float frequency, float base_frequency)
-{
-	// return sinf(cur * (2.0f * M_PI * frequency) / base_frequency);
-	return (fmodf(cur * frequency * 2.0f / base_frequency + 1.0f, 2.0f) - 1.0f);
-}
 
 
 /*-----------------------------
@@ -121,27 +104,14 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 			if (mixer->playlist[pl].active == false)
 				continue;
 
-			if (mixer->playlist[pl].is_synth == false)
-			{
-				data = mixer->playlist[pl].sample->data;
-				data += (mixer->playlist[pl].cursor * channels);
+			data = mixer->playlist[pl].sample->data;
+			data += (mixer->playlist[pl].cursor * mixer->playlist[pl].sample->channels);
 
-				for (size_t ch = 0; ch < channels; ch++)
-					output[i + ch] += (data[ch] * mixer->playlist[pl].volume);
+			for (size_t ch = 0; ch < channels; ch++)
+				output[i + ch] += (data[ch % mixer->playlist[pl].sample->channels] * mixer->playlist[pl].volume);
 
-				if ((mixer->playlist[pl].cursor += 1) > mixer->playlist[pl].sample->length)
-					mixer->playlist[pl].active = false;
-			}
-			else
-			{
-				for (size_t ch = 0; ch < channels; ch++)
-					output[i + ch] += sSaw((float)mixer->playlist[pl].cursor, mixer->playlist[pl].synth.frequency,
-					                       (float)mixer->options.frequency) *
-					                  mixer->playlist[pl].volume;
-
-				if ((mixer->playlist[pl].cursor += 1) > mixer->playlist[pl].synth.length)
-					mixer->playlist[pl].active = false;
-			}
+			if ((mixer->playlist[pl].cursor += 1) > mixer->playlist[pl].sample->length)
+				mixer->playlist[pl].active = false;
 		}
 
 		// Global volume
@@ -180,7 +150,7 @@ static void sToCommonFormat(const void* in, size_t in_size, size_t in_channels, 
 	float mix;
 
 	// Cycle in frame steps
-	for (size_t bytes_read = 0; bytes_read < in_size; bytes_read += (SoundBps(in_format) * in_channels))
+	for (size_t bytes_read = 0; bytes_read < in_size; bytes_read += ((size_t)SoundBps(in_format) * in_channels))
 	{
 		// Re format (now cycling though samples)
 		for (size_t c = 0; c < in_channels; c++)
@@ -203,7 +173,7 @@ static void sToCommonFormat(const void* in, size_t in_size, size_t in_channels, 
 		}
 
 		// Next
-		org.i8 += (SoundBps(in_format) * in_channels);
+		org.i8 += ((size_t)SoundBps(in_format) * in_channels);
 		out += out_channels;
 	}
 }
@@ -305,15 +275,9 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct St
 	if (SoundExLoad(file, &ex, st) != 0)
 		goto return_failure;
 
-	if (fseek(file, ex.data_offset, SEEK_SET) != 0)
+	if (fseek(file, (long)ex.data_offset, SEEK_SET) != 0)
 	{
 		StatusSet(st, "SampleCreate", STATUS_UNEXPECTED_EOF, "at data seek");
-		goto return_failure;
-	}
-
-	if (ex.format == SOUND_F64)
-	{
-		StatusSet(st, "SampleCreate", STATUS_UNSUPPORTED_FEATURE, NULL);
 		goto return_failure;
 	}
 
@@ -325,67 +289,70 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct St
 	}
 
 	// Reformat (we use float everywhere)
-	size_t reformat_size = ex.length * Min(ex.channels, mixer->options.channels) * sizeof(float);
 	float* reformat_dest = NULL;
-
-	if (BufferResize(&mixer->buffer, ex.uncompressed_size + reformat_size) == NULL)
 	{
-		StatusSet(st, "SampleCreate", STATUS_MEMORY_ERROR, NULL);
-		goto return_failure;
+		size_t reformat_size = ex.length * Min(ex.channels, (size_t)mixer->options.channels) * sizeof(float);
+		struct Status temp_st = {0};
+
+		if (BufferResize(&mixer->buffer, ex.uncompressed_size + reformat_size) == NULL)
+		{
+			StatusSet(st, "SampleCreate", STATUS_MEMORY_ERROR, NULL);
+			goto return_failure;
+		}
+
+		reformat_dest = (float*)(((uint8_t*)mixer->buffer.data) + ex.uncompressed_size);
+		memset(reformat_dest, 0, reformat_size);
+
+		SoundExRead(file, ex, ex.uncompressed_size, mixer->buffer.data, &temp_st);
+
+		if (temp_st.code != STATUS_SUCCESS)
+			goto return_failure;
+
+		sToCommonFormat(mixer->buffer.data, ex.uncompressed_size, ex.channels, ex.format, reformat_dest,
+		                Min(ex.channels, (size_t)mixer->options.channels));
 	}
 
-	reformat_dest = (float*)(((uint8_t*)mixer->buffer.data) + ex.uncompressed_size);
-	memset(reformat_dest, 0, reformat_size);
-
-	SoundExRead(file, ex, ex.uncompressed_size, mixer->buffer.data, st);
-
-	if (st->code != STATUS_SUCCESS)
-		goto return_failure;
-
-	sToCommonFormat(mixer->buffer.data, ex.uncompressed_size, ex.channels, ex.format, reformat_dest,
-	                (size_t)Min(ex.channels, mixer->options.channels));
-
-	// Developers, developers, developers
-	struct Sound devs = {0};
-	char str[128];
-
-	devs.frequency = ex.frequency;
-	devs.channels = (size_t)Min(ex.channels, mixer->options.channels);
-	devs.length = ex.length;
-	devs.size = devs.length * devs.channels * sizeof(float);
-	devs.format = SOUND_F32;
-	devs.data = reformat_dest;
-
-	sprintf(str, "%s.reformat", filename);
-	SoundSaveWav(&devs, str);
-
-#if 0
-	// Well, lets allocate everything needed
-	size_t total_size = sizeof(struct Sample) + (sizeof(float) * (size_t)mixer->options.channels);
-
-	if ((item = DictionaryAdd(mixer->samples, filename, NULL, total_size)) == NULL)
+	// Resample
 	{
-		StatusSet(st, "SampleCreate", STATUS_MEMORY_ERROR, NULL);
-		goto return_failure;
+		size_t resampled_length = ex.length * (size_t)mixer->options.frequency / ex.frequency;
+		size_t resampled_size = resampled_length * sizeof(float) * Min(ex.channels, (size_t)mixer->options.channels);
+
+		if ((item = DictionaryAdd(mixer->samples, filename, NULL, sizeof(struct Sample) + resampled_size)) == NULL)
+		{
+			StatusSet(st, "SampleCreate", STATUS_MEMORY_ERROR, NULL);
+			goto return_failure;
+		}
+
+		sample = item->data;
+		sample->item = item;
+		sample->length = resampled_length;
+		sample->channels = Min(ex.channels, (size_t)mixer->options.channels);
+
+		SRC_DATA resample_cfg = {
+			.data_in = reformat_dest,
+			.data_out = sample->data,
+			.input_frames = (long)ex.length,
+			.output_frames = (long)resampled_length,
+			.src_ratio = (double)mixer->options.frequency / (double)ex.frequency
+		};
+
+		// TODO, hardcoded SRC_LINEAR
+		if (src_simple(&resample_cfg, SRC_LINEAR, Min((int)ex.channels, mixer->options.channels)) != 0)
+		{
+			StatusSet(st, "SampleCreate", STATUS_ERROR, "src_simple() error");
+			goto return_failure;
+		}
 	}
-
-	sample = item->data;
-	sample->item = item;
-
-	sample->length = 1;
-
-	// Resampling
-	{
-	}
-#endif
 
 	// Bye!
 	fclose(file);
-	return file;
+	return sample;
 
 return_failure:
 	if (file != NULL)
 		fclose(file);
+	if (item != NULL)
+		DictionaryRemove(item);
 
 	return NULL;
 }
@@ -393,9 +360,25 @@ return_failure:
 
 /*-----------------------------
 
- PlayTone()
+ PlaySample()
 -----------------------------*/
-void PlayTone(struct Mixer* mixer, float volume, float frequency, int duration)
+inline void PlayFile(struct Mixer* mixer, float volume, const char* filename)
+{
+	struct DictionaryItem* item = DictionaryGet(mixer->samples, filename);
+	struct Sample* sample = NULL;
+
+	if (item != NULL)
+		PlaySample(mixer, volume, (struct Sample*)item->data);
+	else
+	{
+		printf("Creating sample for '%s'...\n", filename);
+
+		if ((sample = SampleCreate(mixer, filename, NULL)) != NULL)
+			PlaySample(mixer, volume, sample);
+	}
+}
+
+void PlaySample(struct Mixer* mixer, float volume, struct Sample* sample)
 {
 	struct ToPlay* space = NULL;
 
@@ -421,7 +404,7 @@ void PlayTone(struct Mixer* mixer, float volume, float frequency, int duration)
 			space = &mixer->playlist[i];
 		}
 
-		printf("Play at %zu%s\n", i, (ref_i == PLAY_LEN) ? " (r)" : "");
+		// printf("Play at %zu%s\n", i, (ref_i == PLAY_LEN) ? " (r)" : "");
 		mixer->last_index = (i + 1);
 	}
 
@@ -429,12 +412,8 @@ void PlayTone(struct Mixer* mixer, float volume, float frequency, int duration)
 	space->active = false;
 
 	space->cursor = 0;
-	space->sample = NULL;
-	space->is_synth = true;
-
+	space->sample = sample;
 	space->volume = volume;
-	space->synth.length = ((size_t)duration * (size_t)mixer->options.frequency) / 1000;
-	space->synth.frequency = frequency;
 
 	space->active = true;
 }
