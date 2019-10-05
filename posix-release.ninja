@@ -1,5 +1,7 @@
 
-cflags = `pkg-config --cflags glfw3 glesv2 portaudio-2.0` -O3 -flto -mtune=generic -I./source/lib-japan/include
+cflags = `pkg-config --cflags glfw3 glesv2 portaudio-2.0` -O3 -flto -mtune=generic $
+-I./source/lib-japan/include -I./source/lib-samplerate/src
+
 lflags = `pkg-config --libs glfw3 glesv2 portaudio-2.0` -lm
 
 rule generate

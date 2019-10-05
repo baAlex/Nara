@@ -35,8 +35,10 @@ SOFTWARE.
 #include <string.h>
 #include <time.h>
 
+#include "buffer.h"
 #include "dictionary.h"
 #include "mixer.h"
+#include "samplerate.h"
 #include "utilities.h"
 
 #define PLAY_LEN 8
@@ -75,6 +77,7 @@ struct Mixer
 	PaStream* stream;
 	struct MixerOptions options;
 	struct Dictionary* samples;
+	struct Buffer buffer;
 
 	struct ToPlay playlist[PLAY_LEN];
 	struct timespec playlist_update;
@@ -159,6 +162,55 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 
 /*-----------------------------
 
+ sToCommonFormat
+-----------------------------*/
+static void sToCommonFormat(const void* in, size_t in_size, size_t in_channels, enum SoundFormat in_format, float* out,
+                            size_t out_channels)
+{
+	union {
+		const void* raw;
+		int8_t* i8;
+		int16_t* i16;
+		int32_t* i32;
+		float* f32;
+		double* f64;
+	} org;
+
+	org.raw = in;
+	float mix;
+
+	// Cycle in frame steps
+	for (size_t bytes_read = 0; bytes_read < in_size; bytes_read += (SoundBps(in_format) * in_channels))
+	{
+		// Re format (now cycling though samples)
+		for (size_t c = 0; c < in_channels; c++)
+		{
+			switch (in_format)
+			{
+			case SOUND_I8: mix = ((float)org.i8[c]) / (float)INT8_MAX; break;
+			case SOUND_I16: mix = ((float)org.i16[c]) / (float)INT16_MAX; break;
+			case SOUND_I32: mix = ((float)org.i32[c]) / (float)INT32_MAX; break;
+			case SOUND_F32: mix = org.f32[c]; break;
+			case SOUND_F64: mix = (float)org.f64[c];
+			}
+
+			// Mix, this only works with stereo and mono.
+			// Different files can map channels in their own way.
+			out[c % out_channels] += mix;
+
+			if (c >= out_channels)
+				out[c % out_channels] /= 2.0f;
+		}
+
+		// Next
+		org.i8 += (SoundBps(in_format) * in_channels);
+		out += out_channels;
+	}
+}
+
+
+/*-----------------------------
+
  MixerCreate()
 -----------------------------*/
 struct Mixer* MixerCreate(struct MixerOptions options, struct Status* st)
@@ -219,6 +271,7 @@ inline void MixerDelete(struct Mixer* mixer)
 	Pa_Terminate();
 
 	DictionaryDelete(mixer->samples);
+	BufferClean(&mixer->buffer);
 	free(mixer);
 }
 
@@ -242,9 +295,7 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct St
 	if (item != NULL)
 		return item->data;
 
-	// Well, lets allocate everything needed
-	size_t total_size = sizeof(struct Sample) + (sizeof(float) * (size_t)mixer->options.channels);
-
+	// Open
 	if ((file = fopen(filename, "rb")) == NULL)
 	{
 		StatusSet(st, "SampleCreate", STATUS_IO_ERROR, NULL);
@@ -253,6 +304,64 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct St
 
 	if (SoundExLoad(file, &ex, st) != 0)
 		goto return_failure;
+
+	if (fseek(file, ex.data_offset, SEEK_SET) != 0)
+	{
+		StatusSet(st, "SampleCreate", STATUS_UNEXPECTED_EOF, "at data seek");
+		goto return_failure;
+	}
+
+	if (ex.format == SOUND_F64)
+	{
+		StatusSet(st, "SampleCreate", STATUS_UNSUPPORTED_FEATURE, NULL);
+		goto return_failure;
+	}
+
+	if (ex.uncompressed_size > (10 * 1024 * 1024))
+	{
+		StatusSet(st, "SampleCreate", STATUS_UNSUPPORTED_FEATURE,
+		          "The dev is lazy, only files small than 10mb supported");
+		goto return_failure;
+	}
+
+	// Reformat (we use float everywhere)
+	size_t reformat_size = ex.length * Min(ex.channels, mixer->options.channels) * sizeof(float);
+	float* reformat_dest = NULL;
+
+	if (BufferResize(&mixer->buffer, ex.uncompressed_size + reformat_size) == NULL)
+	{
+		StatusSet(st, "SampleCreate", STATUS_MEMORY_ERROR, NULL);
+		goto return_failure;
+	}
+
+	reformat_dest = (float*)(((uint8_t*)mixer->buffer.data) + ex.uncompressed_size);
+	memset(reformat_dest, 0, reformat_size);
+
+	SoundExRead(file, ex, ex.uncompressed_size, mixer->buffer.data, st);
+
+	if (st->code != STATUS_SUCCESS)
+		goto return_failure;
+
+	sToCommonFormat(mixer->buffer.data, ex.uncompressed_size, ex.channels, ex.format, reformat_dest,
+	                (size_t)Min(ex.channels, mixer->options.channels));
+
+	// Developers, developers, developers
+	struct Sound devs = {0};
+	char str[128];
+
+	devs.frequency = ex.frequency;
+	devs.channels = (size_t)Min(ex.channels, mixer->options.channels);
+	devs.length = ex.length;
+	devs.size = devs.length * devs.channels * sizeof(float);
+	devs.format = SOUND_F32;
+	devs.data = reformat_dest;
+
+	sprintf(str, "%s.reformat", filename);
+	SoundSaveWav(&devs, str);
+
+#if 0
+	// Well, lets allocate everything needed
+	size_t total_size = sizeof(struct Sample) + (sizeof(float) * (size_t)mixer->options.channels);
 
 	if ((item = DictionaryAdd(mixer->samples, filename, NULL, total_size)) == NULL)
 	{
@@ -268,10 +377,11 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct St
 	// Resampling
 	{
 	}
+#endif
 
 	// Bye!
 	fclose(file);
-	return sample;
+	return file;
 
 return_failure:
 	if (file != NULL)
