@@ -48,6 +48,9 @@ struct Sample
 {
 	struct DictionaryItem* item;
 
+	int references;
+	bool to_delete;
+
 	size_t length;
 	size_t channels;
 	float data[];
@@ -66,19 +69,34 @@ struct Mixer
 {
 	PaStream* stream;
 	struct MixerOptions options;
-	struct Dictionary* samples;
 	struct Buffer buffer;
 
-	struct ToPlay playlist[PLAY_LEN];
-	struct timespec playlist_update;
+	struct Dictionary* samples;
+	size_t samples_no;
+	struct Buffer marked_samples; // To free them
 
+	struct ToPlay playlist[PLAY_LEN];
 	size_t last_index;
 };
 
 
 /*-----------------------------
 
- sCallback
+ sFreeMarkedSamples()
+-----------------------------*/
+static void sFreeMarkedSamples(struct Mixer* mixer)
+{
+	for (size_t i = 0; i < mixer->samples_no; i++)
+	{
+		if (((struct DictionaryItem**)mixer->marked_samples.data)[i] != NULL)
+			DictionaryRemove(((struct DictionaryItem**)mixer->marked_samples.data)[i]);
+	}
+}
+
+
+/*-----------------------------
+
+ sCallback()
 -----------------------------*/
 static int sCallback(const void* raw_input, void* raw_output, unsigned long frames_no,
                      const PaStreamCallbackTimeInfo* time, PaStreamCallbackFlags status, void* raw_mixer)
@@ -110,8 +128,24 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 			for (size_t ch = 0; ch < channels; ch++)
 				output[i + ch] += (data[ch % mixer->playlist[pl].sample->channels] * mixer->playlist[pl].volume);
 
-			if ((mixer->playlist[pl].cursor += 1) > mixer->playlist[pl].sample->length)
+			if ((mixer->playlist[pl].cursor += 1) >= mixer->playlist[pl].sample->length)
+			{
 				mixer->playlist[pl].active = false;
+				mixer->playlist[pl].sample->references -= 1;
+
+				// Mark sample as deleted if there are no further use
+				if (mixer->playlist[pl].sample->to_delete == true && mixer->playlist[pl].sample->references <= 0)
+				{
+					struct DictionaryItem* item = mixer->playlist[pl].sample->item;
+					DictionaryDetach(item);
+
+					for (size_t z = 0; z < mixer->samples_no; z++)
+					{
+						if (((struct DictionaryItem**)mixer->marked_samples.data)[z] == NULL)
+							((struct DictionaryItem**)mixer->marked_samples.data)[z] = item;
+					}
+				}
+			}
 		}
 
 		// Global volume
@@ -132,7 +166,7 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 
 /*-----------------------------
 
- sToCommonFormat
+ sToCommonFormat()
 -----------------------------*/
 static void sToCommonFormat(const void* in, size_t in_size, size_t in_channels, enum SoundFormat in_format, float* out,
                             size_t out_channels)
@@ -186,16 +220,17 @@ static void sToCommonFormat(const void* in, size_t in_size, size_t in_channels, 
 struct Mixer* MixerCreate(struct MixerOptions options, struct Status* st)
 {
 	struct Mixer* mixer = NULL;
+	PaError errcode = paNoError;
 
 	StatusSet(st, "MixerCreate", STATUS_SUCCESS, NULL);
 	printf("- Lib-Portaudio: %s\n", (Pa_GetVersionInfo() != NULL) ? Pa_GetVersionInfo()->versionText : "");
 
 	// Initialization
-	if ((mixer = calloc(1, sizeof(struct Mixer))) == NULL)
+	if ((mixer = calloc(1, sizeof(struct Mixer))) == NULL || (mixer->samples = DictionaryCreate(NULL)) == NULL)
+	{
+		StatusSet(st, "MixerCreate", STATUS_MEMORY_ERROR, NULL);
 		return NULL;
-
-	if ((mixer->samples = DictionaryCreate(NULL)) == NULL)
-		goto return_failure;
+	}
 
 	options.channels = Clamp(options.channels, 1, 2);
 	options.frequency = Clamp(options.frequency, 6000, 48000);
@@ -203,21 +238,25 @@ struct Mixer* MixerCreate(struct MixerOptions options, struct Status* st)
 
 	memcpy(&mixer->options, &options, sizeof(struct MixerOptions));
 
-	if (Pa_Initialize() != paNoError)
+	if ((errcode = Pa_Initialize()) != paNoError)
 	{
-		StatusSet(st, "MixerCreate", STATUS_ERROR, "Initialiting Portaudio");
+		StatusSet(st, "MixerCreate", STATUS_ERROR, "Initialiting Portaudio: \"%s\"", Pa_GetErrorText(errcode));
 		goto return_failure;
 	}
 
 	// Create stream
-	if (Pa_OpenDefaultStream(&mixer->stream, 0, options.channels, paFloat32, (double)options.frequency,
-	                         paFramesPerBufferUnspecified, sCallback, mixer) != paNoError)
+	if ((errcode = Pa_OpenDefaultStream(&mixer->stream, 0, options.channels, paFloat32, (double)options.frequency,
+	                                    paFramesPerBufferUnspecified, sCallback, mixer)) != paNoError)
 	{
-		StatusSet(st, "MixerCreate", STATUS_ERROR, "Opening stream");
+		StatusSet(st, "MixerCreate", STATUS_ERROR, "Opening stream: \"%s\"", Pa_GetErrorText(errcode));
 		goto return_failure;
 	}
 
-	Pa_StartStream(mixer->stream);
+	if ((errcode = Pa_StartStream(mixer->stream)) != paNoError)
+	{
+		StatusSet(st, "MixerCreate", STATUS_ERROR, "Starting stream: \"%s\"", Pa_GetErrorText(errcode));
+		goto return_failure;
+	}
 
 	// Bye!
 	printf("\n");
@@ -235,14 +274,18 @@ return_failure:
 -----------------------------*/
 inline void MixerDelete(struct Mixer* mixer)
 {
-	if (mixer->stream != NULL)
-		Pa_StopStream(mixer->stream);
+	if (mixer != NULL)
+	{
+		if (mixer->stream != NULL)
+			Pa_StopStream(mixer->stream);
 
-	Pa_Terminate();
+		Pa_Terminate();
 
-	DictionaryDelete(mixer->samples);
-	BufferClean(&mixer->buffer);
-	free(mixer);
+		DictionaryDelete(mixer->samples);
+		BufferClean(&mixer->buffer);
+		sFreeMarkedSamples(mixer);
+		free(mixer);
+	}
 }
 
 
@@ -258,6 +301,7 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct St
 	FILE* file = NULL;
 
 	StatusSet(st, "SampleCreate", STATUS_SUCCESS, NULL);
+	sFreeMarkedSamples(mixer);
 
 	// Alredy exists?
 	item = DictionaryGet(mixer->samples, filename);
@@ -268,7 +312,7 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct St
 	// Open
 	if ((file = fopen(filename, "rb")) == NULL)
 	{
-		StatusSet(st, "SampleCreate", STATUS_IO_ERROR, NULL);
+		StatusSet(st, "SampleCreate", STATUS_IO_ERROR, "File: \"%s\"", filename);
 		return NULL;
 	}
 
@@ -277,14 +321,14 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct St
 
 	if (fseek(file, (long)ex.data_offset, SEEK_SET) != 0)
 	{
-		StatusSet(st, "SampleCreate", STATUS_UNEXPECTED_EOF, "at data seek");
+		StatusSet(st, "SampleCreate", STATUS_UNEXPECTED_EOF, "File: \"%s\"", filename);
 		goto return_failure;
 	}
 
 	if (ex.uncompressed_size > (10 * 1024 * 1024))
 	{
-		StatusSet(st, "SampleCreate", STATUS_UNSUPPORTED_FEATURE,
-		          "The dev is lazy, only files small than 10mb supported");
+		StatusSet(st, "SampleCreate", STATUS_UNSUPPORTED_FEATURE, "Only files small than 10 Mb supported. File: \"%s\"",
+		          filename);
 		goto return_failure;
 	}
 
@@ -296,7 +340,7 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct St
 
 		if (BufferResize(&mixer->buffer, ex.uncompressed_size + reformat_size) == NULL)
 		{
-			StatusSet(st, "SampleCreate", STATUS_MEMORY_ERROR, NULL);
+			StatusSet(st, "SampleCreate", STATUS_MEMORY_ERROR, "File: \"%s\"", filename);
 			goto return_failure;
 		}
 
@@ -306,7 +350,12 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct St
 		SoundExRead(file, ex, ex.uncompressed_size, mixer->buffer.data, &temp_st);
 
 		if (temp_st.code != STATUS_SUCCESS)
+		{
+			if (st != NULL)
+				memcpy(st, &temp_st, sizeof(struct Status));
+
 			goto return_failure;
+		}
 
 		sToCommonFormat(mixer->buffer.data, ex.uncompressed_size, ex.channels, ex.format, reformat_dest,
 		                Min(ex.channels, (size_t)mixer->options.channels));
@@ -314,12 +363,12 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct St
 
 	// Resample
 	{
-		size_t resampled_length = ex.length * (size_t)mixer->options.frequency / ex.frequency;
+		size_t resampled_length = ex.length * (size_t)ceil((double)mixer->options.frequency / (double)ex.frequency);
 		size_t resampled_size = resampled_length * sizeof(float) * Min(ex.channels, (size_t)mixer->options.channels);
 
 		if ((item = DictionaryAdd(mixer->samples, filename, NULL, sizeof(struct Sample) + resampled_size)) == NULL)
 		{
-			StatusSet(st, "SampleCreate", STATUS_MEMORY_ERROR, NULL);
+			StatusSet(st, "SampleCreate", STATUS_MEMORY_ERROR, "File: \"%s\"", filename);
 			goto return_failure;
 		}
 
@@ -327,21 +376,32 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct St
 		sample->item = item;
 		sample->length = resampled_length;
 		sample->channels = Min(ex.channels, (size_t)mixer->options.channels);
+		sample->references = 0;
+		sample->to_delete = false;
 
-		SRC_DATA resample_cfg = {
-			.data_in = reformat_dest,
-			.data_out = sample->data,
-			.input_frames = (long)ex.length,
-			.output_frames = (long)resampled_length,
-			.src_ratio = (double)mixer->options.frequency / (double)ex.frequency
-		};
+		memset(sample->data, 0, resampled_size);
+
+		SRC_DATA resample_cfg = {.data_in = reformat_dest,
+		                         .data_out = sample->data,
+		                         .input_frames = (long)ex.length,
+		                         .output_frames = (long)resampled_length,
+		                         .src_ratio = (double)mixer->options.frequency / (double)ex.frequency};
 
 		// TODO, hardcoded SRC_LINEAR
 		if (src_simple(&resample_cfg, SRC_LINEAR, Min((int)ex.channels, mixer->options.channels)) != 0)
 		{
-			StatusSet(st, "SampleCreate", STATUS_ERROR, "src_simple() error");
+			StatusSet(st, "SampleCreate", STATUS_ERROR, "src_simple() error. File: \"%s\"", filename);
 			goto return_failure;
 		}
+	}
+
+	// Resize list to keep deleted samples
+	mixer->samples_no += 1;
+
+	if (BufferResizeZero(&mixer->marked_samples, sizeof(void*) * mixer->samples_no) == NULL)
+	{
+		StatusSet(st, "SampleCreate", STATUS_MEMORY_ERROR, "File: \"%s\"", filename);
+		goto return_failure;
 	}
 
 	// Bye!
@@ -355,6 +415,16 @@ return_failure:
 		DictionaryRemove(item);
 
 	return NULL;
+}
+
+
+/*-----------------------------
+
+ SampleDelete()
+-----------------------------*/
+inline void SampleDelete(struct Sample* sample)
+{
+	sample->to_delete = true;
 }
 
 
@@ -409,11 +479,11 @@ void PlaySample(struct Mixer* mixer, float volume, struct Sample* sample)
 	}
 
 	// Yay
-	space->active = false;
+	sample->references += 1;
 
+	space->active = false;
 	space->cursor = 0;
 	space->sample = sample;
 	space->volume = volume;
-
 	space->active = true;
 }
