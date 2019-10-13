@@ -187,6 +187,9 @@ int main()
 	bool x_release = false;
 	bool y_release = false;
 
+	int draw_calls = 0;
+	char title[128];
+
 	while (1)
 	{
 		TimerStep(&s_timer);
@@ -215,7 +218,15 @@ int main()
 		// Render
 		SetProgram(s_context, &terrain_program);
 		SetDiffuse(s_context, &terrain_diffuse);
-		NTerrainDraw(terrain, camera_entity->co.position);
+
+		draw_calls = NTerrainDraw(terrain, camera_entity->co.position);
+
+		if (s_timer.one_second == true)
+		{
+			sprintf(title, "Nara v0.1 | dcalls: %i, fps: %i (~%.02f)", draw_calls, s_timer.frames_per_second,
+			        s_timer.miliseconds_betwen);
+			SetTitle(s_context, title);
+		}
 
 		// Testing, testing
 		if (sSingleClick(s_events.a, &a_release) == true)

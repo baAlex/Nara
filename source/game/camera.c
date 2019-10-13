@@ -110,6 +110,22 @@ int GameCameraThink(void* blob, const struct EntityInput* input, struct EntityCo
 		camera->position = Vector3Add(camera->position, temp_v);
 	}
 
+	// Down
+	if (fabs(input->left_analog.t) > ANALOG_DEAD_ZONE)
+	{
+		temp_v = Vector3Set(0.0f, 0.0f, sinf(DegToRad(camera->angle.x)));
+		temp_v = Vector3Scale(temp_v, input->left_analog.t * MOVEMENT_SPEED * input->delta);
+		camera->position = Vector3Add(camera->position, temp_v);
+	}
+
+	// Up
+	if (fabs(input->right_analog.t) > ANALOG_DEAD_ZONE)
+	{
+		temp_v = Vector3Set(0.0f, 0.0f, -sinf(DegToRad(camera->angle.x)));
+		temp_v = Vector3Scale(temp_v, input->right_analog.t * MOVEMENT_SPEED * input->delta);
+		camera->position = Vector3Add(camera->position, temp_v);
+	}
+
 	// Look up, down
 	if (fabs(input->right_analog.v) > ANALOG_DEAD_ZONE)
 	{

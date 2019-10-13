@@ -593,13 +593,15 @@ again:
 
  NTerrainDraw()
 -----------------------------*/
-void NTerrainDraw(struct NTerrain* terrain, struct Vector3 camera_position)
+int NTerrainDraw(struct NTerrain* terrain, struct Vector3 camera_position)
 {
 	struct TreeState s = {.start = terrain->root};
 
 	struct NTerrainNode* node = NULL;
 	struct NTerrainNode* last_with_vertices = NULL;
 	struct NTerrainNode* temp = NULL;
+
+	int dcalls = 0;
 
 	while ((node = NTerrainIterate(&s, &terrain->buffer, &last_with_vertices, camera_position)) != NULL)
 	{
@@ -611,14 +613,18 @@ void NTerrainDraw(struct NTerrain* terrain, struct Vector3 camera_position)
 			glBindBuffer(GL_ARRAY_BUFFER, last_with_vertices->vertices.glptr);
 			glVertexAttribPointer(ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), NULL);
 			glVertexAttribPointer(ATTRIBUTE_UV, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), (float*)NULL + 3);
+			dcalls += 3;
 #endif
 		}
 
 #ifndef TEST
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, node->index.glptr);
 		glDrawElements(GL_TRIANGLES, (GLsizei)node->index.length, GL_UNSIGNED_SHORT, NULL);
+		dcalls += 2;
 #endif
 	}
+
+	return dcalls;
 }
 
 

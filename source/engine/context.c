@@ -87,14 +87,17 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	}
 
 	glfwMakeContextCurrent(context->window);
-	// glfwSwapInterval(0);
+	glfwSwapInterval(0); // TODO: hardcoded
 
 	glfwSetWindowSizeLimits(context->window, options.window_min_size.x, options.window_min_size.y, GLFW_DONT_CARE,
 	                        GLFW_DONT_CARE);
 
 	glfwSetWindowUserPointer(context->window, context);
+
 	glfwSetFramebufferSizeCallback(context->window, sResizeCallback);
 	glfwSetKeyCallback(context->window, KeyboardCallback);
+	glfwSetCursorPosCallback(context->window, MousePositionCallback);
+	glfwSetMouseButtonCallback(context->window, MouseClickCallback);
 
 	if (context->options.fullscreen == true)
 	{
@@ -178,6 +181,16 @@ void ContextUpdate(struct Context* context, struct ContextEvents* out_events)
 		out_events->resized = context->window_resized;
 		out_events->close = (glfwWindowShouldClose(context->window) == GLFW_TRUE) ? true : false;
 	}
+}
+
+
+/*-----------------------------
+
+ SetTitle()
+-----------------------------*/
+inline void SetTitle(struct Context* context, const char* title)
+{
+	glfwSetWindowTitle(context->window, title);
 }
 
 
