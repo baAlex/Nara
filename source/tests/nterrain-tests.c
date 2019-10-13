@@ -128,44 +128,6 @@ void sDrawTerrainLayers(struct NTerrain* terrain, const char* filename)
 
 /*-----------------------------
 
- sPrintInfo()
------------------------------*/
-static void sPrintInfo(const struct NTerrain* terrain)
-{
-	struct TreeState s = {.start = terrain->root};
-	struct Buffer buffer = {0};
-	struct Tree* item = NULL;
-	struct NTerrainNode* node = NULL;
-
-	size_t prev_depth = 0;
-
-	printf("Terrain 0x%p:\n", (void*)terrain);
-	printf(" - Dimension: %f\n", terrain->dimension);
-	printf(" - Minimum tile dimension: %f\n", terrain->min_tile_dimension);
-	printf(" - Minimum pattern dimension: %f\n", terrain->min_pattern_dimension);
-	printf(" - Steps: %lu\n", terrain->steps);
-	printf(" - Tiles: %lu\n", terrain->tiles_no);
-	printf(" - Vertices buffers: %lu\n", terrain->vertices_buffers_no);
-
-	while ((item = TreeIterate(&s, &buffer)) != NULL)
-	{
-		node = item->data;
-
-		if (prev_depth < s.depth || s.depth == 0)
-		{
-			printf(" # Step %lu:\n", s.depth);
-			printf("    - Dimension: %f\n", (node->max.x - node->min.x));
-			printf("    - Pattern dimension: %f\n", node->pattern_dimension);
-			printf("    - Vertices type: %i\n", node->vertices_type);
-
-			prev_depth = s.depth;
-		}
-	}
-}
-
-
-/*-----------------------------
-
  TestMesures1()
 -----------------------------*/
 void TestMesures1(void** cmocka_state)
@@ -187,7 +149,7 @@ void TestMesures1(void** cmocka_state)
 		assert_int_equal(st.code, STATUS_SUCCESS);
 	}
 
-	sPrintInfo(terrain);
+	NTerrainPrintInfo(terrain);
 
 	// Take a calculator
 	{
@@ -255,7 +217,7 @@ void TestMesures2(void** cmocka_state)
 		assert_int_equal(st.code, STATUS_SUCCESS);
 	}
 
-	sPrintInfo(terrain);
+	NTerrainPrintInfo(terrain);
 
 	// Take a calculator
 	{

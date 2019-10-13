@@ -34,6 +34,13 @@ SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 
+// TODO: while having differenced max, min Z values for every node sounds
+// as a good idea, it actually made the prediction on where the LOD
+// quality changes a lot more difficult (now is necessary to take in account
+// the elevation on that precise node). And fill gaps really need to
+// anticipate where the quality changes. Having a "fake" z values shared
+// across all the terrain is going to be a lot better.
+
 
 static inline float sDimension(const struct NTerrainNode* node)
 {
@@ -50,8 +57,19 @@ static inline struct Vector3 sMiddle(const struct NTerrainNode* node)
 	return (struct Vector3){
 	    .x = node->min.x + (node->max.x - node->min.x) / 2.0f,
 	    .y = node->min.y + (node->max.y - node->min.y) / 2.0f,
-	    .z = node->min.z + (node->max.z - node->min.z) / 2.0f, // TODO: is not generated in any step
+	    .z = node->min.z + (node->max.z - node->min.z) / 2.0f,
 	};
+}
+
+static inline bool sBoxSphereCollition(struct Vector3 sphere_origin, float sphere_radious, struct Vector3 box_min,
+                                       struct Vector3 box_max)
+{
+	if (sphere_origin.x > (box_min.x - sphere_radious) && sphere_origin.x < (box_max.x + sphere_radious) &&
+	    sphere_origin.y > (box_min.y - sphere_radious) && sphere_origin.y < (box_max.y + sphere_radious) &&
+	    sphere_origin.z > (box_min.z - sphere_radious) && sphere_origin.z < (box_max.z + sphere_radious))
+		return true;
+
+	return false;
 }
 
 
@@ -201,8 +219,12 @@ static struct Index sGenerateIndex(struct Buffer* buffer, const struct NTerrainN
 -----------------------------*/
 static struct Vertices sGenerateVertices(struct Buffer* buffer, const struct NTerrainNode* node,
                                          float pattern_dimension, float terrain_dimension,
-                                         const struct Image* heightmap, float elevation)
+                                         const struct Image* heightmap, float elevation, float* out_min_z,
+                                         float* out_max_z)
 {
+	float min_z = 0.0f;
+	float max_z = 0.0f;
+
 	// Generation on a temporary buffer
 	size_t const patterns_no = sSquareColumns(sDimension(node), pattern_dimension);
 
@@ -223,7 +245,15 @@ static struct Vertices sGenerateVertices(struct Buffer* buffer, const struct NTe
 				temp_data[col + (patterns_no + 1) * row].pos.y = node->min.y + (float)row * pattern_dimension;
 
 				if (heightmap != NULL)
+				{
 					temp_data[col + (patterns_no + 1) * row].pos.z = sPixelAsFloat(heightmap, texture_step) * elevation;
+
+					if (temp_data[col + (patterns_no + 1) * row].pos.z > max_z)
+						max_z = temp_data[col + (patterns_no + 1) * row].pos.z;
+
+					if (temp_data[col + (patterns_no + 1) * row].pos.z < min_z)
+						min_z = temp_data[col + (patterns_no + 1) * row].pos.z;
+				}
 				else
 					temp_data[col + (patterns_no + 1) * row].pos.z = 0.0;
 
@@ -234,6 +264,12 @@ static struct Vertices sGenerateVertices(struct Buffer* buffer, const struct NTe
 			texture_step.y += pattern_dimension / terrain_dimension;
 			texture_step.x = node->min.x / terrain_dimension;
 		}
+	}
+
+	if (out_min_z != NULL && out_max_z != NULL)
+	{
+		*out_min_z = min_z;
+		*out_max_z = max_z;
 	}
 
 	// Copy to the final index
@@ -262,8 +298,8 @@ static void sSubdivideTile(struct Tree* item, float min_tile_dimension)
 		new_item = TreeCreate(item, NULL, sizeof(struct NTerrainNode));
 		new_node = new_item->data;
 
-		new_node->min.z = 0.0; // TODO
-		new_node->max.z = 0.0;
+		new_node->min.z = 0.0; // Is impossible to do in this step, as this function
+		new_node->max.z = 0.0; // did not take the heightmap in account
 
 		switch (i)
 		{
@@ -399,6 +435,9 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 			node->vertices_type = INHERITED_FROM_PARENT;
 			node->index = sGenerateIndex(&terrain->buffer, node, last_parent->min, last_parent->max,
 			                             terrain->min_pattern_dimension);
+
+			node->min.z = last_parent->min.z;
+			node->max.z = last_parent->max.z;
 		}
 		else
 		{
@@ -410,8 +449,9 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 				terrain->vertices_buffers_no++;
 
 				node->vertices_type = SHARED_WITH_CHILDRENS;
-				node->vertices = sGenerateVertices(&terrain->buffer, node, terrain->min_pattern_dimension,
-				                                   terrain->dimension, heightmap, elevation);
+				node->vertices =
+				    sGenerateVertices(&terrain->buffer, node, terrain->min_pattern_dimension, terrain->dimension,
+				                      heightmap, elevation, &node->min.z, &node->max.z);
 				node->index =
 				    sGenerateIndex(&terrain->buffer, node, node->min, node->max, terrain->min_pattern_dimension);
 			}
@@ -425,7 +465,7 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 
 				node->vertices_type = OWN_VERTICES;
 				node->vertices = sGenerateVertices(&terrain->buffer, node, node->pattern_dimension, terrain->dimension,
-				                                   heightmap, elevation);
+				                                   heightmap, elevation, &node->min.z, &node->max.z);
 				node->index = sGenerateIndex(&terrain->buffer, node, node->min, node->max, node->pattern_dimension);
 			}
 		}
@@ -477,6 +517,7 @@ struct NTerrainNode* NTerrainIterate(struct TreeState* state, struct Buffer* buf
                                      struct NTerrainNode** out_with_vertices, struct Vector3 camera_position)
 {
 	struct Tree** future_parent_heap = NULL;
+	struct NTerrainNode* actual_node = NULL;
 
 	if (state->start != NULL)
 	{
@@ -494,19 +535,21 @@ again:
 		return NULL;
 
 	state->depth = state->future_depth;
-	state->future_return = NULL;
+	state->future_return = NULL; // This one is resolved in next conditionals
 
-	if (((struct NTerrainNode*)state->actual->data)->vertices_type == SHARED_WITH_CHILDRENS ||
-	    ((struct NTerrainNode*)state->actual->data)->vertices_type == OWN_VERTICES)
-		*out_with_vertices = state->actual->data;
+	actual_node = state->actual->data;
+
+	if (actual_node->vertices_type == SHARED_WITH_CHILDRENS || actual_node->vertices_type == OWN_VERTICES)
+		*out_with_vertices = actual_node;
 
 	// Future values
 	{
 		// Go in? (childrens)
-		// TODO, the 1.5 can be configurable
-		// TODO, calculate as an circle is too lazy
+		float distance_factor = sDimension(actual_node); // TODO: frustum and max distance here!
+		// float distance_factor = sDimension(actual_node) * 4.0f; // Increased distance quality (configurable)
+
 		if (state->actual->children != NULL &&
-		    Vector3Distance(sMiddle(state->actual->data), camera_position) <= sDimension(state->actual->data) * 1.5)
+		    sBoxSphereCollition(camera_position, distance_factor, actual_node->min, actual_node->max) == true)
 		{
 			if (buffer->size < (state->depth + 1) * sizeof(void*))
 				if (BufferResize(buffer, (state->depth + 1) * sizeof(void*)) == NULL) // FIXME, Bug in LibJapan, the +1
@@ -542,7 +585,7 @@ again:
 		}
 	}
 
-	return state->actual->data;
+	return actual_node;
 }
 
 
@@ -575,5 +618,43 @@ void NTerrainDraw(struct NTerrain* terrain, struct Vector3 camera_position)
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, node->index.glptr);
 		glDrawElements(GL_TRIANGLES, (GLsizei)node->index.length, GL_UNSIGNED_SHORT, NULL);
 #endif
+	}
+}
+
+
+/*-----------------------------
+
+ NTerrainPrintInfo()
+-----------------------------*/
+void NTerrainPrintInfo(const struct NTerrain* terrain)
+{
+	struct TreeState s = {.start = terrain->root};
+	struct Buffer buffer = {0};
+	struct Tree* item = NULL;
+	struct NTerrainNode* node = NULL;
+
+	size_t prev_depth = 0;
+
+	printf("Terrain 0x%p:\n", (void*)terrain);
+	printf(" - Dimension: %f\n", terrain->dimension);
+	printf(" - Minimum tile dimension: %f\n", terrain->min_tile_dimension);
+	printf(" - Minimum pattern dimension: %f\n", terrain->min_pattern_dimension);
+	printf(" - Steps: %lu\n", terrain->steps);
+	printf(" - Tiles: %lu\n", terrain->tiles_no);
+	printf(" - Vertices buffers: %lu\n", terrain->vertices_buffers_no);
+
+	while ((item = TreeIterate(&s, &buffer)) != NULL)
+	{
+		node = item->data;
+
+		if (prev_depth < s.depth || s.depth == 0)
+		{
+			printf(" # Step %lu:\n", s.depth);
+			printf("    - Dimension: %f\n", (node->max.x - node->min.x));
+			printf("    - Pattern dimension: %f\n", node->pattern_dimension);
+			printf("    - Vertices type: %i\n", node->vertices_type);
+
+			prev_depth = s.depth;
+		}
 	}
 }

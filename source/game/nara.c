@@ -156,7 +156,7 @@ int main()
 
 	// Resources
 	{
-		if ((terrain = NTerrainCreate("./assets/heightmap.sgi", 75.0, 972.0, 18.0, 3, &st)) == NULL)
+		if ((terrain = NTerrainCreate("./assets/heightmap.sgi", 75.0, 972.0, 9.0, 2, &st)) == NULL)
 			goto return_failure;
 
 		if (ProgramInit(&terrain_program, (char*)g_terrain_vertex, (char*)g_terrain_fragment, &st) != 0)
@@ -179,13 +179,7 @@ int main()
 		sSetProjection((struct Vector2i){WINDOWS_WIDTH, WINDOWS_HEIGHT}, s_context);
 	}
 
-	printf("Terrain 0x%p:\n", (void*)terrain);
-	printf(" - Dimension: %0.4f\n", terrain->dimension);
-	printf(" - Minimum tile dimension: %0.4f\n", terrain->min_tile_dimension);
-	printf(" - Minimum pattern dimension: %0.4f\n", terrain->min_pattern_dimension);
-	printf(" - Steps: %lu\n", terrain->steps);
-	printf(" - Tiles: %lu\n", terrain->tiles_no);
-	printf(" - Vertices buffers: %lu\n", terrain->vertices_buffers_no);
+	NTerrainPrintInfo(terrain);
 
 	// Game loop
 	bool a_release = false;
