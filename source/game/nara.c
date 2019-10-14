@@ -156,7 +156,7 @@ int main()
 
 	// Resources
 	{
-		if ((terrain = NTerrainCreate("./assets/heightmap.sgi", 75.0, 972.0, 9.0, 2, &st)) == NULL)
+		if ((terrain = NTerrainCreate("./assets/heightmap.sgi", 75.0, 972.0, 36.0, 3, &st)) == NULL)
 			goto return_failure;
 
 		if (ProgramInit(&terrain_program, (char*)g_terrain_vertex, (char*)g_terrain_fragment, &st) != 0)
@@ -190,6 +190,8 @@ int main()
 	int draw_calls = 0;
 	char title[128];
 
+	Play2d(s_mixer, 0.7f, PLAY_LOOP, "./assets/ambient01.au");
+
 	while (1)
 	{
 		TimerStep(&s_timer);
@@ -219,7 +221,7 @@ int main()
 		SetProgram(s_context, &terrain_program);
 		SetDiffuse(s_context, &terrain_diffuse);
 
-		draw_calls = NTerrainDraw(terrain, camera_entity->co.position);
+		draw_calls = NTerrainDraw(terrain, 972.0f, camera_entity->co.position);
 
 		if (s_timer.one_second == true)
 		{
@@ -230,16 +232,16 @@ int main()
 
 		// Testing, testing
 		if (sSingleClick(s_events.a, &a_release) == true)
-			Play(s_mixer, 1.0f, "./assets/rz1-kick.wav");
+			Play2d(s_mixer, 1.0f, PLAY_NORMAL, "./assets/rz1-kick.wav");
 
 		if (sSingleClick(s_events.b, &b_release) == true)
-			Play(s_mixer, 1.0f, "./assets/rz1-snare.wav");
+			Play2d(s_mixer, 1.0f, PLAY_NORMAL, "./assets/rz1-snare.wav");
 
 		if (sSingleClick(s_events.x, &x_release) == true)
-			Play(s_mixer, 1.0f, "./assets/rz1-closed-hithat.wav");
+			Play2d(s_mixer, 1.0f, PLAY_NORMAL, "./assets/rz1-closed-hithat.wav");
 
 		if (sSingleClick(s_events.y, &y_release) == true)
-			Play(s_mixer, 1.0f, "./assets/rz1-clap.wav");
+			Play2d(s_mixer, 1.0f, PLAY_NORMAL, "./assets/rz1-clap.wav");
 
 		// Exit?
 		if (s_events.close == true)

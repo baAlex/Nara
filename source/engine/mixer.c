@@ -63,6 +63,8 @@ struct ToPlay
 
 	struct Sample* sample;
 	float volume;
+
+	enum PlayOptions options;
 };
 
 struct Mixer
@@ -130,6 +132,12 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 
 			if ((mixer->playlist[pl].cursor += 1) >= mixer->playlist[pl].sample->length)
 			{
+				if((mixer->playlist[pl].options & PLAY_LOOP) == PLAY_LOOP)
+				{
+					mixer->playlist[pl].cursor = 0;
+					continue;
+				}
+
 				mixer->playlist[pl].active = false;
 				mixer->playlist[pl].sample->references -= 1;
 
@@ -430,25 +438,25 @@ inline void SampleDelete(struct Sample* sample)
 
 /*-----------------------------
 
- PlaySample()
+ Play2d
 -----------------------------*/
-inline void PlayFile(struct Mixer* mixer, float volume, const char* filename)
+inline void Play2dFile(struct Mixer* mixer, float volume, enum PlayOptions options, const char* filename)
 {
 	struct DictionaryItem* item = DictionaryGet(mixer->samples, filename);
 	struct Sample* sample = NULL;
 
 	if (item != NULL)
-		PlaySample(mixer, volume, (struct Sample*)item->data);
+		Play2dSample(mixer, volume, options, (struct Sample*)item->data);
 	else
 	{
 		printf("Creating sample for '%s'...\n", filename);
 
 		if ((sample = SampleCreate(mixer, filename, NULL)) != NULL)
-			PlaySample(mixer, volume, sample);
+			Play2dSample(mixer, volume, options, sample);
 	}
 }
 
-void PlaySample(struct Mixer* mixer, float volume, struct Sample* sample)
+void Play2dSample(struct Mixer* mixer, float volume, enum PlayOptions options, struct Sample* sample)
 {
 	struct ToPlay* space = NULL;
 
@@ -482,8 +490,11 @@ void PlaySample(struct Mixer* mixer, float volume, struct Sample* sample)
 	sample->references += 1;
 
 	space->active = false;
+
 	space->cursor = 0;
+	space->options = options;
 	space->sample = sample;
 	space->volume = volume;
+
 	space->active = true;
 }

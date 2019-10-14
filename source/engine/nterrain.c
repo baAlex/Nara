@@ -64,6 +64,7 @@ static inline struct Vector3 sMiddle(const struct NTerrainNode* node)
 static inline bool sBoxSphereCollition(struct Vector3 sphere_origin, float sphere_radious, struct Vector3 box_min,
                                        struct Vector3 box_max)
 {
+	// TODO: I think that a box (rather than an sphere) is going to be better
 	if (sphere_origin.x > (box_min.x - sphere_radious) && sphere_origin.x < (box_max.x + sphere_radious) &&
 	    sphere_origin.y > (box_min.y - sphere_radious) && sphere_origin.y < (box_max.y + sphere_radious) &&
 	    sphere_origin.z > (box_min.z - sphere_radious) && sphere_origin.z < (box_max.z + sphere_radious))
@@ -545,7 +546,7 @@ again:
 	// Future values
 	{
 		// Go in? (childrens)
-		float distance_factor = sDimension(actual_node); // TODO: frustum and max distance here!
+		float distance_factor = sDimension(actual_node);
 		// float distance_factor = sDimension(actual_node) * 4.0f; // Increased distance quality (configurable)
 
 		if (state->actual->children != NULL &&
@@ -593,7 +594,7 @@ again:
 
  NTerrainDraw()
 -----------------------------*/
-int NTerrainDraw(struct NTerrain* terrain, struct Vector3 camera_position)
+int NTerrainDraw(struct NTerrain* terrain, float max_distance, struct Vector3 camera_position)
 {
 	struct TreeState s = {.start = terrain->root};
 
@@ -605,6 +606,9 @@ int NTerrainDraw(struct NTerrain* terrain, struct Vector3 camera_position)
 
 	while ((node = NTerrainIterate(&s, &terrain->buffer, &last_with_vertices, camera_position)) != NULL)
 	{
+		if(sBoxSphereCollition(camera_position, max_distance, node->min, node->max) == false)
+			continue;
+
 		if (temp != last_with_vertices)
 		{
 			temp = last_with_vertices;

@@ -54,7 +54,7 @@
 
 	struct NTerrainNode* NTerrainIterate(struct TreeState* state, struct Buffer* buffer,
 	                                     struct NTerrainNode** out_with_vertices, struct Vector3 camera_position);
-	int NTerrainDraw(struct NTerrain* terrain, struct Vector3 camera_position);
+	int NTerrainDraw(struct NTerrain* terrain, float max_distance, struct Vector3 camera_position);
 	void NTerrainPrintInfo(const struct NTerrain* terrain);
 
 #endif

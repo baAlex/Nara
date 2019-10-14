@@ -11,6 +11,12 @@
 	#include "status.h"
 	#include "sound.h"
 
+	enum PlayOptions
+	{
+		PLAY_NORMAL = 0,
+		PLAY_LOOP = 2
+	};
+
 	struct MixerOptions
 	{
 		int frequency; // 6000-48000 Hz
@@ -24,14 +30,14 @@
 	struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct Status* st);
 	void SampleDelete(struct Sample*);
 
-	void PlaySample(struct Mixer*, float volume, struct Sample*);
-	void PlayFile(struct Mixer*, float volume, const char* filename);
+	void Play2dSample(struct Mixer*, float volume, enum PlayOptions, struct Sample*);
+	void Play2dFile(struct Mixer*, float volume, enum PlayOptions, const char* filename);
 
-	#define Play(mixer, volume, obj) _Generic((obj), \
-		const char*: PlayFile, \
-		char*: PlayFile, \
-		const struct Sample*: PlaySample, \
-		default: PlaySample \
-	)(mixer, volume, obj)
+	#define Play2d(mixer, volume, options, obj) _Generic((obj), \
+		const char*: Play2dFile, \
+		char*: Play2dFile, \
+		const struct Sample*: Play2dSample, \
+		default: Play2dSample \
+	)(mixer, volume, options, obj)
 
 #endif
