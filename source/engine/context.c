@@ -72,7 +72,7 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 		goto return_failure;
 	}
 
-	// Create window
+	// Create window-context
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
@@ -87,6 +87,14 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	}
 
 	glfwMakeContextCurrent(context->window);
+
+	if(gladLoadGLES2Loader((GLADloadproc) glfwGetProcAddress) == 0) // After MakeContext()
+	{
+		StatusSet(st, "ContextCreate", STATUS_ERROR, "Initialiting GLAD");
+		goto return_failure;
+	}
+
+	// Callbacks and pretty things
 	glfwSwapInterval(0); // TODO: hardcoded
 
 	glfwSetWindowSizeLimits(context->window, options.window_min_size.x, options.window_min_size.y, GLFW_DONT_CARE,

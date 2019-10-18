@@ -3,30 +3,35 @@ Nara
 
 The terrain in the screenshots should work as an overworld for an action rpg, but is more a renderer that a videogame.
 
-Check implemented features and future work in the [projects tab](https://github.com/baAlex/Nara/projects/4). Any help is welcomed ⛰️📐️!.
+Check implemented features and future work in the [projects tab](https://github.com/baAlex/Nara/projects/). Any help is welcomed ⛰️📐️!.
 
 ![screenshot](./documentation/screenshot-terrain.jpg)
 ![screenshot](./documentation/screenshot-wire.jpg)
 
 
-Compilation
------------
-Runtime dependencies are:
+Dependencies
+------------
+At runtime Nara requires:
  - Portaudio
  - GLFW3
- - *An OpenGL ES2 implementation*
+ - *An OpenGL ES2 compatible implementation*
 
-Compilation dependencies:
+For compilation:
  - Python3
  - Pkg-config
  - Ninja
  - Git
 
-On Ubuntu (and most Posix variants) *Mesa* provide the OpenGL implementation, so you can install all them with:
+On Ubuntu (and most Posix variants) *Mesa* provide the OpenGL implementation, so you can install all dependencies with:
 ```
 sudo apt install libglfw3-dev portaudio19-dev libgles2-mesa-dev python3 pkg-config ninja-build git
 ```
 
+And don't forget the `git submodule` steps when cloning the repo.
+
+
+Compilation
+-----------
 To clone and compile the repository:
 ```
 git clone https://github.com/baAlex/Nara.git
@@ -41,6 +46,12 @@ Optionally you can compile a debug build with:
 ninja -f posix-debug.ninja
 ```
 
+
+Thanks to
+---------
+- @erikd (['libsamplerate'](https://github.com/erikd/libsamplerate) library)
+- @Dav1dde ([GLAD](https://github.com/Dav1dde/glad) loader)
+- And all contributors of [GLFW](https://github.com/glfw/glfw/graphs/contributors) and [Portaudio](http://portaudio.com/people.htmlm)
 
 License
 -------

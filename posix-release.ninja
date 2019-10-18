@@ -1,8 +1,8 @@
 
-cflags = `pkg-config --cflags glfw3 glesv2 portaudio-2.0` -O3 -flto -mtune=generic $
+cflags = `pkg-config --cflags glfw3 portaudio-2.0` -O3 -flto -mtune=generic $
 -I./source/lib-japan/include -I./source/lib-samplerate/src
 
-lflags = `pkg-config --libs glfw3 glesv2 portaudio-2.0` -lm
+lflags = `pkg-config --libs glfw3 portaudio-2.0` -lm
 
 rule generate
  command = python3 ./tools/c-ify.py $in $out
@@ -25,6 +25,7 @@ build ./objects/release/engine/context-input.o:    compile ./source/engine/conte
 build ./objects/release/engine/context-opengl.o:   compile ./source/engine/context-opengl.c
 build ./objects/release/engine/context.o:          compile ./source/engine/context.c
 build ./objects/release/engine/entity.o:           compile ./source/engine/entity.c
+build ./objects/release/engine/glad.o:             compile ./source/engine/glad.c
 build ./objects/release/engine/mixer.o:            compile ./source/engine/mixer.c
 build ./objects/release/engine/nterrain.o:         compile ./source/engine/nterrain.c
 build ./objects/release/engine/red-fragment.o:     compile ./objects/release/engine/red-fragment.c
@@ -74,6 +75,7 @@ build nara: link $
 ./objects/release/engine/context-opengl.o $
 ./objects/release/engine/context.o $
 ./objects/release/engine/entity.o $
+./objects/release/engine/glad.o $
 ./objects/release/engine/mixer.o $
 ./objects/release/engine/nterrain.o $
 ./objects/release/engine/red-fragment.o $

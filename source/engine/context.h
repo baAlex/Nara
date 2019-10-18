@@ -13,6 +13,8 @@
 	#include "vector.h"
 
 	#ifndef TEST
+	#include "glad.h" // Before GLFW
+
 	#define GLFW_INCLUDE_ES2
 	#include <GLFW/glfw3.h>
 	#else

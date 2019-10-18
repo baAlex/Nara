@@ -1,11 +1,11 @@
 
-cflags = `pkg-config --cflags glfw3 glesv2 portaudio-2.0` -O0 -std=c11 -Wall -Wextra -pedantic -g -DDEBUG $
+cflags = `pkg-config --cflags glfw3 portaudio-2.0` -O0 -std=c11 -Wall -Wextra -pedantic -g -DDEBUG $
 -I./source/lib-japan/include -I./source/lib-samplerate/src
 
-cflags_strict = `pkg-config --cflags glfw3 glesv2 portaudio-2.0` -O0 -std=c11 -Wall -Wextra -Wconversion -pedantic -g -DDEBUG $
+cflags_strict = `pkg-config --cflags glfw3 portaudio-2.0` -O0 -std=c11 -Wall -Wextra -Wconversion -pedantic -g -DDEBUG $
 -I./source/lib-japan/include -I./source/lib-samplerate/src
 
-lflags = `pkg-config --libs glfw3 glesv2 portaudio-2.0` -lm
+lflags = `pkg-config --libs glfw3 portaudio-2.0` -lm
 
 
 rule generate
@@ -32,6 +32,7 @@ build ./objects/debug/engine/context-input.o:    compile        ./source/engine/
 build ./objects/debug/engine/context-opengl.o:   compile_strict ./source/engine/context-opengl.c
 build ./objects/debug/engine/context.o:          compile        ./source/engine/context.c
 build ./objects/debug/engine/entity.o:           compile_strict ./source/engine/entity.c
+build ./objects/debug/engine/glad.o:             compile        ./source/engine/glad.c
 build ./objects/debug/engine/mixer.o:            compile_strict ./source/engine/mixer.c
 build ./objects/debug/engine/nterrain.o:         compile_strict ./source/engine/nterrain.c
 build ./objects/debug/engine/red-fragment.o:     compile_strict ./objects/debug/engine/red-fragment.c
@@ -84,6 +85,7 @@ build nara-dbg: link $
 ./objects/debug/engine/context-opengl.o $
 ./objects/debug/engine/context.o $
 ./objects/debug/engine/entity.o $
+./objects/debug/engine/glad.o $
 ./objects/debug/engine/mixer.o $
 ./objects/debug/engine/nterrain.o $
 ./objects/debug/engine/red-fragment.o $
