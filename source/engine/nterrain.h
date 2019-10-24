@@ -23,8 +23,8 @@
 
 	struct NTerrainNode
 	{
-		struct Vector3 min;
-		struct Vector3 max;
+		struct Vector2 min;
+		struct Vector2 max;
 
 		float pattern_dimension;
 
@@ -38,6 +38,7 @@
 		struct Tree* root;
 
 		float dimension;
+		float elevation;
 		float min_tile_dimension;
 		float min_pattern_dimension;
 
@@ -54,7 +55,7 @@
 
 	struct NTerrainNode* NTerrainIterate(struct TreeState* state, struct Buffer* buffer,
 	                                     struct NTerrainNode** out_with_vertices, struct Vector3 camera_position);
-	int NTerrainDraw(struct NTerrain* terrain, float max_distance, struct Vector3 camera_position);
+	int NTerrainDraw(struct NTerrain* terrain, float max_distance, struct Vector3 cam_position, struct Vector3 cam_angle);
 	void NTerrainPrintInfo(const struct NTerrain* terrain);
 
 #endif

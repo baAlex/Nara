@@ -1,6 +1,6 @@
 
 cflags = `pkg-config --cflags glfw3 portaudio-2.0` -O3 -flto -mtune=generic $
--I./source/lib-japan/include -I./source/lib-samplerate/src
+-I./source/lib-glad -I./source/lib-japan/include -I./source/lib-samplerate/src
 
 lflags = `pkg-config --libs glfw3 portaudio-2.0` -lm
 
@@ -25,7 +25,6 @@ build ./objects/release/engine/context-input.o:    compile ./source/engine/conte
 build ./objects/release/engine/context-opengl.o:   compile ./source/engine/context-opengl.c
 build ./objects/release/engine/context.o:          compile ./source/engine/context.c
 build ./objects/release/engine/entity.o:           compile ./source/engine/entity.c
-build ./objects/release/engine/glad.o:             compile ./source/engine/glad.c
 build ./objects/release/engine/mixer.o:            compile ./source/engine/mixer.c
 build ./objects/release/engine/nterrain.o:         compile ./source/engine/nterrain.c
 build ./objects/release/engine/red-fragment.o:     compile ./objects/release/engine/red-fragment.c
@@ -38,6 +37,9 @@ build ./objects/release/engine/timer.o:            compile ./source/engine/timer
 build ./objects/release/game/camera.o: compile ./source/game/camera.c
 build ./objects/release/game/nara.o:   compile ./source/game/nara.c
 build ./objects/release/game/point.o:  compile ./source/game/point.c
+
+# Lib Glad
+build ./objects/release/lib-glad/glad.o: compile ./source/lib-glad/glad.c
 
 # Lib Japan
 build ./objects/release/lib-japan/buffer.o:           compile ./source/lib-japan/source/buffer.c
@@ -75,7 +77,6 @@ build nara: link $
 ./objects/release/engine/context-opengl.o $
 ./objects/release/engine/context.o $
 ./objects/release/engine/entity.o $
-./objects/release/engine/glad.o $
 ./objects/release/engine/mixer.o $
 ./objects/release/engine/nterrain.o $
 ./objects/release/engine/red-fragment.o $
@@ -86,6 +87,7 @@ build nara: link $
 ./objects/release/game/camera.o $
 ./objects/release/game/nara.o $
 ./objects/release/game/point.o $
+./objects/release/lib-glad/glad.o $
 ./objects/release/lib-japan/buffer.o $
 ./objects/release/lib-japan/dictionary.o $
 ./objects/release/lib-japan/endianness.o $

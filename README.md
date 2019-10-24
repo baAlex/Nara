@@ -14,7 +14,6 @@ Dependencies
 At runtime Nara requires:
  - Portaudio
  - GLFW3
- - *An OpenGL ES2 compatible implementation*
 
 For compilation:
  - Python3
@@ -22,9 +21,9 @@ For compilation:
  - Ninja
  - Git
 
-On Ubuntu (and most Posix variants) *Mesa* provide the OpenGL implementation, so you can install all dependencies with:
+On Ubuntu you can install all dependencies with:
 ```
-sudo apt install libglfw3-dev portaudio19-dev libgles2-mesa-dev python3 pkg-config ninja-build git
+sudo apt install libglfw3-dev portaudio19-dev python3 pkg-config ninja-build git
 ```
 
 And don't forget the `git submodule` steps when cloning the repo.
@@ -49,8 +48,8 @@ ninja -f posix-debug.ninja
 
 Thanks to
 ---------
-- @erikd (['libsamplerate'](https://github.com/erikd/libsamplerate) library)
-- @Dav1dde ([GLAD](https://github.com/Dav1dde/glad) loader)
+- erikd (['libsamplerate'](https://github.com/erikd/libsamplerate) library)
+- Dav1dde ([GLAD](https://github.com/Dav1dde/glad) loader)
 - And all contributors of [GLFW](https://github.com/glfw/glfw/graphs/contributors) and [Portaudio](http://portaudio.com/people.htmlm)
 
 License
