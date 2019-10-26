@@ -221,7 +221,7 @@ int main()
 		SetProgram(s_context, &terrain_program);
 		SetDiffuse(s_context, &terrain_diffuse);
 
-		draw_calls = NTerrainDraw(terrain, 972.0f, camera_entity->co.position, camera_entity->co.angle);
+		draw_calls = NTerrainDraw(terrain, 1024.0f, camera_entity->co.position, camera_entity->co.angle);
 
 		if (s_timer.one_second == true)
 		{

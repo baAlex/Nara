@@ -38,12 +38,7 @@ SOFTWARE.
 
 static inline float sDimension(const struct NTerrainNode* node)
 {
-	return (node->max.x - node->min.x);
-}
-
-static inline size_t sSquareColumns(float dimension, float pattern_dimension)
-{
-	return (size_t)(ceilf(dimension / pattern_dimension));
+	return (node->max.x - node->min.x); // Nodes are square
 }
 
 static inline struct Vector2 sMiddle(const struct NTerrainNode* node)
@@ -61,15 +56,15 @@ static inline bool sRectRectCollition(struct Vector2 a_min, struct Vector2 a_max
 	return true;
 }
 
-static inline bool sCircleRectCollition(struct Vector2 sphere_origin, float sphere_radious, struct Vector2 box_min,
+/*static inline bool sCircleRectCollition(struct Vector2 sphere_origin, float sphere_radious, struct Vector2 rect_,
                                         struct Vector2 box_max)
 {
-	if (sphere_origin.x < (box_min.x - sphere_radious) || sphere_origin.x > (box_max.x + sphere_radious) ||
-	    sphere_origin.y < (box_min.y - sphere_radious) || sphere_origin.y > (box_max.y + sphere_radious))
-		return false;
+    if (sphere_origin.x < (rect_.x - sphere_radious) || sphere_origin.x > (box_max.x + sphere_radious) ||
+        sphere_origin.y < (rect_.y - sphere_radious) || sphere_origin.y > (box_max.y + sphere_radious))
+        return false;
 
-	return true;
-}
+    return true;
+}*/
 
 static inline bool sSphereBoxCollition(struct Vector3 sphere_origin, float sphere_radious, struct Vector3 box_min,
                                        struct Vector3 box_max)
@@ -80,6 +75,11 @@ static inline bool sSphereBoxCollition(struct Vector3 sphere_origin, float spher
 		return false;
 
 	return true;
+}
+
+static inline size_t sSquareColumns(float dimension, float pattern_dimension) // TODO: 'square' is a poor term
+{
+	return (size_t)(ceilf(dimension / pattern_dimension));
 }
 
 
@@ -581,6 +581,47 @@ again:
 
  NTerrainDraw()
 -----------------------------*/
+static bool sCheckVisibility(const struct NTerrainNode* node, float elevation, float max_distance,
+                             struct Vector3 cam_pos, struct Vector3 cam_angle)
+{
+	// TODO: the other planes of the view pyramid, the back frustum
+	// isn't really necessary, only four planes all call it a day
+
+	// Front frustum (far = max_distance)
+	if (sSphereBoxCollition(cam_pos, max_distance, (struct Vector3){node->min.x, node->min.y, 0.0},
+	                        (struct Vector3){node->max.x, node->max.y, elevation}) == false)
+		return false;
+
+	// Back frustum (near = 0)
+	struct Vector3 angle = {0};
+	struct Vector3 cam_normal = {sinf(DegToRad(cam_angle.z)) * sinf(DegToRad(cam_angle.x)),
+	                             cosf(DegToRad(cam_angle.z)) * sinf(DegToRad(cam_angle.x)),
+	                             cosf(DegToRad(cam_angle.x))};
+
+	for (int i = 0; i < 8; i++)
+	{
+		// Nodes didn't include a Z value, so is approximated here using the whole terrain elevation
+
+		switch (i)
+		{
+		case 0: angle = Vector3Subtract((struct Vector3){node->min.x, node->min.y, 0.0f}, cam_pos); break;
+		case 1: angle = Vector3Subtract((struct Vector3){node->max.x, node->min.y, 0.0f}, cam_pos); break;
+		case 2: angle = Vector3Subtract((struct Vector3){node->max.x, node->max.y, 0.0f}, cam_pos); break;
+		case 3: angle = Vector3Subtract((struct Vector3){node->min.x, node->max.y, 0.0f}, cam_pos); break;
+
+		case 4: angle = Vector3Subtract((struct Vector3){node->min.x, node->min.y, elevation}, cam_pos); break;
+		case 5: angle = Vector3Subtract((struct Vector3){node->max.x, node->min.y, elevation}, cam_pos); break;
+		case 6: angle = Vector3Subtract((struct Vector3){node->max.x, node->max.y, elevation}, cam_pos); break;
+		case 7: angle = Vector3Subtract((struct Vector3){node->min.x, node->max.y, elevation}, cam_pos); break;
+		}
+
+		if (Vector3Dot(cam_normal, Vector3Normalize(angle)) <= 0.f)
+			return true;
+	}
+
+	return false;
+}
+
 int NTerrainDraw(struct NTerrain* terrain, float max_distance, struct Vector3 cam_pos, struct Vector3 cam_angle)
 {
 	struct TreeState s = {.start = terrain->root};
@@ -593,19 +634,11 @@ int NTerrainDraw(struct NTerrain* terrain, float max_distance, struct Vector3 ca
 
 	while ((node = NTerrainIterate(&s, &terrain->buffer, &last_with_vertices, cam_pos)) != NULL)
 	{
-		// View distance
-		if (sSphereBoxCollition(cam_pos, max_distance, (struct Vector3){node->min.x, node->min.y, 0.0},
-		                        (struct Vector3){node->max.x, node->max.y, terrain->elevation}) == false)
+		// TODO, is a better idea to do the check in NTerrainIterate() so in case
+		// of falseness we can skip the iteration of all childrens nodes
+		if (sCheckVisibility(node, terrain->elevation, max_distance, cam_pos, cam_angle) == false)
 			continue;
 
-		// Cheap view frustum, a 2d camera with 180º fov (TODO)
-		struct Vector2 angle = Vector2Subtract(sMiddle(node), (struct Vector2){.x = cam_pos.x, .y = cam_pos.y});
-		angle = Vector2Normalize(angle);
-
-		if (Vector2Dot((struct Vector2){sinf(DegToRad(cam_angle.z)), .y = cosf(DegToRad(cam_angle.z))}, angle) <= 0.f)
-			continue;
-
-		// Lets draw!
 		if (temp != last_with_vertices)
 		{
 			temp = last_with_vertices;

@@ -19,17 +19,18 @@ build ./objects/tests/engine/nterrain.o: compile ./source/engine/nterrain.c
 build ./objects/tests/lib-japan/buffer.o:           compile ./source/lib-japan/source/buffer.c
 build ./objects/tests/lib-japan/dictionary.o:       compile ./source/lib-japan/source/dictionary.c
 build ./objects/tests/lib-japan/endianness.o:       compile ./source/lib-japan/source/endianness.c
+build ./objects/tests/lib-japan/image/format-sgi.o: compile ./source/lib-japan/source/image/format-sgi.c
+build ./objects/tests/lib-japan/image/image.o:      compile ./source/lib-japan/source/image/image.c
 build ./objects/tests/lib-japan/list.o:             compile ./source/lib-japan/source/list.c
 build ./objects/tests/lib-japan/matrix.o:           compile ./source/lib-japan/source/matrix.c
-build ./objects/tests/lib-japan/status.o:           compile ./source/lib-japan/source/status.c
-build ./objects/tests/lib-japan/tree.o:             compile ./source/lib-japan/source/tree.c
-build ./objects/tests/lib-japan/vector.o:           compile ./source/lib-japan/source/vector.c
-build ./objects/tests/lib-japan/image/image.o:      compile ./source/lib-japan/source/image/image.c
-build ./objects/tests/lib-japan/image/format-sgi.o: compile ./source/lib-japan/source/image/format-sgi.c
-build ./objects/tests/lib-japan/sound/sound.o:      compile ./source/lib-japan/source/sound/sound.c
 build ./objects/tests/lib-japan/sound/format-au.o:  compile ./source/lib-japan/source/sound/format-au.c
 build ./objects/tests/lib-japan/sound/format-wav.o: compile ./source/lib-japan/source/sound/format-wav.c
 build ./objects/tests/lib-japan/sound/laws.o:       compile ./source/lib-japan/source/sound/laws.c
+build ./objects/tests/lib-japan/sound/sound.o:      compile ./source/lib-japan/source/sound/sound.c
+build ./objects/tests/lib-japan/status.o:           compile ./source/lib-japan/source/status.c
+build ./objects/tests/lib-japan/tree.o:             compile ./source/lib-japan/source/tree.c
+build ./objects/tests/lib-japan/utilities.o:        compile ./source/lib-japan/source/utilities.c
+build ./objects/tests/lib-japan/vector.o:           compile ./source/lib-japan/source/vector.c
 
 # Link
 build nterrain-tests: link $
@@ -39,14 +40,15 @@ build nterrain-tests: link $
 ./objects/tests/lib-japan/buffer.o $
 ./objects/tests/lib-japan/dictionary.o $
 ./objects/tests/lib-japan/endianness.o $
+./objects/tests/lib-japan/image/format-sgi.o $
+./objects/tests/lib-japan/image/image.o $
 ./objects/tests/lib-japan/list.o $
 ./objects/tests/lib-japan/matrix.o $
-./objects/tests/lib-japan/status.o $
-./objects/tests/lib-japan/tree.o $
-./objects/tests/lib-japan/vector.o $
-./objects/tests/lib-japan/image/image.o $
-./objects/tests/lib-japan/image/format-sgi.o $
-./objects/tests/lib-japan/sound/sound.o $
 ./objects/tests/lib-japan/sound/format-au.o $
 ./objects/tests/lib-japan/sound/format-wav.o $
-./objects/tests/lib-japan/sound/laws.o
+./objects/tests/lib-japan/sound/laws.o $
+./objects/tests/lib-japan/sound/sound.o $
+./objects/tests/lib-japan/status.o $
+./objects/tests/lib-japan/tree.o $
+./objects/tests/lib-japan/utilities.o $
+./objects/tests/lib-japan/vector.o
