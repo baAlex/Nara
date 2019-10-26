@@ -48,8 +48,8 @@ ninja -f posix-debug.ninja
 
 Thanks to
 ---------
-- erikd (['libsamplerate'](https://github.com/erikd/libsamplerate) library)
-- Dav1dde ([GLAD](https://github.com/Dav1dde/glad) loader)
+- Erik de Castro Lopo (['libsamplerate'](https://github.com/erikd/libsamplerate) library)
+- David Herberth ([GLAD](https://github.com/Dav1dde/glad) loader)
 - And all contributors of [GLFW](https://github.com/glfw/glfw/graphs/contributors) and [Portaudio](http://portaudio.com/people.htmlm)
 
 License

@@ -129,7 +129,7 @@ int main()
 
 	struct Matrix4 camera_matrix = Matrix4Identity();
 
-	printf("Nara v0.1\n");
+	printf("Nara v0.2-alpha\n");
 
 	// Initialization
 	s_context = ContextCreate((struct ContextOptions){
@@ -225,7 +225,7 @@ int main()
 
 		if (s_timer.one_second == true)
 		{
-			sprintf(title, "Nara v0.1 | dcalls: %i, fps: %i (~%.02f)", draw_calls, s_timer.frames_per_second,
+			sprintf(title, "Nara v0.2-alpha | dcalls: %i, fps: %i (~%.02f)", draw_calls, s_timer.frames_per_second,
 			        s_timer.miliseconds_betwen);
 			SetTitle(s_context, title);
 		}
