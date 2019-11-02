@@ -39,23 +39,32 @@
 
 		float dimension;
 		float elevation;
-		float min_tile_dimension;
+		float min_node_dimension;
 		float min_pattern_dimension;
 
 		size_t steps;
-		size_t tiles_no;
+		size_t nodes_no;
 		size_t vertices_buffers_no;
 
 		struct Buffer buffer;
 	};
 
-	struct NTerrain* NTerrainCreate(const char* heightmap, float elevation, float dimension, float minimum_tile_dimension,
+	struct NTerrainView
+	{
+		struct Vector3 position;
+		struct Vector3 angle;
+		float max_distance;
+		float fov;
+	};
+
+	struct NTerrain* NTerrainCreate(const char* heightmap, float elevation, float dimension, float minimum_node_dimension,
 	                                int pattern_subdivisions, struct Status* st);
 	void NTerrainDelete(struct NTerrain* terrain);
 
 	struct NTerrainNode* NTerrainIterate(struct TreeState* state, struct Buffer* buffer,
-	                                     struct NTerrainNode** out_with_vertices, struct Vector3 camera_position);
-	int NTerrainDraw(struct NTerrain* terrain, float max_distance, struct Vector3 cam_position, struct Vector3 cam_angle);
+	                                     struct NTerrainNode** out_with_vertices, struct NTerrainView*);
+
+	int NTerrainDraw(struct NTerrain* terrain, struct NTerrainView*);
 	void NTerrainPrintInfo(const struct NTerrain* terrain);
 
 #endif

@@ -192,6 +192,8 @@ int main()
 
 	Play2d(s_mixer, 0.7f, PLAY_LOOP, "./assets/ambient01.au");
 
+	struct NTerrainView view = {0};
+
 	while (1)
 	{
 		TimerStep(&s_timer);
@@ -221,7 +223,11 @@ int main()
 		SetProgram(s_context, &terrain_program);
 		SetDiffuse(s_context, &terrain_diffuse);
 
-		draw_calls = NTerrainDraw(terrain, 1024.0f, camera_entity->co.position, camera_entity->co.angle);
+		view.angle = camera_entity->co.angle;
+		view.position = camera_entity->co.position;
+		view.max_distance = 1024.0f;
+
+		draw_calls = NTerrainDraw(terrain, &view);
 
 		if (s_timer.one_second == true)
 		{

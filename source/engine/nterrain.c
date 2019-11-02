@@ -36,17 +36,6 @@ SOFTWARE.
 #include <string.h>
 
 
-static inline float sDimension(const struct NTerrainNode* node)
-{
-	return (node->max.x - node->min.x); // Nodes are square
-}
-
-static inline struct Vector2 sMiddle(const struct NTerrainNode* node)
-{
-	return (struct Vector2){.x = node->min.x + (node->max.x - node->min.x) / 2.0f,
-	                        .y = node->min.y + (node->max.y - node->min.y) / 2.0f};
-}
-
 static inline bool sRectRectCollition(struct Vector2 a_min, struct Vector2 a_max, struct Vector2 b_min,
                                       struct Vector2 b_max)
 {
@@ -56,28 +45,39 @@ static inline bool sRectRectCollition(struct Vector2 a_min, struct Vector2 a_max
 	return true;
 }
 
-/*static inline bool sCircleRectCollition(struct Vector2 sphere_origin, float sphere_radious, struct Vector2 rect_,
+static inline bool sCircleRectCollition(struct Vector2 circle_origin, float circle_radius, struct Vector2 rect_,
                                         struct Vector2 box_max)
 {
-    if (sphere_origin.x < (rect_.x - sphere_radious) || sphere_origin.x > (box_max.x + sphere_radious) ||
-        sphere_origin.y < (rect_.y - sphere_radious) || sphere_origin.y > (box_max.y + sphere_radious))
-        return false;
-
-    return true;
-}*/
-
-static inline bool sSphereBoxCollition(struct Vector3 sphere_origin, float sphere_radious, struct Vector3 box_min,
-                                       struct Vector3 box_max)
-{
-	if (sphere_origin.x < (box_min.x - sphere_radious) || sphere_origin.x > (box_max.x + sphere_radious) ||
-	    sphere_origin.y < (box_min.y - sphere_radious) || sphere_origin.y > (box_max.y + sphere_radious) ||
-	    sphere_origin.z < (box_min.z - sphere_radious) || sphere_origin.z > (box_max.z + sphere_radious))
+	if (circle_origin.x < (rect_.x - circle_radius) || circle_origin.x > (box_max.x + circle_radius) ||
+	    circle_origin.y < (rect_.y - circle_radius) || circle_origin.y > (box_max.y + circle_radius))
 		return false;
 
 	return true;
 }
 
-static inline size_t sSquareColumns(float dimension, float pattern_dimension) // TODO: 'square' is a poor term
+static inline bool sSphereBoxCollition(struct Vector3 sphere_origin, float sphere_radius, struct Vector3 box_min,
+                                       struct Vector3 box_max)
+{
+	if (sphere_origin.x < (box_min.x - sphere_radius) || sphere_origin.x > (box_max.x + sphere_radius) ||
+	    sphere_origin.y < (box_min.y - sphere_radius) || sphere_origin.y > (box_max.y + sphere_radius) ||
+	    sphere_origin.z < (box_min.z - sphere_radius) || sphere_origin.z > (box_max.z + sphere_radius))
+		return false;
+
+	return true;
+}
+
+static inline float sNodeDimension(const struct NTerrainNode* node)
+{
+	return (node->max.x - node->min.x);
+}
+
+static inline struct Vector2 sNodeMiddle(const struct NTerrainNode* node)
+{
+	return (struct Vector2){.x = node->min.x + (node->max.x - node->min.x) / 2.0f,
+	                        .y = node->min.y + (node->max.y - node->min.y) / 2.0f};
+}
+
+static inline size_t sPatternsInARow(float dimension, float pattern_dimension)
 {
 	return (size_t)(ceilf(dimension / pattern_dimension));
 }
@@ -85,9 +85,9 @@ static inline size_t sSquareColumns(float dimension, float pattern_dimension) //
 
 /*-----------------------------
 
- sPixelAsFloat()
+ sHeightmapElevation()
 -----------------------------*/
-float sPixelAsFloat(const struct Image* image, struct Vector2 cords)
+static float sHeightmapElevation(const struct Image* hmap, struct Vector2 cords)
 {
 	// https://en.wikipedia.org/wiki/Bilinear_filtering
 	union {
@@ -95,7 +95,7 @@ float sPixelAsFloat(const struct Image* image, struct Vector2 cords)
 		uint16_t* u16;
 		void* raw;
 
-	} data = {.raw = image->data};
+	} data = {.raw = hmap->data};
 
 	if (cords.x > 1.0f)
 		cords.x = 1.0f;
@@ -107,8 +107,8 @@ float sPixelAsFloat(const struct Image* image, struct Vector2 cords)
 		cords.y = -1.0f;
 
 	// TODO, think a better replacement for the -1
-	float u = cords.x * (float)(image->width - 1);
-	float v = cords.y * (float)(image->height - 1);
+	float u = cords.x * (float)(hmap->width - 1);
+	float v = cords.y * (float)(hmap->height - 1);
 
 	size_t x = (size_t)floorf(u);
 	size_t y = (size_t)floorf(v);
@@ -120,20 +120,19 @@ float sPixelAsFloat(const struct Image* image, struct Vector2 cords)
 
 	float result = 0.0;
 
-	switch (image->format)
+	switch (hmap->format)
 	{
 	case IMAGE_GRAY8:
-		result =
-		    (data.u8[x + image->width * y] * u_opposite + data.u8[x + 1 + image->width * y] * u_ratio) * v_opposite +
-		    (data.u8[x + image->width * (y + 1)] * u_opposite + data.u8[x + 1 + image->width * (y + 1)] * u_ratio) *
-		        v_ratio;
+		result = (data.u8[x + hmap->width * y] * u_opposite + data.u8[x + 1 + hmap->width * y] * u_ratio) * v_opposite +
+		         (data.u8[x + hmap->width * (y + 1)] * u_opposite + data.u8[x + 1 + hmap->width * (y + 1)] * u_ratio) *
+		             v_ratio;
 		result /= 255.0f;
 		break;
 
 	case IMAGE_GRAY16:
 		result =
-		    (data.u16[x + image->width * y] * u_opposite + data.u16[x + 1 + image->width * y] * u_ratio) * v_opposite +
-		    (data.u16[x + image->width * (y + 1)] * u_opposite + data.u16[x + 1 + image->width * (y + 1)] * u_ratio) *
+		    (data.u16[x + hmap->width * y] * u_opposite + data.u16[x + 1 + hmap->width * y] * u_ratio) * v_opposite +
+		    (data.u16[x + hmap->width * (y + 1)] * u_opposite + data.u16[x + 1 + hmap->width * (y + 1)] * u_ratio) *
 		        v_ratio;
 		result /= 65535.0f;
 		break;
@@ -153,60 +152,61 @@ static struct Index sGenerateIndex(struct Buffer* buffer, const struct NTerrainN
                                    struct Vector2 org_max, float org_pattern_dimension)
 {
 	// Generation on a temporary buffer
-	size_t const squares = sSquareColumns(sDimension(node), node->pattern_dimension);
-	size_t const length = squares * squares * 6; // 6 = Two triangles vertices, as OpenGL ES2 did not have quads
+	size_t const patterns_no = sPatternsInARow(sNodeDimension(node), node->pattern_dimension);
+	size_t const length = patterns_no * patterns_no * 6; // 6 = Two triangles vertices, as OpenGL ES2 did not have quads
 	size_t col = 0;
 
 	BufferResize(buffer, sizeof(uint16_t) * length); // TODO, check failure
 	uint16_t* temp_data = buffer->data;
 
 	{
-		size_t const org_squares = sSquareColumns(org_max.x - org_min.x, org_pattern_dimension);
-		size_t const org_step = (org_squares / squares) / (size_t)lroundf((org_max.x - org_min.x) / sDimension(node));
+		size_t const org_patterns_no = sPatternsInARow(org_max.x - org_min.x, org_pattern_dimension);
+		size_t const org_step =
+		    (org_patterns_no / patterns_no) / (size_t)lroundf((org_max.x - org_min.x) / sNodeDimension(node));
 
-		size_t const org_col_start = sSquareColumns(node->min.x - org_min.x, org_pattern_dimension);
-		size_t org_row = sSquareColumns(node->min.y - org_min.y, org_pattern_dimension);
+		size_t const org_col_start = sPatternsInARow(node->min.x - org_min.x, org_pattern_dimension);
+		size_t org_row = sPatternsInARow(node->min.y - org_min.y, org_pattern_dimension);
 		size_t org_col = org_col_start;
 
 		size_t index_value = 0;
 
-		/*printf("Node sqrs: %zu, Org sqrs: %zu, Node sz: %zu, Org sz: %zu -> Step: %zu (sz diff: %f)\n", squares,
-		       org_squares, (size_t)ceil((max.x - min.x)), (size_t)ceil((org_max.x - org_min.x)), org_step,
+		/*printf("Node sqrs: %zu, Org sqrs: %zu, Node sz: %zu, Org sz: %zu -> Step: %zu (sz diff: %f)\n", patterns_no,
+		       org_patterns_no, (size_t)ceil((max.x - min.x)), (size_t)ceil((org_max.x - org_min.x)), org_step,
 		       round((org_max.x - org_min.x) / (max.x - min.x)));*/
 
 		for (size_t i = 0; i < length; i += 6)
 		{
 			// As next uint16_t conversions silently hide everything, this gently
 			// comparasion would tell us about bad calculations, TODO: use only in tests.
-			if (org_col + (org_squares + 1) * org_row + org_step + ((org_squares + 1) * org_step) > UINT16_MAX)
+			if (org_col + (org_patterns_no + 1) * org_row + org_step + ((org_patterns_no + 1) * org_step) > UINT16_MAX)
 			{
 				printf("Beep boop!!!\n"); // TODO
 				return (struct Index){0};
 			}
 
-			index_value = org_col + (org_squares + 1) * org_row;
+			index_value = org_col + (org_patterns_no + 1) * org_row;
 			temp_data[i + 0] = (uint16_t)index_value;
 
-			index_value = org_col + (org_squares + 1) * org_row + org_step;
+			index_value = org_col + (org_patterns_no + 1) * org_row + org_step;
 			temp_data[i + 1] = (uint16_t)index_value;
 
-			index_value = org_col + (org_squares + 1) * org_row + org_step + ((org_squares + 1) * org_step);
+			index_value = org_col + (org_patterns_no + 1) * org_row + org_step + ((org_patterns_no + 1) * org_step);
 			temp_data[i + 2] = (uint16_t)index_value;
 
-			index_value = org_col + ((org_squares + 1) * org_row) + org_step + (org_squares + 1) * org_step;
+			index_value = org_col + ((org_patterns_no + 1) * org_row) + org_step + (org_patterns_no + 1) * org_step;
 			temp_data[i + 3] = (uint16_t)index_value;
 
-			index_value = org_col + ((org_squares + 1) * org_row) + (org_squares + 1) * org_step;
+			index_value = org_col + ((org_patterns_no + 1) * org_row) + (org_patterns_no + 1) * org_step;
 			temp_data[i + 4] = (uint16_t)index_value;
 
-			index_value = org_col + ((org_squares + 1) * org_row);
+			index_value = org_col + ((org_patterns_no + 1) * org_row);
 			temp_data[i + 5] = (uint16_t)index_value;
 
 			// Next step
 			col += 1;
 			org_col += org_step;
 
-			if ((col % squares) == 0)
+			if ((col % patterns_no) == 0)
 			{
 				col = 0;
 				org_col = org_col_start;
@@ -228,11 +228,11 @@ static struct Index sGenerateIndex(struct Buffer* buffer, const struct NTerrainN
  sGenerateVertices()
 -----------------------------*/
 static struct Vertices sGenerateVertices(struct Buffer* buffer, const struct NTerrainNode* node,
-                                         float pattern_dimension, float terrain_dimension,
-                                         const struct Image* heightmap, float elevation)
+                                         float pattern_dimension, float terrain_dimension, const struct Image* hmap,
+                                         float elevation)
 {
 	// Generation on a temporary buffer
-	size_t const patterns_no = sSquareColumns(sDimension(node), pattern_dimension);
+	size_t const patterns_no = sPatternsInARow(sNodeDimension(node), pattern_dimension);
 
 	BufferResize(buffer, sizeof(struct Vertex) * (patterns_no + 1) * (patterns_no + 1));
 	struct Vertex* temp_data = buffer->data;
@@ -250,8 +250,9 @@ static struct Vertices sGenerateVertices(struct Buffer* buffer, const struct NTe
 				temp_data[col + (patterns_no + 1) * row].pos.x = node->min.x + (float)col * pattern_dimension;
 				temp_data[col + (patterns_no + 1) * row].pos.y = node->min.y + (float)row * pattern_dimension;
 
-				if (heightmap != NULL)
-					temp_data[col + (patterns_no + 1) * row].pos.z = sPixelAsFloat(heightmap, texture_step) * elevation;
+				if (hmap != NULL)
+					temp_data[col + (patterns_no + 1) * row].pos.z =
+					    sHeightmapElevation(hmap, texture_step) * elevation;
 				else
 					temp_data[col + (patterns_no + 1) * row].pos.z = 0.0;
 
@@ -274,15 +275,15 @@ static struct Vertices sGenerateVertices(struct Buffer* buffer, const struct NTe
 
 /*-----------------------------
 
- sSubdivideTile()
+ sSubdivideNode()
 -----------------------------*/
-static void sSubdivideTile(struct Tree* item, float min_tile_dimension)
+static void sSubdivideNode(struct Tree* item, float min_node_dimension)
 {
 	struct NTerrainNode* node = item->data;
 	struct NTerrainNode* new_node = NULL;
 	struct Tree* new_item = NULL;
 
-	if ((sDimension(node) / 3.0f) < min_tile_dimension)
+	if ((sNodeDimension(node) / 3.0f) < min_node_dimension)
 		return;
 
 	for (int i = 0; i < 9; i++)
@@ -295,59 +296,59 @@ static void sSubdivideTile(struct Tree* item, float min_tile_dimension)
 		case 0: // North West
 			new_node->min.x = node->min.x;
 			new_node->min.y = node->min.y;
-			new_node->max.x = node->min.x + sDimension(node) / 3.0f;
-			new_node->max.y = node->min.y + sDimension(node) / 3.0f;
+			new_node->max.x = node->min.x + sNodeDimension(node) / 3.0f;
+			new_node->max.y = node->min.y + sNodeDimension(node) / 3.0f;
 			break;
 		case 1: // North
-			new_node->min.x = node->min.x + sDimension(node) / 3.0f;
+			new_node->min.x = node->min.x + sNodeDimension(node) / 3.0f;
 			new_node->min.y = node->min.y;
-			new_node->max.x = node->min.x + sDimension(node) / 3.0f * 2.0f;
-			new_node->max.y = node->min.y + sDimension(node) / 3.0f;
+			new_node->max.x = node->min.x + sNodeDimension(node) / 3.0f * 2.0f;
+			new_node->max.y = node->min.y + sNodeDimension(node) / 3.0f;
 			break;
 		case 2: // North East
-			new_node->min.x = node->min.x + sDimension(node) / 3.0f * 2.0f;
+			new_node->min.x = node->min.x + sNodeDimension(node) / 3.0f * 2.0f;
 			new_node->min.y = node->min.y;
-			new_node->max.x = node->min.x + sDimension(node) / 3.0f * 3.0f;
-			new_node->max.y = node->min.y + sDimension(node) / 3.0f;
+			new_node->max.x = node->min.x + sNodeDimension(node) / 3.0f * 3.0f;
+			new_node->max.y = node->min.y + sNodeDimension(node) / 3.0f;
 			break;
 		case 3: // West
 			new_node->min.x = node->min.x;
-			new_node->min.y = node->min.y + sDimension(node) / 3.0f;
-			new_node->max.x = node->min.x + sDimension(node) / 3.0f;
-			new_node->max.y = node->min.y + sDimension(node) / 3.0f * 2.0f;
+			new_node->min.y = node->min.y + sNodeDimension(node) / 3.0f;
+			new_node->max.x = node->min.x + sNodeDimension(node) / 3.0f;
+			new_node->max.y = node->min.y + sNodeDimension(node) / 3.0f * 2.0f;
 			break;
 		case 4: // Center
-			new_node->min.x = node->min.x + sDimension(node) / 3.0f;
-			new_node->min.y = node->min.y + sDimension(node) / 3.0f;
-			new_node->max.x = node->min.x + sDimension(node) / 3.0f * 2.0f;
-			new_node->max.y = node->min.y + sDimension(node) / 3.0f * 2.0f;
+			new_node->min.x = node->min.x + sNodeDimension(node) / 3.0f;
+			new_node->min.y = node->min.y + sNodeDimension(node) / 3.0f;
+			new_node->max.x = node->min.x + sNodeDimension(node) / 3.0f * 2.0f;
+			new_node->max.y = node->min.y + sNodeDimension(node) / 3.0f * 2.0f;
 			break;
 		case 5: // East
-			new_node->min.x = node->min.x + sDimension(node) / 3.0f * 2.0f;
-			new_node->min.y = node->min.y + sDimension(node) / 3.0f;
-			new_node->max.x = node->min.x + sDimension(node) / 3.0f * 3.0f;
-			new_node->max.y = node->min.y + sDimension(node) / 3.0f * 2.0f;
+			new_node->min.x = node->min.x + sNodeDimension(node) / 3.0f * 2.0f;
+			new_node->min.y = node->min.y + sNodeDimension(node) / 3.0f;
+			new_node->max.x = node->min.x + sNodeDimension(node) / 3.0f * 3.0f;
+			new_node->max.y = node->min.y + sNodeDimension(node) / 3.0f * 2.0f;
 			break;
 		case 6: // South West
 			new_node->min.x = node->min.x;
-			new_node->min.y = node->min.y + sDimension(node) / 3.0f * 2.0f;
-			new_node->max.x = node->min.x + sDimension(node) / 3.0f;
-			new_node->max.y = node->min.y + sDimension(node) / 3.0f * 3.0f;
+			new_node->min.y = node->min.y + sNodeDimension(node) / 3.0f * 2.0f;
+			new_node->max.x = node->min.x + sNodeDimension(node) / 3.0f;
+			new_node->max.y = node->min.y + sNodeDimension(node) / 3.0f * 3.0f;
 			break;
 		case 7: // South
-			new_node->min.x = node->min.x + sDimension(node) / 3.0f;
-			new_node->min.y = node->min.y + sDimension(node) / 3.0f * 2.0f;
-			new_node->max.x = node->min.x + sDimension(node) / 3.0f * 2.0f;
-			new_node->max.y = node->min.y + sDimension(node) / 3.0f * 3.0f;
+			new_node->min.x = node->min.x + sNodeDimension(node) / 3.0f;
+			new_node->min.y = node->min.y + sNodeDimension(node) / 3.0f * 2.0f;
+			new_node->max.x = node->min.x + sNodeDimension(node) / 3.0f * 2.0f;
+			new_node->max.y = node->min.y + sNodeDimension(node) / 3.0f * 3.0f;
 			break;
 		case 8: // South East
-			new_node->min.x = node->min.x + sDimension(node) / 3.0f * 2.0f;
-			new_node->min.y = node->min.y + sDimension(node) / 3.0f * 2.0f;
-			new_node->max.x = node->min.x + sDimension(node) / 3.0f * 3.0f;
-			new_node->max.y = node->min.y + sDimension(node) / 3.0f * 3.0f;
+			new_node->min.x = node->min.x + sNodeDimension(node) / 3.0f * 2.0f;
+			new_node->min.y = node->min.y + sNodeDimension(node) / 3.0f * 2.0f;
+			new_node->max.x = node->min.x + sNodeDimension(node) / 3.0f * 3.0f;
+			new_node->max.y = node->min.y + sNodeDimension(node) / 3.0f * 3.0f;
 		}
 
-		sSubdivideTile(new_item, min_tile_dimension);
+		sSubdivideNode(new_item, min_node_dimension);
 	}
 }
 
@@ -357,7 +358,7 @@ static void sSubdivideTile(struct Tree* item, float min_tile_dimension)
  NTerrainCreate()
 -----------------------------*/
 struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation, float dimension,
-                                float min_tile_dimension, int pattern_subdivisions, struct Status* st)
+                                float min_node_dimension, int pattern_subdivisions, struct Status* st)
 {
 	struct NTerrain* terrain = NULL;
 	struct NTerrainNode* node = NULL;
@@ -388,9 +389,9 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 	terrain->elevation = elevation;
 
 	// Mesures
-	for (float i = dimension; i >= min_tile_dimension; i /= 3.0f)
+	for (float i = dimension; i >= min_node_dimension; i /= 3.0f)
 	{
-		terrain->min_tile_dimension = i;
+		terrain->min_node_dimension = i;
 		terrain->min_pattern_dimension = i;
 		terrain->steps++;
 	}
@@ -398,12 +399,12 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 	for (int i = 0; i < pattern_subdivisions; i++)
 		terrain->min_pattern_dimension /= 3.0f;
 
-	// Tile subdivision
+	// Node subdivision
 	node = terrain->root->data;
 	node->min = (struct Vector2){0.0, 0.0};
 	node->max = (struct Vector2){dimension, dimension};
 
-	sSubdivideTile(terrain->root, min_tile_dimension);
+	sSubdivideNode(terrain->root, min_node_dimension);
 
 	// Pattern subdivision (the following big loop)
 	// generating vertices and indexes
@@ -412,9 +413,9 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 	while ((item = TreeIterate(&state, &terrain->buffer)) != NULL)
 	{
 		node = item->data;
-		terrain->tiles_no++;
+		terrain->nodes_no++;
 
-		node->pattern_dimension = sDimension(node);
+		node->pattern_dimension = sNodeDimension(node);
 
 		for (int i = 0; i < pattern_subdivisions; i++)
 			node->pattern_dimension /= 3.0f;
@@ -429,7 +430,7 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 		else
 		{
 			// Can this node keep all childrens vertices? (because indices in OpenGL ES2)
-			if (ceilf(powf(sDimension(node) / terrain->min_pattern_dimension + 1.0f, 2.0)) < (float)UINT16_MAX)
+			if (ceilf(powf(sNodeDimension(node) / terrain->min_pattern_dimension + 1.0f, 2.0)) < (float)UINT16_MAX)
 			{
 				last_parent = node;
 				parent_depth = state.depth;
@@ -499,88 +500,6 @@ void NTerrainDelete(struct NTerrain* terrain)
 
  NTerrainIterate()
 -----------------------------*/
-struct NTerrainNode* NTerrainIterate(struct TreeState* state, struct Buffer* buffer,
-                                     struct NTerrainNode** out_with_vertices, struct Vector3 cam_pos)
-{
-	struct Tree** future_parent_heap = NULL;
-	struct NTerrainNode* actual_node = NULL;
-
-	if (state->start != NULL)
-	{
-		state->future_parent[0] = NULL;
-		state->future_depth = 1;
-		state->future_return = state->start;
-		state->actual = state->start;
-		state->start = NULL;
-	}
-
-again:
-
-	// Actual node (to call)
-	if ((state->actual = state->future_return) == NULL)
-		return NULL;
-
-	state->depth = state->future_depth;
-	state->future_return = NULL; // This one is resolved in next conditionals
-
-	actual_node = state->actual->data;
-
-	if (actual_node->vertices_type == SHARED_WITH_CHILDRENS || actual_node->vertices_type == OWN_VERTICES)
-		*out_with_vertices = actual_node;
-
-	// Future values
-	{
-		// Go in? (childrens)
-		float distance_factor = sDimension(actual_node);
-		distance_factor = sDimension(actual_node) * 2.0f; // Increased distance quality (configurable)
-
-		if (state->actual->children != NULL &&
-		    sRectRectCollition((struct Vector2){cam_pos.x - distance_factor / 2.0f, cam_pos.y - distance_factor / 2.0f},
-		                       (struct Vector2){cam_pos.x + distance_factor / 2.0f, cam_pos.y + distance_factor / 2.0f},
-		                       actual_node->min, actual_node->max) == true)
-		{
-			if (buffer->size < (state->depth + 1) * sizeof(void*))
-				if (BufferResize(buffer, (state->depth + 1) * sizeof(void*)) == NULL) // FIXME, Bug in LibJapan, the +1
-					return NULL;
-
-			future_parent_heap = buffer->data;
-			future_parent_heap[state->depth] = state->actual->next;
-			state->future_return = state->actual->children;
-
-			state->future_depth++;
-			goto again; // We omit actual for being drawing
-		}
-
-		// Brothers
-		else if (state->depth > 0 && state->actual->next != NULL)
-		{
-			state->future_return = state->actual->next;
-		}
-
-		// Go out (next parent)
-		else if (state->depth > 0)
-		{
-			future_parent_heap = buffer->data;
-
-			while ((state->future_depth -= 1) > 0)
-			{
-				if (future_parent_heap[state->future_depth] != NULL)
-				{
-					state->future_return = future_parent_heap[state->future_depth];
-					break;
-				}
-			}
-		}
-	}
-
-	return actual_node;
-}
-
-
-/*-----------------------------
-
- NTerrainDraw()
------------------------------*/
 static bool sCheckVisibility(const struct NTerrainNode* node, float elevation, float max_distance,
                              struct Vector3 cam_pos, struct Vector3 cam_angle)
 {
@@ -622,7 +541,94 @@ static bool sCheckVisibility(const struct NTerrainNode* node, float elevation, f
 	return false;
 }
 
-int NTerrainDraw(struct NTerrain* terrain, float max_distance, struct Vector3 cam_pos, struct Vector3 cam_angle)
+struct NTerrainNode* NTerrainIterate(struct TreeState* state, struct Buffer* buffer,
+                                     struct NTerrainNode** out_with_vertices, struct NTerrainView* view)
+{
+	struct Tree** future_parent_heap = NULL;
+	struct NTerrainNode* actual_node = NULL;
+
+	if (state->start != NULL)
+	{
+		state->future_parent[0] = NULL;
+		state->future_depth = 1;
+		state->future_return = state->start;
+		state->actual = state->start;
+		state->start = NULL;
+	}
+
+again:
+
+	// Actual node (to call)
+	if ((state->actual = state->future_return) == NULL)
+		return NULL;
+
+	state->depth = state->future_depth;
+	state->future_return = NULL; // This one is resolved in next conditionals
+
+	actual_node = state->actual->data;
+
+	if (actual_node->vertices_type == SHARED_WITH_CHILDRENS || actual_node->vertices_type == OWN_VERTICES)
+		*out_with_vertices = actual_node;
+
+	// Future values
+	{
+		// Go in? (childrens)
+		float distance_factor = sNodeDimension(actual_node);
+		distance_factor = sNodeDimension(actual_node) * 2.0f; // Increased distance quality (configurable)
+
+		if (state->actual->children != NULL &&
+		    sRectRectCollition(
+		        (struct Vector2){view->position.x - distance_factor / 2.0f, view->position.y - distance_factor / 2.0f},
+		        (struct Vector2){view->position.x + distance_factor / 2.0f, view->position.y + distance_factor / 2.0f},
+		        actual_node->min, actual_node->max) == true)
+		{
+			if (buffer->size < (state->depth + 1) * sizeof(void*))
+				if (BufferResize(buffer, (state->depth + 1) * sizeof(void*)) == NULL) // FIXME, Bug in LibJapan, the +1
+					return NULL;
+
+			future_parent_heap = buffer->data;
+			future_parent_heap[state->depth] = state->actual->next;
+			state->future_return = state->actual->children;
+
+			state->future_depth++;
+			goto again; // We omit actual for being drawing
+		}
+
+		// Brothers
+		else if (state->depth > 0 && state->actual->next != NULL)
+		{
+			state->future_return = state->actual->next;
+		}
+
+		// Go out (next parent)
+		else if (state->depth > 0)
+		{
+			future_parent_heap = buffer->data;
+
+			while ((state->future_depth -= 1) > 0)
+			{
+				if (future_parent_heap[state->future_depth] != NULL)
+				{
+					state->future_return = future_parent_heap[state->future_depth];
+					break;
+				}
+			}
+		}
+	}
+
+	// FIXME, 0.0 = hardcoded elevation
+	if (sCheckVisibility(actual_node, 0.0, view->max_distance, view->position, view->angle) == false)
+		goto again;
+
+	return actual_node;
+}
+
+
+/*-----------------------------
+
+ NTerrainDraw()
+-----------------------------*/
+int NTerrainDraw(struct NTerrain* terrain, struct NTerrainView* view)
 {
 	struct TreeState s = {.start = terrain->root};
 
@@ -632,13 +638,8 @@ int NTerrainDraw(struct NTerrain* terrain, float max_distance, struct Vector3 ca
 
 	int dcalls = 0;
 
-	while ((node = NTerrainIterate(&s, &terrain->buffer, &last_with_vertices, cam_pos)) != NULL)
+	while ((node = NTerrainIterate(&s, &terrain->buffer, &last_with_vertices, view)) != NULL)
 	{
-		// TODO, is a better idea to do the check in NTerrainIterate() so in case
-		// of falseness we can skip the iteration of all childrens nodes
-		if (sCheckVisibility(node, terrain->elevation, max_distance, cam_pos, cam_angle) == false)
-			continue;
-
 		if (temp != last_with_vertices)
 		{
 			temp = last_with_vertices;
@@ -677,10 +678,10 @@ void NTerrainPrintInfo(const struct NTerrain* terrain)
 
 	printf("Terrain 0x%p:\n", (void*)terrain);
 	printf(" - Dimension: %f\n", terrain->dimension);
-	printf(" - Minimum tile dimension: %f\n", terrain->min_tile_dimension);
+	printf(" - Minimum node dimension: %f\n", terrain->min_node_dimension);
 	printf(" - Minimum pattern dimension: %f\n", terrain->min_pattern_dimension);
 	printf(" - Steps: %lu\n", terrain->steps);
-	printf(" - Tiles: %lu\n", terrain->tiles_no);
+	printf(" - Nodes: %lu\n", terrain->nodes_no);
 	printf(" - Vertices buffers: %lu\n", terrain->vertices_buffers_no);
 
 	while ((item = TreeIterate(&s, &buffer)) != NULL)

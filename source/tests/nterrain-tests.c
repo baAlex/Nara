@@ -62,9 +62,9 @@ static inline bool sFloatRoughtEquals(float a, float b)
 
 /*-----------------------------
 
- sDrawTile()
+ sDrawNode()
 -----------------------------*/
-static void sDrawTile(struct Canvas* canvas, const struct NTerrainNode* node, const struct NTerrainNode* vertices_from)
+static void sDrawNode(struct Canvas* canvas, const struct NTerrainNode* node, const struct NTerrainNode* vertices_from)
 {
 	(void)vertices_from;
 
@@ -117,7 +117,7 @@ void sDrawTerrainLayers(struct NTerrain* terrain, const char* filename)
 				last_with_vertices = node;
 
 			CanvasSetOffset(canvas, (struct Vector2){BORDER, BORDER + (BORDER + terrain->dimension) * (float)s.depth});
-			sDrawTile(canvas, node, last_with_vertices);
+			sDrawNode(canvas, node, last_with_vertices);
 		}
 
 		CanvasSave(canvas, filename);
@@ -138,10 +138,10 @@ void TestMesures1(void** cmocka_state)
 
 	float const ELEVATION = 100.0f;
 	float const DIMENSION = 1024.0f;
-	float const MIN_TILE_DIMENSION = 64.0f;
+	float const MIN_NODE_DIMENSION = 64.0f;
 	int const PATTERN_SUBDIVISIONS = 0;
 
-	terrain = NTerrainCreate(NULL, ELEVATION, DIMENSION, MIN_TILE_DIMENSION, PATTERN_SUBDIVISIONS, &st);
+	terrain = NTerrainCreate(NULL, ELEVATION, DIMENSION, MIN_NODE_DIMENSION, PATTERN_SUBDIVISIONS, &st);
 
 	if (terrain == NULL)
 	{
@@ -153,18 +153,18 @@ void TestMesures1(void** cmocka_state)
 
 	// Take a calculator
 	{
-		assert_true((terrain->min_tile_dimension > MIN_TILE_DIMENSION) ||
-		            sFloatEquals(terrain->min_tile_dimension, MIN_TILE_DIMENSION));
+		assert_true((terrain->min_node_dimension > MIN_NODE_DIMENSION) ||
+		            sFloatEquals(terrain->min_node_dimension, MIN_NODE_DIMENSION));
 
 		// Value before (or equal) 64, dividing 1024 by three
-		assert_true(sFloatEquals(terrain->min_tile_dimension, 113.77778f));
+		assert_true(sFloatEquals(terrain->min_node_dimension, 113.77778f));
 
 		// Steps at dividing by three: 1024, 341, 113
 		assert_true(terrain->steps == 3);
 
 		// Previous subdivisions in 2d
 		// (1024/1024)^2 + (1024/341)^2 + (1024/113)^2
-		assert_true(terrain->tiles_no == 91);
+		assert_true(terrain->nodes_no == 91);
 
 		struct TreeState s = {.start = terrain->root};
 		struct Tree* item = NULL;
@@ -174,7 +174,7 @@ void TestMesures1(void** cmocka_state)
 		{
 			node = item->data;
 
-			// If tiles are squares, note that I'm using sFloatRoughtEquals()
+			// If nodes are squares, note that I'm using sFloatRoughtEquals()
 			if (sFloatRoughtEquals((node->max.x - node->min.x), (node->max.y - node->min.y)) == false)
 				printf("%f != %f\n", (node->max.x - node->min.x), (node->max.y - node->min.y));
 
@@ -206,10 +206,10 @@ void TestMesures2(void** cmocka_state)
 
 	float const ELEVATION = 100.0f;
 	float const DIMENSION = 972.0f;
-	float const MIN_TILE_DIMENSION = 12.0f;
+	float const MIN_NODE_DIMENSION = 12.0f;
 	int const PATTERN_SUBDIVISIONS = 0;
 
-	terrain = NTerrainCreate(NULL, ELEVATION, DIMENSION, MIN_TILE_DIMENSION, PATTERN_SUBDIVISIONS, &st);
+	terrain = NTerrainCreate(NULL, ELEVATION, DIMENSION, MIN_NODE_DIMENSION, PATTERN_SUBDIVISIONS, &st);
 
 	if (terrain == NULL)
 	{
@@ -221,18 +221,18 @@ void TestMesures2(void** cmocka_state)
 
 	// Take a calculator
 	{
-		assert_true((terrain->min_tile_dimension > MIN_TILE_DIMENSION) ||
-		            sFloatEquals(terrain->min_tile_dimension, MIN_TILE_DIMENSION));
+		assert_true((terrain->min_node_dimension > MIN_NODE_DIMENSION) ||
+		            sFloatEquals(terrain->min_node_dimension, MIN_NODE_DIMENSION));
 
 		// Value before (or equal) 12, dividing 972 by three
-		assert_true(sFloatEquals(terrain->min_tile_dimension, 12.0f));
+		assert_true(sFloatEquals(terrain->min_node_dimension, 12.0f));
 
 		// Steps at dividing by three: 972, 324, 108, 36, 12
 		assert_true(terrain->steps == 5);
 
 		// Previous subdivisions in 2d
 		// (972/972)^2 + (972/324)^2 + (972/108)^2 + (972/36)^2 + (972/12)^2
-		assert_true(terrain->tiles_no == 7381);
+		assert_true(terrain->nodes_no == 7381);
 
 		struct TreeState s = {.start = terrain->root};
 		struct Tree* item = NULL;
@@ -242,7 +242,7 @@ void TestMesures2(void** cmocka_state)
 		{
 			node = item->data;
 
-			// If tiles are squares, note that I'm using sFloatEquals()
+			// If nodes are squares, note that I'm using sFloatEquals()
 			if (sFloatEquals((node->max.x - node->min.x), (node->max.y - node->min.y)) == false)
 				printf("%f != %f\n", (node->max.x - node->min.x), (node->max.y - node->min.y));
 
