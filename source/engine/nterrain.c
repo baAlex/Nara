@@ -85,6 +85,34 @@ static inline size_t sPatternsInARow(float dimension, float pattern_dimension)
 
 /*-----------------------------
 
+ sNodeCreate()
+-----------------------------*/
+static struct NTerrainNode* sNodeCreate(struct NTerrainNode* parent)
+{
+	struct NTerrainNode* node = NULL;
+
+	if ((node = calloc(1, sizeof(struct NTerrainNode))) != NULL)
+	{
+		node->children = NULL;
+		node->next = NULL;
+
+		if (parent != NULL)
+		{
+			if (parent->children == NULL)
+				node->next = NULL;
+			else
+				node->next = parent->children;
+
+			parent->children = node;
+		}
+	}
+
+	return node;
+}
+
+
+/*-----------------------------
+
  sHeightmapElevation()
 -----------------------------*/
 static float sHeightmapElevation(const struct Image* hmap, struct Vector2 cords)
@@ -277,19 +305,16 @@ static struct Vertices sGenerateVertices(struct Buffer* buffer, const struct NTe
 
  sSubdivideNode()
 -----------------------------*/
-static void sSubdivideNode(struct Tree* item, float min_node_dimension)
+static void sSubdivideNode(struct NTerrainNode* node, float min_node_dimension)
 {
-	struct NTerrainNode* node = item->data;
 	struct NTerrainNode* new_node = NULL;
-	struct Tree* new_item = NULL;
 
 	if ((sNodeDimension(node) / 3.0f) < min_node_dimension)
 		return;
 
 	for (int i = 0; i < 9; i++)
 	{
-		new_item = TreeCreate(item, NULL, sizeof(struct NTerrainNode));
-		new_node = new_item->data;
+		new_node = sNodeCreate(node);
 
 		new_node->min.z = node->min.z;
 		new_node->max.z = node->max.z;
@@ -351,7 +376,7 @@ static void sSubdivideNode(struct Tree* item, float min_node_dimension)
 			new_node->max.y = node->min.y + sNodeDimension(node) / 3.0f * 3.0f;
 		}
 
-		sSubdivideNode(new_item, min_node_dimension);
+		sSubdivideNode(new_node, min_node_dimension);
 	}
 }
 
@@ -366,10 +391,9 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 	struct NTerrain* terrain = NULL;
 	struct NTerrainNode* node = NULL;
 
-	struct Tree* item = NULL;
 	struct Image* heightmap = NULL;
 
-	struct TreeState state = {0};
+	struct NTerrainState state = {0};
 	struct NTerrainNode* last_parent = NULL;
 	size_t parent_depth = 0;
 
@@ -381,8 +405,7 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 			goto return_failure;
 	}
 
-	if ((terrain = calloc(1, sizeof(struct NTerrain))) == NULL ||
-	    (terrain->root = TreeCreate(NULL, NULL, sizeof(struct NTerrainNode))) == NULL)
+	if ((terrain = calloc(1, sizeof(struct NTerrain))) == NULL || (terrain->root = sNodeCreate(NULL)) == NULL)
 	{
 		StatusSet(st, "NTerraiNCreate", STATUS_MEMORY_ERROR, NULL);
 		goto return_failure;
@@ -403,7 +426,7 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 		terrain->min_pattern_dimension /= 3.0f;
 
 	// Node subdivision
-	node = terrain->root->data;
+	node = terrain->root;
 	node->min = (struct Vector3){0.0, 0.0, 0.0};
 	node->max = (struct Vector3){dimension, dimension, elevation};
 
@@ -411,11 +434,11 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 
 	// Pattern subdivision (the following big loop)
 	// generating vertices and indexes
+	struct Buffer aux_buffer = {0};
 	state.start = terrain->root;
 
-	while ((item = TreeIterate(&state, &terrain->buffer)) != NULL)
+	while ((node = NTerrainIterate(&state, &aux_buffer, NULL)) != NULL)
 	{
-		node = item->data;
 		terrain->nodes_no++;
 
 		node->pattern_dimension = sNodeDimension(node);
@@ -462,6 +485,7 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 	}
 
 	// Bye!
+	BufferClean(&aux_buffer);
 	return terrain;
 
 return_failure:
@@ -477,21 +501,17 @@ return_failure:
 -----------------------------*/
 void NTerrainDelete(struct NTerrain* terrain)
 {
-	struct TreeState s = {.start = terrain->root};
-	struct Tree* item = NULL;
+	struct NTerrainState state = {.start = terrain->root};
 	struct NTerrainNode* node = NULL;
 
 	if (terrain->root != NULL)
 	{
-		while ((item = TreeIterate(&s, &terrain->buffer)) != NULL)
+		while ((node = NTerrainIterate(&state, &terrain->buffer, NULL)) != NULL)
 		{
-			node = item->data;
-
 			IndexFree(&node->index);
 			VerticesFree(&node->vertices);
+			free(node);
 		}
-
-		TreeDelete(terrain->root);
 	}
 
 	BufferClean(&terrain->buffer);
@@ -542,8 +562,7 @@ static bool sCheckVisibility(const struct NTerrainNode* node, struct NTerrainVie
 
 struct NTerrainNode* NTerrainIterate(struct NTerrainState* state, struct Buffer* buffer, struct NTerrainView* view)
 {
-	struct Tree** future_parent_heap = NULL;
-	struct NTerrainNode* actual_node = NULL;
+	struct NTerrainNode** future_parent_heap = NULL;
 
 	if (state->start != NULL)
 	{
@@ -555,26 +574,25 @@ struct NTerrainNode* NTerrainIterate(struct NTerrainState* state, struct Buffer*
 
 again:
 
-	// Actual node (to call)
+	// Actual node
 	if ((state->actual = state->future_return) == NULL)
 		return NULL;
 
 	state->depth = state->future_depth;
 	state->future_return = NULL; // This one is resolved in next conditionals
 
-	actual_node = state->actual->data;
-
-	if (actual_node->vertices_type == SHARED_WITH_CHILDRENS || actual_node->vertices_type == OWN_VERTICES)
-		state->last_with_vertices = actual_node;
+	if (state->actual->vertices_type == SHARED_WITH_CHILDRENS || state->actual->vertices_type == OWN_VERTICES)
+		state->last_with_vertices = state->actual;
 
 	// Future values
 	{
 		// Go in? (childrens)
-		float factor = sNodeDimension(actual_node);
-		//factor = sNodeDimension(actual_node) * 2.0f; // Increased distance quality (configurable)
+		float factor = sNodeDimension(state->actual);
+		// factor = sNodeDimension(state->actual) * 2.0f; // Increased distance quality (configurable)
 
 		if (state->actual->children != NULL &&
-		    sSphereBoxCollition(view->position, factor, actual_node->min, actual_node->max) == true)
+		    (view == NULL ||
+		     sSphereBoxCollition(view->position, factor, state->actual->min, state->actual->max) == true))
 		{
 			if (buffer->size < (state->depth + 1) * sizeof(void*))
 				if (BufferResize(buffer, (state->depth + 1) * sizeof(void*)) == NULL) // FIXME, Bug in LibJapan, the +1
@@ -585,7 +603,9 @@ again:
 			state->future_return = state->actual->children;
 
 			state->future_depth++;
-			goto again; // We omit actual for being drawing
+
+			if (view != NULL)
+				goto again; // We omit actual for being drawing
 		}
 
 		// Brothers
@@ -610,10 +630,10 @@ again:
 		}
 	}
 
-	if (sCheckVisibility(actual_node, view) == false)
+	if (view != NULL && sCheckVisibility(state->actual, view) == false)
 		goto again;
 
-	return actual_node;
+	return state->actual;
 }
 
 
@@ -623,21 +643,21 @@ again:
 -----------------------------*/
 int NTerrainDraw(struct NTerrain* terrain, struct NTerrainView* view)
 {
-	struct NTerrainState s = {.start = terrain->root};
+	struct NTerrainState state = {.start = terrain->root};
 
 	struct NTerrainNode* node = NULL;
 	struct NTerrainNode* temp = NULL;
 
 	int dcalls = 0;
 
-	while ((node = NTerrainIterate(&s, &terrain->buffer, view)) != NULL)
+	while ((node = NTerrainIterate(&state, &terrain->buffer, view)) != NULL)
 	{
-		if (temp != s.last_with_vertices)
+		if (temp != state.last_with_vertices)
 		{
-			temp = s.last_with_vertices;
+			temp = state.last_with_vertices;
 
 #ifndef TEST
-			glBindBuffer(GL_ARRAY_BUFFER, s.last_with_vertices->vertices.glptr);
+			glBindBuffer(GL_ARRAY_BUFFER, state.last_with_vertices->vertices.glptr);
 			glVertexAttribPointer(ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), NULL);
 			glVertexAttribPointer(ATTRIBUTE_UV, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), (float*)NULL + 3);
 			dcalls += 3;
@@ -662,8 +682,7 @@ int NTerrainDraw(struct NTerrain* terrain, struct NTerrainView* view)
 -----------------------------*/
 void NTerrainPrintInfo(struct NTerrain* terrain)
 {
-	struct TreeState s = {.start = terrain->root};
-	struct Tree* item = NULL;
+	struct NTerrainState state = {.start = terrain->root};
 	struct NTerrainNode* node = NULL;
 
 	size_t prev_depth = 0;
@@ -676,18 +695,16 @@ void NTerrainPrintInfo(struct NTerrain* terrain)
 	printf(" - Nodes: %lu\n", terrain->nodes_no);
 	printf(" - Vertices buffers: %lu\n", terrain->vertices_buffers_no);
 
-	while ((item = TreeIterate(&s, &terrain->buffer)) != NULL)
+	while ((node = NTerrainIterate(&state, &terrain->buffer, NULL)) != NULL)
 	{
-		node = item->data;
-
-		if (prev_depth < s.depth || s.depth == 0)
+		if (prev_depth < state.depth || state.depth == 0)
 		{
-			printf(" # Step %lu:\n", s.depth);
+			printf(" # Step %lu:\n", state.depth);
 			printf("    - Dimension: %f\n", (node->max.x - node->min.x));
 			printf("    - Pattern dimension: %f\n", node->pattern_dimension);
 			printf("    - Vertices type: %i\n", node->vertices_type);
 
-			prev_depth = s.depth;
+			prev_depth = state.depth;
 		}
 	}
 }

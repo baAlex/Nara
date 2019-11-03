@@ -9,7 +9,7 @@
 
 	#include <stdint.h>
 
-	#include "tree.h"
+	#include "buffer.h"
 	#include "vector.h"
 	#include "status.h"
 	#include "context.h"
@@ -23,7 +23,7 @@
 
 	struct NTerrain
 	{
-		struct Tree* root;
+		struct NTerrainNode* root;
 
 		float dimension;
 		float elevation;
@@ -47,6 +47,9 @@
 		enum NVerticesType vertices_type;
 		struct Vertices vertices;
 		struct Index index;
+
+		struct NTerrainNode* next;
+		struct NTerrainNode* children;
 	};
 
 	struct NTerrainView
@@ -59,12 +62,12 @@
 
 	struct NTerrainState
 	{
-		struct Tree* start; // Set before iterate
+		struct NTerrainNode* start; // Set before iterate
 
-		struct Tree* actual;
+		struct NTerrainNode* actual;
 		size_t depth;
 
-		struct Tree* future_return;
+		struct NTerrainNode* future_return;
 		size_t future_depth;
 
 		struct NTerrainNode* last_with_vertices;

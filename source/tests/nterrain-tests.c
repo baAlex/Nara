@@ -97,11 +97,8 @@ static void sDrawNode(struct Canvas* canvas, const struct NTerrainNode* node, co
 
 void sDrawTerrainLayers(struct NTerrain* terrain, const char* filename)
 {
-	struct TreeState s = {.start = terrain->root};
-	struct Tree* item = NULL;
-
+	struct NTerrainState state = {.start = terrain->root};
 	struct NTerrainNode* node = NULL;
-	struct NTerrainNode* last_with_vertices = NULL;
 
 	struct Canvas* canvas = NULL;
 	size_t const canvas_size_x = (size_t)terrain->dimension + BORDER * 2;
@@ -109,15 +106,10 @@ void sDrawTerrainLayers(struct NTerrain* terrain, const char* filename)
 
 	if ((canvas = CanvasCreate(canvas_size_x, canvas_size_y)) != NULL)
 	{
-		while ((item = TreeIterate(&s, &terrain->buffer)) != NULL)
+		while ((node = NTerrainIterate(&state, &terrain->buffer, NULL)) != NULL)
 		{
-			node = item->data;
-
-			if (node->vertices_type == SHARED_WITH_CHILDRENS)
-				last_with_vertices = node;
-
-			CanvasSetOffset(canvas, (struct Vector2){BORDER, BORDER + (BORDER + terrain->dimension) * (float)s.depth});
-			sDrawNode(canvas, node, last_with_vertices);
+			CanvasSetOffset(canvas, (struct Vector2){BORDER, BORDER + (BORDER + terrain->dimension) * (float)state.depth});
+			sDrawNode(canvas, node, state.last_with_vertices);
 		}
 
 		CanvasSave(canvas, filename);
@@ -166,14 +158,11 @@ void TestMesures1(void** cmocka_state)
 		// (1024/1024)^2 + (1024/341)^2 + (1024/113)^2
 		assert_true(terrain->nodes_no == 91);
 
-		struct TreeState s = {.start = terrain->root};
-		struct Tree* item = NULL;
+		struct NTerrainState state = {.start = terrain->root};
 		struct NTerrainNode* node = NULL;
 
-		while ((item = TreeIterate(&s, &terrain->buffer)) != NULL)
+		while ((node = NTerrainIterate(&state, &terrain->buffer, NULL)) != NULL)
 		{
-			node = item->data;
-
 			// If nodes are squares, note that I'm using sFloatRoughtEquals()
 			if (sFloatRoughtEquals((node->max.x - node->min.x), (node->max.y - node->min.y)) == false)
 				printf("%f != %f\n", (node->max.x - node->min.x), (node->max.y - node->min.y));
@@ -234,14 +223,11 @@ void TestMesures2(void** cmocka_state)
 		// (972/972)^2 + (972/324)^2 + (972/108)^2 + (972/36)^2 + (972/12)^2
 		assert_true(terrain->nodes_no == 7381);
 
-		struct TreeState s = {.start = terrain->root};
-		struct Tree* item = NULL;
+		struct NTerrainState state = {.start = terrain->root};
 		struct NTerrainNode* node = NULL;
 
-		while ((item = TreeIterate(&s, &terrain->buffer)) != NULL)
+		while ((node = NTerrainIterate(&state, &terrain->buffer, NULL)) != NULL)
 		{
-			node = item->data;
-
 			// If nodes are squares, note that I'm using sFloatEquals()
 			if (sFloatEquals((node->max.x - node->min.x), (node->max.y - node->min.y)) == false)
 				printf("%f != %f\n", (node->max.x - node->min.x), (node->max.y - node->min.y));
