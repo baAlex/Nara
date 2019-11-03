@@ -148,8 +148,8 @@ static float sHeightmapElevation(const struct Image* hmap, struct Vector2 cords)
 
  sGenerateIndex()
 -----------------------------*/
-static struct Index sGenerateIndex(struct Buffer* buffer, const struct NTerrainNode* node, struct Vector2 org_min,
-                                   struct Vector2 org_max, float org_pattern_dimension)
+static struct Index sGenerateIndex(struct Buffer* buffer, const struct NTerrainNode* node, struct Vector3 org_min,
+                                   struct Vector3 org_max, float org_pattern_dimension)
 {
 	// Generation on a temporary buffer
 	size_t const patterns_no = sPatternsInARow(sNodeDimension(node), node->pattern_dimension);
@@ -291,6 +291,9 @@ static void sSubdivideNode(struct Tree* item, float min_node_dimension)
 		new_item = TreeCreate(item, NULL, sizeof(struct NTerrainNode));
 		new_node = new_item->data;
 
+		new_node->min.z = node->min.z;
+		new_node->max.z = node->max.z;
+
 		switch (i)
 		{
 		case 0: // North West
@@ -401,8 +404,8 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 
 	// Node subdivision
 	node = terrain->root->data;
-	node->min = (struct Vector2){0.0, 0.0};
-	node->max = (struct Vector2){dimension, dimension};
+	node->min = (struct Vector3){0.0, 0.0, 0.0};
+	node->max = (struct Vector3){dimension, dimension, elevation};
 
 	sSubdivideNode(terrain->root, min_node_dimension);
 
@@ -500,38 +503,34 @@ void NTerrainDelete(struct NTerrain* terrain)
 
  NTerrainIterate()
 -----------------------------*/
-static bool sCheckVisibility(const struct NTerrainNode* node, float elevation, float max_distance,
-                             struct Vector3 cam_pos, struct Vector3 cam_angle)
+static bool sCheckVisibility(const struct NTerrainNode* node, struct NTerrainView* view)
 {
 	// TODO: the other planes of the view pyramid, the back frustum
 	// isn't really necessary, only four planes all call it a day
 
 	// Front frustum (far = max_distance)
-	if (sSphereBoxCollition(cam_pos, max_distance, (struct Vector3){node->min.x, node->min.y, 0.0},
-	                        (struct Vector3){node->max.x, node->max.y, elevation}) == false)
+	if (sSphereBoxCollition(view->position, view->max_distance, node->min, node->max) == false)
 		return false;
 
 	// Back frustum (near = 0)
 	struct Vector3 angle = {0};
-	struct Vector3 cam_normal = {sinf(DegToRad(cam_angle.z)) * sinf(DegToRad(cam_angle.x)),
-	                             cosf(DegToRad(cam_angle.z)) * sinf(DegToRad(cam_angle.x)),
-	                             cosf(DegToRad(cam_angle.x))};
+	struct Vector3 cam_normal = {sinf(DegToRad(view->angle.z)) * sinf(DegToRad(view->angle.x)),
+	                             cosf(DegToRad(view->angle.z)) * sinf(DegToRad(view->angle.x)),
+	                             cosf(DegToRad(view->angle.x))};
 
 	for (int i = 0; i < 8; i++)
 	{
-		// Nodes didn't include a Z value, so is approximated here using the whole terrain elevation
-
 		switch (i)
 		{
-		case 0: angle = Vector3Subtract((struct Vector3){node->min.x, node->min.y, 0.0f}, cam_pos); break;
-		case 1: angle = Vector3Subtract((struct Vector3){node->max.x, node->min.y, 0.0f}, cam_pos); break;
-		case 2: angle = Vector3Subtract((struct Vector3){node->max.x, node->max.y, 0.0f}, cam_pos); break;
-		case 3: angle = Vector3Subtract((struct Vector3){node->min.x, node->max.y, 0.0f}, cam_pos); break;
+		case 0: angle = Vector3Subtract((struct Vector3){node->min.x, node->min.y, node->min.z}, view->position); break;
+		case 1: angle = Vector3Subtract((struct Vector3){node->max.x, node->min.y, node->min.z}, view->position); break;
+		case 2: angle = Vector3Subtract((struct Vector3){node->max.x, node->max.y, node->min.z}, view->position); break;
+		case 3: angle = Vector3Subtract((struct Vector3){node->min.x, node->max.y, node->min.z}, view->position); break;
 
-		case 4: angle = Vector3Subtract((struct Vector3){node->min.x, node->min.y, elevation}, cam_pos); break;
-		case 5: angle = Vector3Subtract((struct Vector3){node->max.x, node->min.y, elevation}, cam_pos); break;
-		case 6: angle = Vector3Subtract((struct Vector3){node->max.x, node->max.y, elevation}, cam_pos); break;
-		case 7: angle = Vector3Subtract((struct Vector3){node->min.x, node->max.y, elevation}, cam_pos); break;
+		case 4: angle = Vector3Subtract((struct Vector3){node->min.x, node->min.y, node->max.z}, view->position); break;
+		case 5: angle = Vector3Subtract((struct Vector3){node->max.x, node->min.y, node->max.z}, view->position); break;
+		case 6: angle = Vector3Subtract((struct Vector3){node->max.x, node->max.y, node->max.z}, view->position); break;
+		case 7: angle = Vector3Subtract((struct Vector3){node->min.x, node->max.y, node->max.z}, view->position); break;
 		}
 
 		if (Vector3Dot(cam_normal, Vector3Normalize(angle)) <= 0.f)
@@ -541,15 +540,13 @@ static bool sCheckVisibility(const struct NTerrainNode* node, float elevation, f
 	return false;
 }
 
-struct NTerrainNode* NTerrainIterate(struct TreeState* state, struct Buffer* buffer,
-                                     struct NTerrainNode** out_with_vertices, struct NTerrainView* view)
+struct NTerrainNode* NTerrainIterate(struct NTerrainState* state, struct Buffer* buffer, struct NTerrainView* view)
 {
 	struct Tree** future_parent_heap = NULL;
 	struct NTerrainNode* actual_node = NULL;
 
 	if (state->start != NULL)
 	{
-		state->future_parent[0] = NULL;
 		state->future_depth = 1;
 		state->future_return = state->start;
 		state->actual = state->start;
@@ -568,19 +565,16 @@ again:
 	actual_node = state->actual->data;
 
 	if (actual_node->vertices_type == SHARED_WITH_CHILDRENS || actual_node->vertices_type == OWN_VERTICES)
-		*out_with_vertices = actual_node;
+		state->last_with_vertices = actual_node;
 
 	// Future values
 	{
 		// Go in? (childrens)
-		float distance_factor = sNodeDimension(actual_node);
-		distance_factor = sNodeDimension(actual_node) * 2.0f; // Increased distance quality (configurable)
+		float factor = sNodeDimension(actual_node);
+		//factor = sNodeDimension(actual_node) * 2.0f; // Increased distance quality (configurable)
 
 		if (state->actual->children != NULL &&
-		    sRectRectCollition(
-		        (struct Vector2){view->position.x - distance_factor / 2.0f, view->position.y - distance_factor / 2.0f},
-		        (struct Vector2){view->position.x + distance_factor / 2.0f, view->position.y + distance_factor / 2.0f},
-		        actual_node->min, actual_node->max) == true)
+		    sSphereBoxCollition(view->position, factor, actual_node->min, actual_node->max) == true)
 		{
 			if (buffer->size < (state->depth + 1) * sizeof(void*))
 				if (BufferResize(buffer, (state->depth + 1) * sizeof(void*)) == NULL) // FIXME, Bug in LibJapan, the +1
@@ -616,8 +610,7 @@ again:
 		}
 	}
 
-	// FIXME, 0.0 = hardcoded elevation
-	if (sCheckVisibility(actual_node, 0.0, view->max_distance, view->position, view->angle) == false)
+	if (sCheckVisibility(actual_node, view) == false)
 		goto again;
 
 	return actual_node;
@@ -630,22 +623,21 @@ again:
 -----------------------------*/
 int NTerrainDraw(struct NTerrain* terrain, struct NTerrainView* view)
 {
-	struct TreeState s = {.start = terrain->root};
+	struct NTerrainState s = {.start = terrain->root};
 
 	struct NTerrainNode* node = NULL;
-	struct NTerrainNode* last_with_vertices = NULL;
 	struct NTerrainNode* temp = NULL;
 
 	int dcalls = 0;
 
-	while ((node = NTerrainIterate(&s, &terrain->buffer, &last_with_vertices, view)) != NULL)
+	while ((node = NTerrainIterate(&s, &terrain->buffer, view)) != NULL)
 	{
-		if (temp != last_with_vertices)
+		if (temp != s.last_with_vertices)
 		{
-			temp = last_with_vertices;
+			temp = s.last_with_vertices;
 
 #ifndef TEST
-			glBindBuffer(GL_ARRAY_BUFFER, last_with_vertices->vertices.glptr);
+			glBindBuffer(GL_ARRAY_BUFFER, s.last_with_vertices->vertices.glptr);
 			glVertexAttribPointer(ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), NULL);
 			glVertexAttribPointer(ATTRIBUTE_UV, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), (float*)NULL + 3);
 			dcalls += 3;
@@ -655,6 +647,7 @@ int NTerrainDraw(struct NTerrain* terrain, struct NTerrainView* view)
 #ifndef TEST
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, node->index.glptr);
 		glDrawElements(GL_TRIANGLES, (GLsizei)node->index.length, GL_UNSIGNED_SHORT, NULL);
+		// glDrawElements(GL_LINES, (GLsizei)node->index.length, GL_UNSIGNED_SHORT, NULL);
 		dcalls += 2;
 #endif
 	}
@@ -667,10 +660,9 @@ int NTerrainDraw(struct NTerrain* terrain, struct NTerrainView* view)
 
  NTerrainPrintInfo()
 -----------------------------*/
-void NTerrainPrintInfo(const struct NTerrain* terrain)
+void NTerrainPrintInfo(struct NTerrain* terrain)
 {
 	struct TreeState s = {.start = terrain->root};
-	struct Buffer buffer = {0};
 	struct Tree* item = NULL;
 	struct NTerrainNode* node = NULL;
 
@@ -684,7 +676,7 @@ void NTerrainPrintInfo(const struct NTerrain* terrain)
 	printf(" - Nodes: %lu\n", terrain->nodes_no);
 	printf(" - Vertices buffers: %lu\n", terrain->vertices_buffers_no);
 
-	while ((item = TreeIterate(&s, &buffer)) != NULL)
+	while ((item = TreeIterate(&s, &terrain->buffer)) != NULL)
 	{
 		node = item->data;
 

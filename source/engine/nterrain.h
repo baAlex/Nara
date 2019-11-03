@@ -21,18 +21,6 @@
 		OWN_VERTICES = 2
 	};
 
-	struct NTerrainNode
-	{
-		struct Vector2 min;
-		struct Vector2 max;
-
-		float pattern_dimension;
-
-		enum NVerticesType vertices_type;
-		struct Vertices vertices;
-		struct Index index;
-	};
-
 	struct NTerrain
 	{
 		struct Tree* root;
@@ -49,6 +37,18 @@
 		struct Buffer buffer;
 	};
 
+	struct NTerrainNode
+	{
+		struct Vector3 min;
+		struct Vector3 max;
+
+		float pattern_dimension;
+
+		enum NVerticesType vertices_type;
+		struct Vertices vertices;
+		struct Index index;
+	};
+
 	struct NTerrainView
 	{
 		struct Vector3 position;
@@ -57,14 +57,26 @@
 		float fov;
 	};
 
+	struct NTerrainState
+	{
+		struct Tree* start; // Set before iterate
+
+		struct Tree* actual;
+		size_t depth;
+
+		struct Tree* future_return;
+		size_t future_depth;
+
+		struct NTerrainNode* last_with_vertices;
+	};
+
 	struct NTerrain* NTerrainCreate(const char* heightmap, float elevation, float dimension, float minimum_node_dimension,
 	                                int pattern_subdivisions, struct Status* st);
 	void NTerrainDelete(struct NTerrain* terrain);
 
-	struct NTerrainNode* NTerrainIterate(struct TreeState* state, struct Buffer* buffer,
-	                                     struct NTerrainNode** out_with_vertices, struct NTerrainView*);
+	struct NTerrainNode* NTerrainIterate(struct NTerrainState* state, struct Buffer* buffer, struct NTerrainView*);
 
 	int NTerrainDraw(struct NTerrain* terrain, struct NTerrainView*);
-	void NTerrainPrintInfo(const struct NTerrain* terrain);
+	void NTerrainPrintInfo(struct NTerrain* terrain);
 
 #endif
