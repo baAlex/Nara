@@ -227,7 +227,7 @@ int main()
 		view.position = camera_entity->co.position;
 		view.max_distance = 1024.0f;
 
-		draw_calls = NTerrainDraw(terrain, &view);
+		draw_calls = NTerrainDraw(s_context, terrain, &view);
 
 		if (s_timer.one_second == true)
 		{

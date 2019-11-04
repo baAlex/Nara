@@ -95,7 +95,7 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	}
 
 	// Callbacks and pretty things
-	glfwSwapInterval(0); // TODO: hardcoded
+	//glfwSwapInterval(0); // TODO: hardcoded
 
 	glfwSetWindowSizeLimits(context->window, options.window_min_size.x, options.window_min_size.y, GLFW_DONT_CARE,
 	                        GLFW_DONT_CARE);
@@ -216,6 +216,8 @@ void SetProgram(struct Context* context, const struct Program* program)
 		context->u_camera_origin = glGetUniformLocation(context->current_program->glptr, "camera_origin");
 		context->u_color_texture = glGetUniformLocation(context->current_program->glptr, "color_texture");
 
+		context->u_highlight = glGetUniformLocation(context->current_program->glptr, "highlight");
+
 		glUseProgram(program->glptr);
 
 		glUniformMatrix4fv(context->u_projection, 1, GL_FALSE, &context->projection.e[0][0]);
@@ -285,6 +287,16 @@ inline void SetCameraMatrix(struct Context* context, struct Matrix4 matrix, stru
 		glUniformMatrix4fv(context->u_camera_projection, 1, GL_FALSE, &context->camera.e[0][0]);
 		glUniform3fv(context->u_camera_origin, 1, (float*)&context->camera_origin);
 	}
+}
+
+
+/*-----------------------------
+
+ SetHighlight()
+-----------------------------*/
+inline void SetHighlight(struct Context* context, struct Vector3 value)
+{
+	glUniform3fv(context->u_highlight, 1, (float*)&value);
 }
 
 

@@ -50,6 +50,7 @@
 
 		struct NTerrainNode* next;
 		struct NTerrainNode* children;
+		struct NTerrainNode* parent;
 	};
 
 	struct NTerrainView
@@ -71,6 +72,8 @@
 		size_t future_depth;
 
 		struct NTerrainNode* last_with_vertices;
+
+		bool in_border;
 	};
 
 	struct NTerrain* NTerrainCreate(const char* heightmap, float elevation, float dimension, float minimum_node_dimension,
@@ -79,7 +82,7 @@
 
 	struct NTerrainNode* NTerrainIterate(struct NTerrainState* state, struct Buffer* buffer, struct NTerrainView*);
 
-	int NTerrainDraw(struct NTerrain* terrain, struct NTerrainView*);
+	int NTerrainDraw(struct Context*, struct NTerrain* terrain, struct NTerrainView*);
 	void NTerrainPrintInfo(struct NTerrain* terrain);
 
 #endif

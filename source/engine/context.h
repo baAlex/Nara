@@ -106,6 +106,7 @@
 	void SetDiffuse(struct Context* context, const struct Texture* diffuse);
 	void SetCameraLookAt(struct Context* context, struct Vector3 target, struct Vector3 origin);
 	void SetCameraMatrix(struct Context* context, struct Matrix4 matrix, struct Vector3 origin);
+	void SetHighlight(struct Context* context, struct Vector3 value);
 
 	void Draw(struct Context* context, const struct Vertices* vertices, const struct Index* index);
 

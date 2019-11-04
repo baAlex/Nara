@@ -95,6 +95,7 @@ static struct NTerrainNode* sNodeCreate(struct NTerrainNode* parent)
 	{
 		node->children = NULL;
 		node->next = NULL;
+		node->parent = parent;
 
 		if (parent != NULL)
 		{
@@ -588,11 +589,14 @@ again:
 	{
 		// Go in? (childrens)
 		float factor = sNodeDimension(state->actual);
-		// factor = sNodeDimension(state->actual) * 2.0f; // Increased distance quality (configurable)
+		// factor = sNodeDimension(state->actual) * 2.0f; // Configurable quality
 
 		if (state->actual->children != NULL &&
 		    (view == NULL ||
-		     sSphereBoxCollition(view->position, factor, state->actual->min, state->actual->max) == true))
+		     sRectRectCollition((struct Vector2){view->position.x - factor / 2.0f, view->position.y - factor / 2.0f},
+		                        (struct Vector2){view->position.x + factor / 2.0f, view->position.y + factor / 2.0f},
+		                        (struct Vector2){state->actual->min.x, state->actual->min.y},
+		                        (struct Vector2){state->actual->max.x, state->actual->max.y}) == true))
 		{
 			if (buffer->size < (state->depth + 1) * sizeof(void*))
 				if (BufferResize(buffer, (state->depth + 1) * sizeof(void*)) == NULL) // FIXME, Bug in LibJapan, the +1
@@ -630,8 +634,36 @@ again:
 		}
 	}
 
-	if (view != NULL && sCheckVisibility(state->actual, view) == false)
-		goto again;
+	// The current node is apropiate for the specified view?
+	if (view != NULL)
+	{
+		if (sCheckVisibility(state->actual, view) == false)
+			goto again;
+
+		// Determine if is at the border where LOD changes
+		state->in_border = false;
+
+		if (state->actual->parent != NULL) // The higher node didn't have a parent
+		{
+			state->in_border = true;
+
+			float factor = sNodeDimension(state->actual->parent);
+
+			struct Vector2 step = {view->position.x, view->position.y};
+			step = Vector2Scale(step, 1.0f / sNodeDimension(state->actual->parent));
+			step.x = roundf(step.x);
+			step.y = roundf(step.y);
+			step = Vector2Scale(step, sNodeDimension(state->actual->parent));
+
+			if (sRectRectCollition((struct Vector2){step.x - factor / 2.0f, step.y - factor / 2.0f},
+			                       (struct Vector2){step.x + factor / 2.0f, step.y + factor / 2.0f},
+			                       (struct Vector2){state->actual->min.x, state->actual->min.y},
+			                       (struct Vector2){state->actual->max.x, state->actual->max.y}) == true)
+			{
+				state->in_border = false;
+			}
+		}
+	}
 
 	return state->actual;
 }
@@ -641,7 +673,7 @@ again:
 
  NTerrainDraw()
 -----------------------------*/
-int NTerrainDraw(struct NTerrain* terrain, struct NTerrainView* view)
+int NTerrainDraw(struct Context* context, struct NTerrain* terrain, struct NTerrainView* view)
 {
 	struct NTerrainState state = {.start = terrain->root};
 
@@ -665,9 +697,25 @@ int NTerrainDraw(struct NTerrain* terrain, struct NTerrainView* view)
 		}
 
 #ifndef TEST
+
+		SetHighlight(context, (struct Vector3){0.0, 0.0, 0.0});
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, node->index.glptr);
 		glDrawElements(GL_TRIANGLES, (GLsizei)node->index.length, GL_UNSIGNED_SHORT, NULL);
-		// glDrawElements(GL_LINES, (GLsizei)node->index.length, GL_UNSIGNED_SHORT, NULL);
+
+		if (state.in_border == true)
+		{
+			switch (state.depth)
+			{
+			case 0: SetHighlight(context, (struct Vector3){0.0, 0.0, 1.0}); break;
+			case 1: SetHighlight(context, (struct Vector3){0.0, 1.0, 0.0}); break;
+			case 2: SetHighlight(context, (struct Vector3){1.0, 1.0, 0.0}); break;
+			case 3: SetHighlight(context, (struct Vector3){1.0, 0.25, 0.0}); break;
+			default: SetHighlight(context, (struct Vector3){1.0, 0.0, 0.0});
+			}
+
+			glDrawElements(GL_LINES, (GLsizei)node->index.length, GL_UNSIGNED_SHORT, NULL);
+		}
+
 		dcalls += 2;
 #endif
 	}

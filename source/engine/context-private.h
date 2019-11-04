@@ -33,6 +33,7 @@
 		GLint u_camera_projection; // "
 		GLint u_camera_origin;     // "
 		GLint u_color_texture;     // "
+		GLint u_highlight;         // "
 
 		// Input
 		int active_gamepad;            // -1 if none

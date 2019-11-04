@@ -2,6 +2,7 @@
 
 uniform sampler2D color_texture;
 uniform lowp vec3 camera_origin;
+uniform lowp vec3 highlight;
 
 varying lowp vec2 uv;
 varying lowp vec3 vertex;
@@ -13,7 +14,7 @@ void main()
 	lowp float fog_factor = distance(vertex, camera_origin) / 1024.0;
 	fog_factor = pow(fog_factor, 2.0);
 
-	gl_FragColor = mix(texture2D(color_texture, uv), fog_color, clamp(fog_factor, 0.0, 1.0));
+	gl_FragColor = mix(texture2D(color_texture, uv) + vec4(highlight, 1.0), fog_color, clamp(fog_factor, 0.0, 1.0));
 	//gl_FragColor = texture2D(color_texture, uv);
 	//gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
 }
