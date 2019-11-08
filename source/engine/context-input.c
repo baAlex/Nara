@@ -112,25 +112,25 @@ void InputStep(struct Context* context)
 
 		if ((axes = glfwGetJoystickAxes(context->active_gamepad, &axes_no)) != NULL)
 		{
-			context->gamepad.left_analog.h = (axes_no >= 1) ? axes[0] : 0.0;
-			context->gamepad.left_analog.v = (axes_no >= 2) ? axes[1] : 0.0;
+			context->gamepad.left_analog.h = (axes_no >= 1) ? axes[0] : 0.0f;
+			context->gamepad.left_analog.v = (axes_no >= 2) ? axes[1] : 0.0f;
 
-			context->gamepad.right_analog.h = (axes_no >= 4) ? axes[3] : 0.0;
-			context->gamepad.right_analog.v = (axes_no >= 5) ? axes[4] : 0.0;
+			context->gamepad.right_analog.h = (axes_no >= 4) ? axes[3] : 0.0f;
+			context->gamepad.right_analog.v = (axes_no >= 5) ? axes[4] : 0.0f;
 
-			context->gamepad.pad.h = (axes_no >= 7) ? axes[6] : 0.0;
-			context->gamepad.pad.v = (axes_no >= 8) ? axes[7] : 0.0;
+			context->gamepad.pad.h = (axes_no >= 7) ? axes[6] : 0.0f;
+			context->gamepad.pad.v = (axes_no >= 8) ? axes[7] : 0.0f;
 
-			// Triggers idle position seems to be -1.0
-			context->gamepad.left_analog.t = (axes_no >= 3) ? (axes[2] + 1.0f) / 2.0f : 0.0;
-			context->gamepad.right_analog.t = (axes_no >= 6) ? (axes[5] + 1.0f) / 2.0f : 0.0;
+			// Triggers idle position seems to be -1.0f
+			context->gamepad.left_analog.t = (axes_no >= 3) ? (axes[2] + 1.0f) / 2.0f : 0.0f;
+			context->gamepad.right_analog.t = (axes_no >= 6) ? (axes[5] + 1.0f) / 2.0f : 0.0f;
 		}
 		else
 		{
-			context->gamepad.left_analog.h = context->gamepad.left_analog.v = 0.0;
-			context->gamepad.right_analog.h = context->gamepad.right_analog.v = 0.0;
-			context->gamepad.left_analog.t = context->gamepad.right_analog.t = 0.0;
-			context->gamepad.pad.h = context->gamepad.pad.v = 0.0;
+			context->gamepad.left_analog.h = context->gamepad.left_analog.v = 0.0f;
+			context->gamepad.right_analog.h = context->gamepad.right_analog.v = 0.0f;
+			context->gamepad.left_analog.t = context->gamepad.right_analog.t = 0.0f;
+			context->gamepad.pad.h = context->gamepad.pad.v = 0.0f;
 			check_disconnection = true;
 		}
 
@@ -195,16 +195,16 @@ static inline float sKeysToAxe(int action, int current_key, float current_axe, i
 	if (action == GLFW_PRESS)
 	{
 		if (current_key == key_positive)
-			current_axe += 1.0;
+			current_axe += 1.0f;
 		else if (current_key == key_negative)
-			current_axe -= 1.0;
+			current_axe -= 1.0f;
 	}
 	else
 	{
 		if (current_key == key_positive)
-			current_axe -= 1.0;
+			current_axe -= 1.0f;
 		else if (current_key == key_negative)
-			current_axe += 1.0;
+			current_axe += 1.0f;
 	}
 
 	return current_axe;

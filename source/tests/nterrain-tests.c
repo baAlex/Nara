@@ -20,7 +20,7 @@
 #include "../engine/context.h" // Mocked
 
 
-int VerticesInit(struct Vertices* out, const struct Vertex* data, size_t length, struct Status* st)
+int VerticesInit(struct Vertices* out, const struct Vertex* data, uint16_t length, struct Status* st)
 {
 	(void)data;
 	out->glptr = 0;

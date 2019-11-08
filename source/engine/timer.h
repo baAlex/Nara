@@ -25,6 +25,6 @@
 	};
 
 	void TimerInit(struct Timer* timer);
-	void TimerStep(struct Timer* timer);
+	void TimerUpdate(struct Timer* timer);
 
 #endif

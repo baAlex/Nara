@@ -28,7 +28,7 @@ SOFTWARE.
  - Alexander Brandt 2019
 -----------------------------*/
 
-#include "context.h"
+#include "context-private.h"
 #include <math.h>
 
 #ifndef TEST // All this need to be mocked
@@ -132,13 +132,16 @@ inline void ProgramFree(struct Program* program)
 
  VerticesInit()
 -----------------------------*/
-int VerticesInit(struct Vertices* out, const struct Vertex* data, size_t length, struct Status* st)
+int VerticesInit(struct Vertices* out, const struct Vertex* data, uint16_t length, struct Status* st)
 {
 	GLint reported_size = 0;
+	GLint old_bind = 0;
 
 	StatusSet(st, "VerticesInit", STATUS_SUCCESS, NULL);
 
 	glGenBuffers(1, &out->glptr);
+
+	glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &old_bind);
 	glBindBuffer(GL_ARRAY_BUFFER, out->glptr); // Before ask if is!
 
 	if (glIsBuffer(out->glptr) == GL_FALSE)
@@ -159,9 +162,12 @@ int VerticesInit(struct Vertices* out, const struct Vertex* data, size_t length,
 	out->length = length;
 
 	// Bye!
+	glBindBuffer(GL_ARRAY_BUFFER, (GLuint)old_bind);
 	return 0;
 
 return_failure:
+	glBindBuffer(GL_ARRAY_BUFFER, (GLuint)old_bind);
+
 	if (out->glptr != 0)
 		glDeleteBuffers(1, &out->glptr);
 
@@ -187,10 +193,13 @@ inline void VerticesFree(struct Vertices* vertices)
 int IndexInit(struct Index* out, const uint16_t* data, size_t length, struct Status* st)
 {
 	GLint reported_size = 0;
+	GLint old_bind = 0;
 
 	StatusSet(st, "IndexInit", STATUS_SUCCESS, NULL);
 
 	glGenBuffers(1, &out->glptr);
+
+	glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &old_bind);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, out->glptr); // Before ask if is!
 
 	if (glIsBuffer(out->glptr) == GL_FALSE)
@@ -211,9 +220,12 @@ int IndexInit(struct Index* out, const uint16_t* data, size_t length, struct Sta
 	out->length = length;
 
 	// Bye!
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, (GLuint)old_bind);
 	return 0;
 
 return_failure:
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, (GLuint)old_bind);
+
 	if (out->glptr != 0)
 		glDeleteBuffers(1, &out->glptr);
 
@@ -238,6 +250,8 @@ inline void IndexFree(struct Index* index)
 -----------------------------*/
 int TextureInitImage(struct Texture* out, const struct Image* image, enum Filter filter, struct Status* st)
 {
+	GLint old_bind = 0;
+
 	StatusSet(st, "TextureInitImage", STATUS_SUCCESS, NULL);
 
 	if (image->format != IMAGE_RGB8 && image->format != IMAGE_RGBA8 && image->format != IMAGE_GRAY8 &&
@@ -248,6 +262,8 @@ int TextureInitImage(struct Texture* out, const struct Image* image, enum Filter
 	}
 
 	glGenTextures(1, &out->glptr);
+
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, &old_bind);
 	glBindTexture(GL_TEXTURE_2D, out->glptr); // Before ask if is!
 
 	if (glIsTexture(out->glptr) == GL_FALSE)
@@ -304,6 +320,7 @@ int TextureInitImage(struct Texture* out, const struct Image* image, enum Filter
 	}
 
 	glGenerateMipmap(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, (GLuint)old_bind);
 	return 0;
 }
 

@@ -12,6 +12,13 @@
 	#include <string.h>
 
 	#include "context.h"
+	#include "glad.h" // Before GLFW
+
+	#define GLFW_INCLUDE_ES2
+	#include <GLFW/glfw3.h>
+
+	#define ATTRIBUTE_POSITION 10
+	#define ATTRIBUTE_UV 11
 
 	struct Context
 	{
@@ -27,12 +34,13 @@
 		struct Vector3 camera_origin;
 
 		const struct Program* current_program;
-		const struct Texture* current_diffuse;
+		const struct Vertices* current_vertices;
+		const struct Texture* current_texture;
 
 		GLint u_projection;        // For current program
 		GLint u_camera_projection; // "
 		GLint u_camera_origin;     // "
-		GLint u_color_texture;     // "
+		GLint u_texture;           // "
 		GLint u_highlight;         // "
 
 		// Input

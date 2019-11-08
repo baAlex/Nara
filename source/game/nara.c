@@ -132,15 +132,18 @@ int main()
 	printf("Nara v0.2-alpha\n");
 
 	// Initialization
-	s_context = ContextCreate((struct ContextOptions){
-		.caption = "Nara",
-		.window_size = {WINDOWS_WIDTH, WINDOWS_HEIGHT},
-		.window_min_size = {WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT},
-		.fullscreen = false,
-		.clean_color = {0.80f, 0.82f, 0.84f}},
-	&st);
+	struct ContextOptions options = {0};
+	{
+		options.caption = "Nara";
+		options.window_size = (struct Vector2i){WINDOWS_WIDTH, WINDOWS_HEIGHT};
+		options.window_min_size = (struct Vector2i){WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT};
+		options.clean_color = (struct Vector3){0.80f, 0.82f, 0.84f};
+		options.fullscreen = false;
+		options.disable_vsync = false;
+		options.samples = 2;
+	}
 
-	if (s_context == NULL)
+	if ((s_context = ContextCreate(options, &st)) == NULL)
 		goto return_failure;
 
 	s_mixer = MixerCreate((struct MixerOptions){
@@ -196,7 +199,7 @@ int main()
 
 	while (1)
 	{
-		TimerStep(&s_timer);
+		TimerUpdate(&s_timer);
 		ContextUpdate(s_context, &s_events);
 
 		memcpy(&entities_input, &s_events, sizeof(struct EntityInput)); // HACK!
@@ -221,7 +224,7 @@ int main()
 
 		// Render
 		SetProgram(s_context, &terrain_program);
-		SetDiffuse(s_context, &terrain_diffuse);
+		SetTexture(s_context, &terrain_diffuse);
 
 		view.angle = camera_entity->co.angle;
 		view.position = camera_entity->co.position;

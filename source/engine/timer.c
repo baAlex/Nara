@@ -40,15 +40,16 @@ void TimerInit(struct Timer* timer)
 }
 
 
-void TimerStep(struct Timer* timer)
+void TimerUpdate(struct Timer* timer)
 {
 	struct timespec current_time = {0};
 	timespec_get(&current_time, TIME_UTC);
 
 	timer->frame_number++;
 
-	timer->miliseconds_betwen = current_time.tv_nsec / 1000000.0 + current_time.tv_sec * 1000.0;
-	timer->miliseconds_betwen -= timer->last_update.tv_nsec / 1000000.0 + timer->last_update.tv_sec * 1000.0;
+	timer->miliseconds_betwen = (double)current_time.tv_nsec / 1000000.0 + (double)current_time.tv_sec * 1000.0;
+	timer->miliseconds_betwen -=
+	    (double)timer->last_update.tv_nsec / 1000000.0 + (double)timer->last_update.tv_sec * 1000.0;
 	timer->one_second = false;
 
 	if (current_time.tv_sec > timer->second_counter.tv_sec)
@@ -56,7 +57,7 @@ void TimerStep(struct Timer* timer)
 		timer->second_counter = current_time;
 		timer->one_second = true;
 
-		timer->frames_per_second = timer->frame_number - timer->fps_counter;
+		timer->frames_per_second = (int)(timer->frame_number - timer->fps_counter);
 		timer->fps_counter = timer->frame_number;
 	}
 

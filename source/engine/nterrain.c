@@ -296,7 +296,7 @@ static struct Vertices sGenerateVertices(struct Buffer* buffer, const struct NTe
 
 	// Copy to the final index
 	struct Vertices vertices = {0};
-	VerticesInit(&vertices, temp_data, (patterns_no + 1) * (patterns_no + 1), NULL); // TODO: Check error
+	VerticesInit(&vertices, temp_data, (uint16_t)((patterns_no + 1) * (patterns_no + 1)), NULL); // TODO: Check error
 
 	return vertices;
 }
@@ -588,8 +588,8 @@ again:
 	// Future values
 	{
 		// Go in? (childrens)
-		float factor = sNodeDimension(state->actual);
-		// factor = sNodeDimension(state->actual) * 2.0f; // Configurable quality
+		float factor = sNodeDimension(state->actual) * 1.0f;
+		// factor = sNodeDimension(state->actual) * 3.0f; // Configurable quality, IN STEPS OF 3.0!
 
 		if (state->actual->children != NULL &&
 		    (view == NULL ||
@@ -647,13 +647,13 @@ again:
 		{
 			state->in_border = true;
 
-			float factor = sNodeDimension(state->actual->parent);
+			float factor = sNodeDimension(state->actual->parent) * 1.0f; // Configurable quality, IN STEPS OF 3.0!
 
 			struct Vector2 step = {view->position.x, view->position.y};
-			step = Vector2Scale(step, 1.0f / sNodeDimension(state->actual->parent));
+			step = Vector2Scale(step, 1.0f / (sNodeDimension(state->actual->parent)));
 			step.x = roundf(step.x);
 			step.y = roundf(step.y);
-			step = Vector2Scale(step, sNodeDimension(state->actual->parent));
+			step = Vector2Scale(step, (sNodeDimension(state->actual->parent)));
 
 			if (sRectRectCollition((struct Vector2){step.x - factor / 2.0f, step.y - factor / 2.0f},
 			                       (struct Vector2){step.x + factor / 2.0f, step.y + factor / 2.0f},
@@ -689,20 +689,16 @@ int NTerrainDraw(struct Context* context, struct NTerrain* terrain, struct NTerr
 			temp = state.last_with_vertices;
 
 #ifndef TEST
-			glBindBuffer(GL_ARRAY_BUFFER, state.last_with_vertices->vertices.glptr);
-			glVertexAttribPointer(ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), NULL);
-			glVertexAttribPointer(ATTRIBUTE_UV, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), (float*)NULL + 3);
+			SetVertices(context, &state.last_with_vertices->vertices);
 			dcalls += 3;
 #endif
 		}
 
 #ifndef TEST
 
-		SetHighlight(context, (struct Vector3){0.0, 0.0, 0.0});
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, node->index.glptr);
-		glDrawElements(GL_TRIANGLES, (GLsizei)node->index.length, GL_UNSIGNED_SHORT, NULL);
-
-		if (state.in_border == true)
+		if (state.in_border == false)
+			SetHighlight(context, (struct Vector3){0.0, 0.0, 0.0});
+		else
 		{
 			switch (state.depth)
 			{
@@ -712,9 +708,9 @@ int NTerrainDraw(struct Context* context, struct NTerrain* terrain, struct NTerr
 			case 3: SetHighlight(context, (struct Vector3){1.0, 0.25, 0.0}); break;
 			default: SetHighlight(context, (struct Vector3){1.0, 0.0, 0.0});
 			}
-
-			glDrawElements(GL_LINES, (GLsizei)node->index.length, GL_UNSIGNED_SHORT, NULL);
 		}
+
+		Draw(context, &node->index);
 
 		dcalls += 2;
 #endif

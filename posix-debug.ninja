@@ -28,9 +28,9 @@ build ./objects/debug/engine/terrain-fragment.c: generate ./source/engine/terrai
 build ./objects/debug/engine/terrain-vertex.c:   generate ./source/engine/terrain-vertex.glsl
 
 # Engine
-build ./objects/debug/engine/context-input.o:    compile        ./source/engine/context-input.c
+build ./objects/debug/engine/context-input.o:    compile_strict ./source/engine/context-input.c
 build ./objects/debug/engine/context-opengl.o:   compile_strict ./source/engine/context-opengl.c
-build ./objects/debug/engine/context.o:          compile        ./source/engine/context.c
+build ./objects/debug/engine/context.o:          compile_strict ./source/engine/context.c
 build ./objects/debug/engine/entity.o:           compile_strict ./source/engine/entity.c
 build ./objects/debug/engine/mixer.o:            compile_strict ./source/engine/mixer.c
 build ./objects/debug/engine/nterrain.o:         compile_strict ./source/engine/nterrain.c
@@ -38,7 +38,7 @@ build ./objects/debug/engine/red-fragment.o:     compile_strict ./objects/debug/
 build ./objects/debug/engine/red-vertex.o:       compile_strict ./objects/debug/engine/red-vertex.c
 build ./objects/debug/engine/terrain-fragment.o: compile_strict ./objects/debug/engine/terrain-fragment.c
 build ./objects/debug/engine/terrain-vertex.o:   compile_strict ./objects/debug/engine/terrain-vertex.c
-build ./objects/debug/engine/timer.o:            compile        ./source/engine/timer.c
+build ./objects/debug/engine/timer.o:            compile_strict ./source/engine/timer.c
 
 # Game
 build ./objects/debug/game/camera.o: compile_strict ./source/game/camera.c

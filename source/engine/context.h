@@ -8,21 +8,9 @@
 #define CONTEXT_H
 
 	#include "image.h"
-	#include "matrix.h"
 	#include "status.h"
 	#include "vector.h"
-
-	#ifndef TEST
-	#include "glad.h" // Before GLFW
-
-	#define GLFW_INCLUDE_ES2
-	#include <GLFW/glfw3.h>
-	#else
-	typedef unsigned GLuint;
-	#endif
-
-	#define ATTRIBUTE_POSITION 10
-	#define ATTRIBUTE_UV 11
+	#include "matrix.h"
 
 	enum Filter
 	{
@@ -35,7 +23,7 @@
 
 	struct Program
 	{
-		GLuint glptr;
+		unsigned int glptr;
 	};
 
 	struct Vertex
@@ -46,19 +34,19 @@
 
 	struct Vertices
 	{
-		GLuint glptr;
-		size_t length; // In elements
+		unsigned int glptr;
+		uint16_t length; // In elements
 	};
 
 	struct Index
 	{
-		GLuint glptr;
+		unsigned int glptr;
 		size_t length; // In elements
 	};
 
 	struct Texture
 	{
-		GLuint glptr;
+		unsigned int glptr;
 	};
 
 	struct ContextEvents
@@ -93,7 +81,10 @@
 		struct Vector2i window_min_size;
 		struct Vector3 clean_color;
 
+		int samples;
+
 		bool fullscreen;
+		bool disable_vsync;
 	};
 
 	struct Context* ContextCreate(struct ContextOptions options, struct Status* st);
@@ -102,13 +93,14 @@
 
 	void SetTitle(struct Context* context, const char* title);
 	void SetProgram(struct Context* context, const struct Program* program);
+	void SetVertices(struct Context* context, const struct Vertices* vertices);
+	void SetTexture(struct Context* context, const struct Texture* texture);
 	void SetProjection(struct Context* context, struct Matrix4 matrix);
-	void SetDiffuse(struct Context* context, const struct Texture* diffuse);
+	void SetHighlight(struct Context* context, struct Vector3 value);
 	void SetCameraLookAt(struct Context* context, struct Vector3 target, struct Vector3 origin);
 	void SetCameraMatrix(struct Context* context, struct Matrix4 matrix, struct Vector3 origin);
-	void SetHighlight(struct Context* context, struct Vector3 value);
 
-	void Draw(struct Context* context, const struct Vertices* vertices, const struct Index* index);
+	void Draw(struct Context* context, const struct Index* index);
 
 	#define SetCamera(context, val, origin) _Generic((val), \
 		struct Vector3: SetCameraLookAt, \
@@ -117,16 +109,16 @@
 	)(context, val, origin)
 
 	int ProgramInit(struct Program* out, const char* vertex_code, const char* fragment_code, struct Status* st);
-	void ProgramFree(struct Program*);
+	void ProgramFree(struct Program* program);
 
-	int VerticesInit(struct Vertices* out, const struct Vertex* data, size_t length, struct Status* st);
-	void VerticesFree(struct Vertices*);
+	int VerticesInit(struct Vertices* out, const struct Vertex* data, uint16_t length, struct Status* st);
+	void VerticesFree(struct Vertices* vertices);
 
 	int IndexInit(struct Index* out, const uint16_t* data, size_t length, struct Status* st);
 	void IndexFree(struct Index* index);
 
-	int TextureInitImage(struct Texture* out, const struct Image* image, enum Filter, struct Status* st);
-	int TextureInitFilename(struct Texture* out, const char* image_filename, enum Filter, struct Status* st);
+	int TextureInitImage(struct Texture* out, const struct Image* image, enum Filter filter, struct Status* st);
+	int TextureInitFilename(struct Texture* out, const char* image_filename, enum Filter filter, struct Status* st);
 	void TextureFree(struct Texture* texture);
 
 	#define TextureInit(out, image, filter, st) _Generic((image), \

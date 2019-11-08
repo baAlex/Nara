@@ -32,10 +32,6 @@ SOFTWARE.
 #include <stdio.h>
 
 
-/*-----------------------------
-
- sResizeCallback()
------------------------------*/
 static inline void sResizeCallback(GLFWwindow* window, int new_width, int new_height)
 {
 	struct Context* context = glfwGetWindowUserPointer(window);
@@ -55,7 +51,6 @@ static inline void sResizeCallback(GLFWwindow* window, int new_width, int new_he
 struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 {
 	struct Context* context = NULL;
-	const GLFWvidmode* vid_mode = NULL;
 
 	StatusSet(st, "ContextCreate", STATUS_SUCCESS, NULL);
 	printf("- Lib-GLFW: %s\n", glfwGetVersionString());
@@ -77,7 +72,7 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-	glfwWindowHint(GLFW_SAMPLES, 2);
+	glfwWindowHint(GLFW_SAMPLES, options.samples);
 
 	if ((context->window =
 	         glfwCreateWindow(options.window_size.x, options.window_size.y, options.caption, NULL, NULL)) == NULL)
@@ -88,15 +83,16 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 
 	glfwMakeContextCurrent(context->window);
 
-	if(gladLoadGLES2Loader((GLADloadproc) glfwGetProcAddress) == 0) // After MakeContext()
+	if (gladLoadGLES2Loader((GLADloadproc)glfwGetProcAddress) == 0) // After MakeContext()
 	{
 		StatusSet(st, "ContextCreate", STATUS_ERROR, "Initialiting GLAD");
 		goto return_failure;
 	}
 
-	// Callbacks and pretty things
-	//glfwSwapInterval(0); // TODO: hardcoded
+	if (options.disable_vsync == true)
+		glfwSwapInterval(0);
 
+	// Callbacks and pretty things
 	glfwSetWindowSizeLimits(context->window, options.window_min_size.x, options.window_min_size.y, GLFW_DONT_CARE,
 	                        GLFW_DONT_CARE);
 
@@ -109,7 +105,7 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 
 	if (context->options.fullscreen == true)
 	{
-		vid_mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+		const GLFWvidmode* vid_mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
 		glfwSetWindowMonitor(context->window, glfwGetPrimaryMonitor(), 0, 0, vid_mode->width, vid_mode->height,
 		                     GLFW_DONT_CARE);
 	}
@@ -206,24 +202,56 @@ inline void SetTitle(struct Context* context, const char* title)
 
  SetProgram()
 -----------------------------*/
-void SetProgram(struct Context* context, const struct Program* program)
+inline void SetProgram(struct Context* context, const struct Program* program)
 {
 	if (program != context->current_program)
 	{
 		context->current_program = program;
 		context->u_projection = glGetUniformLocation(program->glptr, "projection");
-		context->u_camera_projection = glGetUniformLocation(context->current_program->glptr, "camera_projection");
-		context->u_camera_origin = glGetUniformLocation(context->current_program->glptr, "camera_origin");
-		context->u_color_texture = glGetUniformLocation(context->current_program->glptr, "color_texture");
-
-		context->u_highlight = glGetUniformLocation(context->current_program->glptr, "highlight");
+		context->u_camera_projection = glGetUniformLocation(program->glptr, "camera_projection");
+		context->u_camera_origin = glGetUniformLocation(program->glptr, "camera_origin");
+		context->u_texture = glGetUniformLocation(program->glptr, "color_texture");
+		context->u_highlight = glGetUniformLocation(program->glptr, "highlight");
 
 		glUseProgram(program->glptr);
 
 		glUniformMatrix4fv(context->u_projection, 1, GL_FALSE, &context->projection.e[0][0]);
 		glUniformMatrix4fv(context->u_camera_projection, 1, GL_FALSE, &context->camera.e[0][0]);
 		glUniform3fv(context->u_camera_origin, 1, (float*)&context->camera_origin);
-		glUniform1i(context->u_color_texture, 0); // Texture unit 0
+		glUniform1i(context->u_texture, 0); // Texture unit 0
+	}
+}
+
+
+/*-----------------------------
+
+ SetVertices()
+-----------------------------*/
+inline void SetVertices(struct Context* context, const struct Vertices* vertices)
+{
+	if (vertices != context->current_vertices)
+	{
+		context->current_vertices = vertices;
+
+		glBindBuffer(GL_ARRAY_BUFFER, vertices->glptr);
+
+		glVertexAttribPointer(ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), NULL);
+		glVertexAttribPointer(ATTRIBUTE_UV, 2, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), ((float*)NULL) + 3);
+	}
+}
+
+
+/*-----------------------------
+
+ SetTexture()
+-----------------------------*/
+inline void SetTexture(struct Context* context, const struct Texture* texture)
+{
+	if (texture != context->current_texture)
+	{
+		context->current_texture = texture;
+		glActiveTexture(GL_TEXTURE0); // Texture unit 0
+		glBindTexture(GL_TEXTURE_2D, context->current_texture->glptr);
 	}
 }
 
@@ -238,21 +266,6 @@ inline void SetProjection(struct Context* context, struct Matrix4 matrix)
 
 	if (context->current_program != NULL)
 		glUniformMatrix4fv(context->u_projection, 1, GL_FALSE, &context->projection.e[0][0]);
-}
-
-
-/*-----------------------------
-
- SetDiffuse()
------------------------------*/
-inline void SetDiffuse(struct Context* context, const struct Texture* diffuse)
-{
-	if (diffuse != context->current_diffuse)
-	{
-		context->current_diffuse = diffuse;
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, context->current_diffuse->glptr);
-	}
 }
 
 
@@ -304,16 +317,9 @@ inline void SetHighlight(struct Context* context, struct Vector3 value)
 
  Draw()
 -----------------------------*/
-void Draw(struct Context* context, const struct Vertices* vertices, const struct Index* index)
+inline void Draw(struct Context* context, const struct Index* index)
 {
 	(void)context;
-
-	glBindBuffer(GL_ARRAY_BUFFER, vertices->glptr);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index->glptr);
-
-	glVertexAttribPointer(ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), NULL);
-	glVertexAttribPointer(ATTRIBUTE_UV, 2, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), ((float*)NULL) + 3);
-
-	// glDrawElements(GL_LINES, index->length, GL_UNSIGNED_SHORT, NULL);
-	glDrawElements(GL_TRIANGLES, index->length, GL_UNSIGNED_SHORT, NULL);
+	glDrawElements(GL_TRIANGLES, (GLsizei)index->length, GL_UNSIGNED_SHORT, NULL);
 }
