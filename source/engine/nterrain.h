@@ -11,6 +11,7 @@
 
 	#include "buffer.h"
 	#include "vector.h"
+	#include "aabounding.h"
 	#include "status.h"
 	#include "context.h"
 
@@ -39,8 +40,7 @@
 
 	struct NTerrainNode
 	{
-		struct Vector3 min;
-		struct Vector3 max;
+		struct AabBox bbox;
 
 		float pattern_dimension;
 

@@ -49,6 +49,7 @@ build ./objects/debug/game/point.o:  compile_strict ./source/game/point.c
 build ./objects/debug/lib-glad/glad.o: compile_strict ./source/lib-glad/glad.c
 
 # Lib Japan
+build ./objects/debug/lib-japan/aabounding.o:       compile_strict ./source/lib-japan/source/aabounding.c
 build ./objects/debug/lib-japan/buffer.o:           compile_strict ./source/lib-japan/source/buffer.c
 build ./objects/debug/lib-japan/dictionary.o:       compile_strict ./source/lib-japan/source/dictionary.c
 build ./objects/debug/lib-japan/endianness.o:       compile_strict ./source/lib-japan/source/endianness.c
@@ -98,6 +99,7 @@ build nara-dbg: link $
 ./objects/debug/game/nara.o $
 ./objects/debug/game/point.o $
 ./objects/debug/lib-glad/glad.o $
+./objects/debug/lib-japan/aabounding.o $
 ./objects/debug/lib-japan/buffer.o $
 ./objects/debug/lib-japan/dictionary.o $
 ./objects/debug/lib-japan/endianness.o $
@@ -119,6 +121,7 @@ build nara-dbg: link $
 ./objects/debug/lib-samplerate/src_zoh.o
 
 build sdk-dbg: link $
+./objects/debug/lib-japan/aabounding.o $
 ./objects/debug/lib-japan/buffer.o $
 ./objects/debug/lib-japan/dictionary.o $
 ./objects/debug/lib-japan/endianness.o $

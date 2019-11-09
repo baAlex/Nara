@@ -42,6 +42,7 @@ build ./objects/release/game/point.o:  compile ./source/game/point.c
 build ./objects/release/lib-glad/glad.o: compile ./source/lib-glad/glad.c
 
 # Lib Japan
+build ./objects/release/lib-japan/aabounding.o:       compile ./source/lib-japan/source/aabounding.c
 build ./objects/release/lib-japan/buffer.o:           compile ./source/lib-japan/source/buffer.c
 build ./objects/release/lib-japan/dictionary.o:       compile ./source/lib-japan/source/dictionary.c
 build ./objects/release/lib-japan/endianness.o:       compile ./source/lib-japan/source/endianness.c
@@ -88,6 +89,7 @@ build nara: link $
 ./objects/release/game/nara.o $
 ./objects/release/game/point.o $
 ./objects/release/lib-glad/glad.o $
+./objects/release/lib-japan/aabounding.o $
 ./objects/release/lib-japan/buffer.o $
 ./objects/release/lib-japan/dictionary.o $
 ./objects/release/lib-japan/endianness.o $
@@ -109,6 +111,7 @@ build nara: link $
 ./objects/release/lib-samplerate/src_zoh.o
 
 build sdk: link $
+./objects/release/lib-japan/aabounding.o $
 ./objects/release/lib-japan/buffer.o $
 ./objects/release/lib-japan/dictionary.o $
 ./objects/release/lib-japan/endianness.o $

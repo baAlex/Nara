@@ -82,10 +82,10 @@ static void sDrawNode(struct Canvas* canvas, const struct NTerrainNode* node, co
 
 	// Outside box
 	CanvasSetColor(canvas, Vector3Scale(CanvasGetColor(canvas), 2));
-	CanvasDrawLine(canvas, (struct Vector2){node->min.x, node->min.y}, (struct Vector2){node->min.x, node->max.y});
-	CanvasDrawLine(canvas, (struct Vector2){node->min.x, node->max.y}, (struct Vector2){node->max.x, node->max.y});
-	CanvasDrawLine(canvas, (struct Vector2){node->max.x, node->max.y}, (struct Vector2){node->max.x, node->min.y});
-	CanvasDrawLine(canvas, (struct Vector2){node->max.x, node->min.y}, (struct Vector2){node->min.x, node->min.y});
+	CanvasDrawLine(canvas, (struct Vector2){node->bbox.min.x, node->bbox.min.y}, (struct Vector2){node->bbox.min.x, node->bbox.max.y});
+	CanvasDrawLine(canvas, (struct Vector2){node->bbox.min.x, node->bbox.max.y}, (struct Vector2){node->bbox.max.x, node->bbox.max.y});
+	CanvasDrawLine(canvas, (struct Vector2){node->bbox.max.x, node->bbox.max.y}, (struct Vector2){node->bbox.max.x, node->bbox.min.y});
+	CanvasDrawLine(canvas, (struct Vector2){node->bbox.max.x, node->bbox.min.y}, (struct Vector2){node->bbox.min.x, node->bbox.min.y});
 }
 
 
@@ -164,15 +164,15 @@ void TestMesures1(void** cmocka_state)
 		while ((node = NTerrainIterate(&state, &terrain->buffer, NULL)) != NULL)
 		{
 			// If nodes are squares, note that I'm using sFloatRoughtEquals()
-			if (sFloatRoughtEquals((node->max.x - node->min.x), (node->max.y - node->min.y)) == false)
-				printf("%f != %f\n", (node->max.x - node->min.x), (node->max.y - node->min.y));
+			if (sFloatRoughtEquals((node->bbox.max.x - node->bbox.min.x), (node->bbox.max.y - node->bbox.min.y)) == false)
+				printf("%f != %f\n", (node->bbox.max.x - node->bbox.min.x), (node->bbox.max.y - node->bbox.min.y));
 
-			assert_true(sFloatRoughtEquals((node->max.x - node->min.x), (node->max.y - node->min.y)));
+			assert_true(sFloatRoughtEquals((node->bbox.max.x - node->bbox.min.x), (node->bbox.max.y - node->bbox.min.y)));
 
 			// If dimensions follows the terrain subdivision
-			assert_true(sFloatRoughtEquals((node->max.x - node->min.x), 1024.0f) ||
-			            sFloatRoughtEquals((node->max.x - node->min.x), 341.33334f) ||
-			            sFloatRoughtEquals((node->max.x - node->min.x), 113.77778f));
+			assert_true(sFloatRoughtEquals((node->bbox.max.x - node->bbox.min.x), 1024.0f) ||
+			            sFloatRoughtEquals((node->bbox.max.x - node->bbox.min.x), 341.33334f) ||
+			            sFloatRoughtEquals((node->bbox.max.x - node->bbox.min.x), 113.77778f));
 		}
 	}
 
@@ -229,17 +229,17 @@ void TestMesures2(void** cmocka_state)
 		while ((node = NTerrainIterate(&state, &terrain->buffer, NULL)) != NULL)
 		{
 			// If nodes are squares, note that I'm using sFloatEquals()
-			if (sFloatEquals((node->max.x - node->min.x), (node->max.y - node->min.y)) == false)
-				printf("%f != %f\n", (node->max.x - node->min.x), (node->max.y - node->min.y));
+			if (sFloatEquals((node->bbox.max.x - node->bbox.min.x), (node->bbox.max.y - node->bbox.min.y)) == false)
+				printf("%f != %f\n", (node->bbox.max.x - node->bbox.min.x), (node->bbox.max.y - node->bbox.min.y));
 
-			assert_true(sFloatRoughtEquals((node->max.x - node->min.x), (node->max.y - node->min.y)));
+			assert_true(sFloatRoughtEquals((node->bbox.max.x - node->bbox.min.x), (node->bbox.max.y - node->bbox.min.y)));
 
 			// If dimensions follows the terrain subdivision
-			assert_true(sFloatEquals((node->max.x - node->min.x), 972.0f) ||
-			            sFloatEquals((node->max.x - node->min.x), 324.0f) ||
-			            sFloatEquals((node->max.x - node->min.x), 108.0f) ||
-			            sFloatEquals((node->max.x - node->min.x), 36.0f) ||
-			            sFloatEquals((node->max.x - node->min.x), 12.0f));
+			assert_true(sFloatEquals((node->bbox.max.x - node->bbox.min.x), 972.0f) ||
+			            sFloatEquals((node->bbox.max.x - node->bbox.min.x), 324.0f) ||
+			            sFloatEquals((node->bbox.max.x - node->bbox.min.x), 108.0f) ||
+			            sFloatEquals((node->bbox.max.x - node->bbox.min.x), 36.0f) ||
+			            sFloatEquals((node->bbox.max.x - node->bbox.min.x), 12.0f));
 		}
 	}
 
