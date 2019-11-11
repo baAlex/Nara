@@ -73,6 +73,7 @@
 
 		struct NTerrainNode* last_with_vertices;
 
+		struct AabRectangle view_rectangle;
 		bool in_border;
 	};
 

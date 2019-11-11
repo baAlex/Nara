@@ -96,7 +96,7 @@
 	void SetVertices(struct Context* context, const struct Vertices* vertices);
 	void SetTexture(struct Context* context, const struct Texture* texture);
 	void SetProjection(struct Context* context, struct Matrix4 matrix);
-	void SetHighlight(struct Context* context, struct Vector3 value);
+	void SetHighlight(struct Context* context, struct Vector2 value);
 	void SetCameraLookAt(struct Context* context, struct Vector3 target, struct Vector3 origin);
 	void SetCameraMatrix(struct Context* context, struct Matrix4 matrix, struct Vector3 origin);
 

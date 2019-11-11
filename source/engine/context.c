@@ -307,9 +307,9 @@ inline void SetCameraMatrix(struct Context* context, struct Matrix4 matrix, stru
 
  SetHighlight()
 -----------------------------*/
-inline void SetHighlight(struct Context* context, struct Vector3 value)
+inline void SetHighlight(struct Context* context, struct Vector2 value)
 {
-	glUniform3fv(context->u_highlight, 1, (float*)&value);
+	glUniform2fv(context->u_highlight, 1, (float*)&value);
 }
 
 

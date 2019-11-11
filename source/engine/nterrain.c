@@ -41,12 +41,6 @@ static inline float sNodeDimension(const struct NTerrainNode* node)
 	return (node->bbox.max.x - node->bbox.min.x);
 }
 
-static inline struct Vector2 sNodeMiddle(const struct NTerrainNode* node)
-{
-	return (struct Vector2){.x = node->bbox.min.x + (node->bbox.max.x - node->bbox.min.x) / 2.0f,
-	                        .y = node->bbox.min.y + (node->bbox.max.y - node->bbox.min.y) / 2.0f};
-}
-
 static inline size_t sPatternsInARow(float dimension, float pattern_dimension)
 {
 	return (size_t)(ceilf(dimension / pattern_dimension));
@@ -147,8 +141,8 @@ static float sHeightmapElevation(const struct Image* hmap, struct Vector2 cords)
 
  sGenerateIndex()
 -----------------------------*/
-static struct Index sGenerateIndex(struct Buffer* buffer, const struct NTerrainNode* node, struct Vector3 org_min,
-                                   struct Vector3 org_max, float org_pattern_dimension)
+static struct Index sGenerateIndex(struct Buffer* buffer, const struct NTerrainNode* node, struct AabBox org,
+                                   float org_pattern_dimension)
 {
 	// Generation on a temporary buffer
 	size_t const patterns_no = sPatternsInARow(sNodeDimension(node), node->pattern_dimension);
@@ -159,12 +153,12 @@ static struct Index sGenerateIndex(struct Buffer* buffer, const struct NTerrainN
 	uint16_t* temp_data = buffer->data;
 
 	{
-		size_t const org_patterns_no = sPatternsInARow(org_max.x - org_min.x, org_pattern_dimension);
+		size_t const org_patterns_no = sPatternsInARow(org.max.x - org.min.x, org_pattern_dimension);
 		size_t const org_step =
-		    (org_patterns_no / patterns_no) / (size_t)lroundf((org_max.x - org_min.x) / sNodeDimension(node));
+		    (org_patterns_no / patterns_no) / (size_t)lroundf((org.max.x - org.min.x) / sNodeDimension(node));
 
-		size_t const org_col_start = sPatternsInARow(node->bbox.min.x - org_min.x, org_pattern_dimension);
-		size_t org_row = sPatternsInARow(node->bbox.min.y - org_min.y, org_pattern_dimension);
+		size_t const org_col_start = sPatternsInARow(node->bbox.min.x - org.min.x, org_pattern_dimension);
+		size_t org_row = sPatternsInARow(node->bbox.min.y - org.min.y, org_pattern_dimension);
 		size_t org_col = org_col_start;
 
 		size_t index_value = 0;
@@ -421,8 +415,7 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 		if (last_parent != NULL && state.depth > parent_depth)
 		{
 			node->vertices_type = INHERITED_FROM_PARENT;
-			node->index = sGenerateIndex(&terrain->buffer, node, last_parent->bbox.min, last_parent->bbox.max,
-			                             terrain->min_pattern_dimension);
+			node->index = sGenerateIndex(&terrain->buffer, node, last_parent->bbox, terrain->min_pattern_dimension);
 		}
 		else
 		{
@@ -436,8 +429,7 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 				node->vertices_type = SHARED_WITH_CHILDRENS;
 				node->vertices = sGenerateVertices(&terrain->buffer, node, terrain->min_pattern_dimension,
 				                                   terrain->dimension, heightmap, elevation);
-				node->index =
-				    sGenerateIndex(&terrain->buffer, node, node->bbox.min, node->bbox.max, terrain->min_pattern_dimension);
+				node->index = sGenerateIndex(&terrain->buffer, node, node->bbox, terrain->min_pattern_dimension);
 			}
 
 			// Nope, only his own vertices
@@ -450,7 +442,7 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 				node->vertices_type = OWN_VERTICES;
 				node->vertices = sGenerateVertices(&terrain->buffer, node, node->pattern_dimension, terrain->dimension,
 				                                   heightmap, elevation);
-				node->index = sGenerateIndex(&terrain->buffer, node, node->bbox.min, node->bbox.max, node->pattern_dimension);
+				node->index = sGenerateIndex(&terrain->buffer, node, node->bbox, node->pattern_dimension);
 			}
 		}
 	}
@@ -617,21 +609,24 @@ again:
 		{
 			state->in_border = true;
 
+			// Lets create a 'view_rectangle', similar to the box that determines
+			// when a node should be subdivided (the 'Go in?' step). Also, note
+			// that 'factor' is the same, the difference is that this rectangle has
+			// his coordinates aligned.
+
 			float factor = sNodeDimension(state->actual->parent) * 1.0f; // Configurable quality, IN STEPS OF 3.0!
 
-			struct Vector2 step = {view->position.x, view->position.y};
-			step = Vector2Scale(step, 1.0f / (sNodeDimension(state->actual->parent)));
-			step.x = roundf(step.x);
-			step.y = roundf(step.y);
-			step = Vector2Scale(step, (sNodeDimension(state->actual->parent)));
+			struct Vector2 align = {view->position.x, view->position.y};
+			align = Vector2Scale(align, 1.0f / (sNodeDimension(state->actual->parent)));
+			align.x = roundf(align.x);
+			align.y = roundf(align.y);
+			align = Vector2Scale(align, (sNodeDimension(state->actual->parent)));
 
-			struct AabRectangle f = {{step.x - factor / 2.0f, step.y - factor / 2.0f}, {step.x + factor / 2.0f, step.y + factor / 2.0f}};
-			struct AabRectangle r = {{state->actual->bbox.min.x, state->actual->bbox.min.y}, {state->actual->bbox.max.x, state->actual->bbox.max.y}};
+			state->view_rectangle = (struct AabRectangle){{align.x - factor / 2.0f, align.y - factor / 2.0f},
+			                         {align.x + factor / 2.0f, align.y + factor / 2.0f}};
 
-			if (AabCollisionRectRect(f, r) == true)
-			{
+			if (AabCollisionRectRect(state->view_rectangle, AabToRectangle(state->actual->bbox)) == true)
 				state->in_border = false;
-			}
 		}
 	}
 
@@ -654,34 +649,39 @@ int NTerrainDraw(struct Context* context, struct NTerrain* terrain, struct NTerr
 
 	while ((node = NTerrainIterate(&state, &terrain->buffer, view)) != NULL)
 	{
+#ifndef TEST
 		if (temp != state.last_with_vertices)
 		{
 			temp = state.last_with_vertices;
 
-#ifndef TEST
 			SetVertices(context, &state.last_with_vertices->vertices);
 			dcalls += 3;
-#endif
 		}
 
-#ifndef TEST
-
 		if (state.in_border == false)
-			SetHighlight(context, (struct Vector3){0.0, 0.0, 0.0});
+		{
+			// Because there are no off/on state except for the coordinates themself,
+			// vertices on positions x:0 and y:0 always falls as being part of a border
+			SetHighlight(context, (struct Vector2){0.0f, 0.0f});
+		}
 		else
 		{
-			switch (state.depth)
-			{
-			case 0: SetHighlight(context, (struct Vector3){0.0, 0.0, 1.0}); break;
-			case 1: SetHighlight(context, (struct Vector3){0.0, 1.0, 0.0}); break;
-			case 2: SetHighlight(context, (struct Vector3){1.0, 1.0, 0.0}); break;
-			case 3: SetHighlight(context, (struct Vector3){1.0, 0.25, 0.0}); break;
-			default: SetHighlight(context, (struct Vector3){1.0, 0.0, 0.0});
-			}
+			struct Vector2 highlight_coords = {0.0f, 0.0f};
+
+			if (node->bbox.min.x >= state.view_rectangle.max.x)
+				highlight_coords.x = node->bbox.max.x;
+			else if (node->bbox.max.x <= state.view_rectangle.min.x)
+				highlight_coords.x = node->bbox.min.x;
+
+			if (node->bbox.min.y >= state.view_rectangle.max.y)
+				highlight_coords.y = node->bbox.max.y;
+			else if (node->bbox.max.y <= state.view_rectangle.min.y)
+				highlight_coords.y = node->bbox.min.y;
+
+			SetHighlight(context, highlight_coords);
 		}
 
 		Draw(context, &node->index);
-
 		dcalls += 2;
 #endif
 	}
