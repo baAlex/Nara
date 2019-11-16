@@ -660,25 +660,18 @@ int NTerrainDraw(struct Context* context, struct NTerrain* terrain, struct NTerr
 
 		if (state.in_border == false)
 		{
-			// Because there are no off/on state except for the coordinates themself,
-			// vertices on positions x:0 and y:0 always falls as being part of a border
-			SetHighlight(context, (struct Vector2){0.0f, 0.0f});
+			SetHighlight(context, (struct Vector3){0.0f, 0.0f, 0.0f});
 		}
 		else
 		{
-			struct Vector2 highlight_coords = {0.0f, 0.0f};
-
-			if (node->bbox.min.x >= state.view_rectangle.max.x)
-				highlight_coords.x = node->bbox.max.x;
-			else if (node->bbox.max.x <= state.view_rectangle.min.x)
-				highlight_coords.x = node->bbox.min.x;
-
-			if (node->bbox.min.y >= state.view_rectangle.max.y)
-				highlight_coords.y = node->bbox.max.y;
-			else if (node->bbox.max.y <= state.view_rectangle.min.y)
-				highlight_coords.y = node->bbox.min.y;
-
-			SetHighlight(context, highlight_coords);
+			switch (state.depth)
+			{
+			case 0: SetHighlight(context, (struct Vector3){0.0, 0.0, 1.0}); break;
+			case 1: SetHighlight(context, (struct Vector3){0.0, 1.0, 0.0}); break;
+			case 2: SetHighlight(context, (struct Vector3){1.0, 1.0, 0.0}); break;
+			case 3: SetHighlight(context, (struct Vector3){1.0, 0.25, 0.0}); break;
+			default: SetHighlight(context, (struct Vector3){1.0, 0.0, 0.0});
+			}
 		}
 
 		Draw(context, &node->index);
