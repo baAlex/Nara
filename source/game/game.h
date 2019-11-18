@@ -16,6 +16,8 @@
 	#include "matrix.h"
 	#include "utilities.h"
 
+	#include "../engine/misc.h"
+
 	#ifndef ENTITY_H
 		struct EntityInput // Copy from 'entity.h'
 		{

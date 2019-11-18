@@ -5,6 +5,8 @@ The terrain in the screenshots should work as an overworld for an action rpg, bu
 
 Check implemented features and future work in the [projects tab](https://github.com/baAlex/Nara/projects/). Any help is welcomed ⛰️📐️!.
 
+And while I always procure to maintain the code in a compilable state,
+
 ![screenshot](./documentation/screenshot-terrain.jpg)
 ![screenshot](./documentation/screenshot-wire.jpg)
 

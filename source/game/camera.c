@@ -79,36 +79,6 @@ void GameCameraDelete(void* blob)
 
  GameCameraThink()
 -----------------------------*/
-static void sVectorAxes(struct Vector3 angle, struct Vector3* forward, struct Vector3* left, struct Vector3* up)
-{
-	// http://www.songho.ca/opengl/gl_anglestoaxes.html#anglestoaxes
-	// Saving all diferences on axis disposition
-
-	// x = Pith
-	// y = Roll
-	// z = Yaw
-
-	float cx = cosf(DegToRad(angle.x));
-	float sx = sinf(DegToRad(angle.x));
-	float cy = cosf(DegToRad(angle.y)); // TODO: broken... maybe
-	float sy = sinf(DegToRad(angle.y)); // "
-	float cz = cosf(DegToRad(angle.z));
-	float sz = sinf(DegToRad(angle.z));
-
-	forward->x = sz * sx;
-	forward->y = cz * sx;
-	forward->z = cx;
-
-	left->x = (sz * sy * sx) + (cy * cz);
-	left->y = (cz * sy * sx) + (cy * -sz);
-	left->z = sx * sy;
-
-	up->x = (sz * cy * cx) + -(sy * cz);
-	up->y = (cz * cy * cx) + -(sy * -sz);
-	up->z = -sx * cy;
-}
-
-
 int GameCameraThink(void* blob, const struct EntityInput* input, struct EntityCommon* out_state)
 {
 	struct Camera* camera = blob;
@@ -118,12 +88,12 @@ int GameCameraThink(void* blob, const struct EntityInput* input, struct EntityCo
 	struct Vector3 left;
 	struct Vector3 up;
 
-	sVectorAxes(camera->angle, &forward, &left, &up);
+	VectorAxes(camera->angle, &forward, &left, &up);
 
 	// Forward, backward
 	if (fabs(input->left_analog.v) > ANALOG_DEAD_ZONE)
 	{
-		temp = Vector3Scale(forward, input->left_analog.v * MOVEMENT_SPEED * input->delta);
+		temp = Vector3Scale(forward, (-1.0f) * input->left_analog.v * MOVEMENT_SPEED * input->delta);
 		camera->position = Vector3Add(camera->position, temp);
 	}
 
