@@ -15,8 +15,6 @@ rule link
 
 
 # Automatically generated files
-build ./objects/release/engine/red-fragment.c:     generate ./source/engine/red-fragment.glsl
-build ./objects/release/engine/red-vertex.c:       generate ./source/engine/red-vertex.glsl
 build ./objects/release/engine/terrain-fragment.c: generate ./source/engine/terrain-fragment.glsl
 build ./objects/release/engine/terrain-vertex.c:   generate ./source/engine/terrain-vertex.glsl
 
@@ -27,8 +25,6 @@ build ./objects/release/engine/context.o:          compile ./source/engine/conte
 build ./objects/release/engine/entity.o:           compile ./source/engine/entity.c
 build ./objects/release/engine/mixer.o:            compile ./source/engine/mixer.c
 build ./objects/release/engine/nterrain.o:         compile ./source/engine/nterrain.c
-build ./objects/release/engine/red-fragment.o:     compile ./objects/release/engine/red-fragment.c
-build ./objects/release/engine/red-vertex.o:       compile ./objects/release/engine/red-vertex.c
 build ./objects/release/engine/terrain-fragment.o: compile ./objects/release/engine/terrain-fragment.c
 build ./objects/release/engine/terrain-vertex.o:   compile ./objects/release/engine/terrain-vertex.c
 build ./objects/release/engine/timer.o:            compile ./source/engine/timer.c
@@ -80,8 +76,6 @@ build nara: link $
 ./objects/release/engine/entity.o $
 ./objects/release/engine/mixer.o $
 ./objects/release/engine/nterrain.o $
-./objects/release/engine/red-fragment.o $
-./objects/release/engine/red-vertex.o $
 ./objects/release/engine/terrain-fragment.o $
 ./objects/release/engine/terrain-vertex.o $
 ./objects/release/engine/timer.o $

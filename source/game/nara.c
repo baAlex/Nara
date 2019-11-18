@@ -42,23 +42,31 @@ SOFTWARE.
 #include "game.h"
 #include "utilities.h"
 
+
+#define NAME "Nara v0.2-alpha"
+#define NAME_SHORT "Nara"
+
 #define FOV 45
 
 #define WINDOWS_WIDTH 1152
 #define WINDOWS_HEIGHT 480
-
 #define WINDOWS_MIN_WIDTH 240
 #define WINDOWS_MIN_HEIGHT 100
 
+
 extern const uint8_t g_terrain_vertex[];
 extern const uint8_t g_terrain_fragment[];
-extern const uint8_t g_red_vertex[];
-extern const uint8_t g_red_fragment[];
 
 static struct Context* s_context = NULL;
-static struct ContextEvents s_events;
 static struct Mixer* s_mixer = NULL;
-static struct Timer s_timer;
+static struct Timer s_timer = {0};
+
+static struct NTerrain* s_terrain = NULL;
+static struct Program s_terrain_program = {0};
+static struct Texture s_terrain_texture = {0};
+
+static struct Dictionary* s_classes = NULL;
+static struct List s_entities = {0};
 
 
 /*-----------------------------
@@ -88,20 +96,20 @@ static struct Dictionary* sInitializeClasses()
 
  sSetProjection()
 -----------------------------*/
-static void sSetProjection(struct Vector2i window_size, struct Context* s_context)
+static void sSetProjection(struct Vector2i window_size, struct Context* context)
 {
 	struct Matrix4 projection;
 
-	projection = Matrix4Perspective(FOV, (float)window_size.x / (float)window_size.y, 0.1f, 20000.0f); // 20 km
-	SetProjection(s_context, projection);
+	projection = Matrix4Perspective(FOV, (float)window_size.x / (float)window_size.y, 0.1f, 20000.0f);
+	SetProjection(context, projection);
 }
 
 
 /*-----------------------------
 
- main()
+ sSingleClick()
 -----------------------------*/
-static bool sSingleClick(bool evn, bool* state)
+static inline bool sSingleClick(bool evn, bool* state)
 {
 	if (evn == false)
 		*state = true;
@@ -114,156 +122,191 @@ static bool sSingleClick(bool evn, bool* state)
 	return false;
 }
 
+
+/*-----------------------------
+
+ main()
+-----------------------------*/
 int main()
 {
 	struct Status st = {0};
+	struct Entity* camera = NULL;
 
-	struct NTerrain* terrain = NULL;
-	struct Program terrain_program = {0};
-	struct Texture terrain_diffuse = {0};
+	printf("%s\n", NAME);
 
-	struct Dictionary* classes = NULL;
-	struct List entities = {0};
-	struct EntityInput entities_input = {0};
-	struct Entity* camera_entity = NULL;
-
-	struct Matrix4 camera_matrix = Matrix4Identity();
-
-	printf("Nara v0.2-alpha\n");
-
-	// Initialization
-	struct ContextOptions options = {0};
+	// Engine initialization
 	{
-		options.caption = "Nara";
-		options.window_size = (struct Vector2i){WINDOWS_WIDTH, WINDOWS_HEIGHT};
-		options.window_min_size = (struct Vector2i){WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT};
-		options.clean_color = (struct Vector3){0.80f, 0.82f, 0.84f};
-		options.fullscreen = false;
-		options.disable_vsync = false;
-		options.samples = 2;
+		struct ContextOptions context_options = {0};
+		struct MixerOptions mixer_options = {0};
+
+		context_options.caption = NAME_SHORT;
+		context_options.window_size = (struct Vector2i){WINDOWS_WIDTH, WINDOWS_HEIGHT};
+		context_options.window_min_size = (struct Vector2i){WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT};
+		context_options.clean_color = (struct Vector3){0.80f, 0.82f, 0.84f};
+		context_options.fullscreen = false;
+		context_options.disable_vsync = false;
+		context_options.samples = 2;
+
+		mixer_options.frequency = 48000;
+		mixer_options.channels = 2;
+		mixer_options.volume = 0.8f;
+
+		if ((s_context = ContextCreate(context_options, &st)) == NULL)
+			goto return_failure;
+
+		if ((s_mixer = MixerCreate(mixer_options, &st)) == NULL)
+			goto return_failure;
+
+		TimerInit(&s_timer);
 	}
-
-	if ((s_context = ContextCreate(options, &st)) == NULL)
-		goto return_failure;
-
-	s_mixer = MixerCreate((struct MixerOptions){
-		.frequency = 48000,
-		.channels = 2,
-		.volume = 0.8f},
-	&st);
-
-	if (s_mixer == NULL)
-		goto return_failure;
-
-	TimerInit(&s_timer);
 
 	// Resources
 	{
-		if ((terrain = NTerrainCreate("./assets/heightmap.sgi", 75.0, 972.0, 36.0, 3, &st)) == NULL)
+		if ((s_terrain = NTerrainCreate("./assets/heightmap.sgi", 75.0, 972.0, 36.0, 3, &st)) == NULL)
 			goto return_failure;
 
-		if (ProgramInit(&terrain_program, (char*)g_terrain_vertex, (char*)g_terrain_fragment, &st) != 0)
+		if (ProgramInit(&s_terrain_program, (char*)g_terrain_vertex, (char*)g_terrain_fragment, &st) != 0)
 			goto return_failure;
 
-		if (TextureInit(&terrain_diffuse, "./assets/colormap.sgi", FILTER_TRILINEAR, &st) != 0)
+		if (TextureInit(&s_terrain_texture, "./assets/colormap.sgi", FILTER_TRILINEAR, &st) != 0)
 			goto return_failure;
 
-		if (SampleCreate(s_mixer, "./assets/rz1-closed-hithat.wav", &st) == NULL ||
-		    SampleCreate(s_mixer, "./assets/rz1-clap.wav", &st) == NULL)
+		if (SampleCreate(s_mixer, "./assets/rz1-closed-hithat.wav", &st) == NULL)
 			goto return_failure;
 
-		classes = sInitializeClasses();
-		EntityCreate(&entities, ClassGet(classes, "Point"));
+		if (SampleCreate(s_mixer, "./assets/rz1-clap.wav", &st) == NULL)
+			goto return_failure;
 
-		camera_entity = EntityCreate(&entities, ClassGet(classes, "Camera"));
-		camera_entity->co.position = (struct Vector3){128.0f, 128.0f, 256.0f};
-		camera_entity->co.angle = (struct Vector3){-50.0f, 0.0f, 45.0f};
+		if (SampleCreate(s_mixer, "./assets/ambient01.au", &st) == NULL)
+			goto return_failure;
+
+		NTerrainPrintInfo(s_terrain);
+
+		// Entities
+		s_classes = sInitializeClasses();
+
+		EntityCreate(&s_entities, ClassGet(s_classes, "Point"));
+		camera = EntityCreate(&s_entities, ClassGet(s_classes, "Camera"));
+		camera->co.position = (struct Vector3){128.0f, 128.0f, 256.0f};
+		camera->co.angle = (struct Vector3){-50.0f, 0.0f, 45.0f};
 
 		sSetProjection((struct Vector2i){WINDOWS_WIDTH, WINDOWS_HEIGHT}, s_context);
 	}
 
-	NTerrainPrintInfo(terrain);
-
 	// Game loop
-	bool a_release = false;
-	bool b_release = false;
-	bool x_release = false;
-	bool y_release = false;
-
-	int draw_calls = 0;
-	char title[128];
-
-	Play2d(s_mixer, 0.7f, PLAY_LOOP, "./assets/ambient01.au");
-
-	struct NTerrainView view = {0};
-
-	while (1)
 	{
-		TimerUpdate(&s_timer);
-		ContextUpdate(s_context, &s_events);
+		struct ContextEvents events = {0};
+		struct EntityInput entities_input = {0};
+		struct NTerrainView terrain_view = {0};
+		struct Matrix4 matrix = {0};
 
-		memcpy(&entities_input, &s_events, sizeof(struct EntityInput)); // HACK!
-		entities_input.delta = (float)s_timer.miliseconds_betwen / 33.3333f;
+		int draw_calls = 0;
+		char title[128] = {0};
 
-		EntitiesUpdate(&entities, entities_input);
+		bool a_release = false;
+		bool b_release = false;
+		bool x_release = false;
+		bool y_release = false;
 
-		// Update view
-		if (Vector3Equals(camera_entity->co.position, camera_entity->old_co.position) == false ||
-		    Vector3Equals(camera_entity->co.angle, camera_entity->old_co.angle) == false)
+		Play2d(s_mixer, 0.7f, PLAY_LOOP, "./assets/ambient01.au");
+		SetProgram(s_context, &s_terrain_program);
+		SetTexture(s_context, &s_terrain_texture);
+
+		if (MixerStart(s_mixer, &st) != 0)
+			goto return_failure;
+
+		while (1)
 		{
-			camera_matrix = Matrix4Identity();
-			camera_matrix = Matrix4RotateX(camera_matrix, DegToRad(camera_entity->co.angle.x));
-			camera_matrix = Matrix4RotateZ(camera_matrix, DegToRad(camera_entity->co.angle.z));
-			camera_matrix = Matrix4Multiply(camera_matrix, Matrix4Translate(Vector3Invert(camera_entity->co.position)));
+			// Update engine
+			TimerUpdate(&s_timer);
+			ContextUpdate(s_context, &events);
 
-			SetCamera(s_context, camera_matrix, camera_entity->co.position);
+			// Update entities
+			entities_input.a = events.a;
+			entities_input.b = events.b;
+			entities_input.x = events.x;
+			entities_input.y = events.y;
+
+			entities_input.lb = events.lb;
+			entities_input.rb = events.rb;
+
+			entities_input.view = events.view;
+			entities_input.menu = events.menu;
+			entities_input.guide = events.guide;
+
+			entities_input.ls = events.ls;
+			entities_input.rs = events.rs;
+
+			entities_input.pad.h = events.pad.h;
+			entities_input.pad.v = events.pad.v;
+
+			entities_input.left_analog.h = events.left_analog.h;
+			entities_input.left_analog.v = events.left_analog.v;
+			entities_input.left_analog.t = events.left_analog.t;
+
+			entities_input.right_analog.h = events.right_analog.h;
+			entities_input.right_analog.v = events.right_analog.v;
+			entities_input.right_analog.t = events.right_analog.t;
+
+			entities_input.delta = (float)s_timer.miliseconds_betwen / 33.3333f;
+
+			EntitiesUpdate(&s_entities, entities_input);
+
+			// Update view
+			if (Vector3Equals(camera->co.position, camera->old_co.position) == false ||
+			    Vector3Equals(camera->co.angle, camera->old_co.angle) == false)
+			{
+				matrix = Matrix4Identity();
+				matrix = Matrix4RotateX(matrix, DegToRad(camera->co.angle.x));
+				matrix = Matrix4RotateZ(matrix, DegToRad(camera->co.angle.z));
+				matrix = Matrix4Multiply(matrix, Matrix4Translate(Vector3Invert(camera->co.position)));
+
+				SetCamera(s_context, matrix, camera->co.position);
+			}
+
+			if (events.resized == true)
+				sSetProjection(events.window_size, s_context);
+
+			// Render
+			terrain_view.angle = camera->co.angle;
+			terrain_view.position = camera->co.position;
+			terrain_view.max_distance = 1024.0f;
+
+			draw_calls = NTerrainDraw(s_context, s_terrain, &terrain_view);
+
+			if (s_timer.one_second == true)
+			{
+				sprintf(title, "%s | dcalls: %i, fps: %i (~%.02f)", NAME, draw_calls, s_timer.frames_per_second,
+				        s_timer.miliseconds_betwen);
+				SetTitle(s_context, title);
+			}
+
+			// Testing, testing
+			if (sSingleClick(events.a, &a_release) == true)
+				Play2d(s_mixer, 1.0f, PLAY_NORMAL, "./assets/rz1-kick.wav");
+
+			if (sSingleClick(events.b, &b_release) == true)
+				Play2d(s_mixer, 1.0f, PLAY_NORMAL, "./assets/rz1-snare.wav");
+
+			if (sSingleClick(events.x, &x_release) == true)
+				Play2d(s_mixer, 1.0f, PLAY_NORMAL, "./assets/rz1-closed-hithat.wav");
+
+			if (sSingleClick(events.y, &y_release) == true)
+				Play2d(s_mixer, 1.0f, PLAY_NORMAL, "./assets/rz1-clap.wav");
+
+			// Exit?
+			if (events.close == true)
+				break;
 		}
-
-		if (s_events.resized == true)
-			sSetProjection(s_events.window_size, s_context);
-
-		// Render
-		SetProgram(s_context, &terrain_program);
-		SetTexture(s_context, &terrain_diffuse);
-
-		view.angle = camera_entity->co.angle;
-		view.position = camera_entity->co.position;
-		view.max_distance = 1024.0f;
-
-		draw_calls = NTerrainDraw(s_context, terrain, &view);
-
-		if (s_timer.one_second == true)
-		{
-			sprintf(title, "Nara v0.2-alpha | dcalls: %i, fps: %i (~%.02f)", draw_calls, s_timer.frames_per_second,
-			        s_timer.miliseconds_betwen);
-			SetTitle(s_context, title);
-		}
-
-		// Testing, testing
-		if (sSingleClick(s_events.a, &a_release) == true)
-			Play2d(s_mixer, 1.0f, PLAY_NORMAL, "./assets/rz1-kick.wav");
-
-		if (sSingleClick(s_events.b, &b_release) == true)
-			Play2d(s_mixer, 1.0f, PLAY_NORMAL, "./assets/rz1-snare.wav");
-
-		if (sSingleClick(s_events.x, &x_release) == true)
-			Play2d(s_mixer, 1.0f, PLAY_NORMAL, "./assets/rz1-closed-hithat.wav");
-
-		if (sSingleClick(s_events.y, &y_release) == true)
-			Play2d(s_mixer, 1.0f, PLAY_NORMAL, "./assets/rz1-clap.wav");
-
-		// Exit?
-		if (s_events.close == true)
-			break;
 	}
 
 	// Bye!
-	DictionaryDelete(classes);
-	ListClean(&entities);
+	DictionaryDelete(s_classes);
+	ListClean(&s_entities);
 
-	ProgramFree(&terrain_program);
-	TextureFree(&terrain_diffuse);
-	NTerrainDelete(terrain);
+	ProgramFree(&s_terrain_program);
+	TextureFree(&s_terrain_texture);
+	NTerrainDelete(s_terrain);
 
 	MixerDelete(s_mixer);
 	ContextDelete(s_context);
@@ -271,6 +314,6 @@ int main()
 	return EXIT_SUCCESS;
 
 return_failure:
-	StatusPrint("Nara", st);
+	StatusPrint(NAME_SHORT, st);
 	return EXIT_FAILURE;
 }

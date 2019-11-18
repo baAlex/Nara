@@ -27,6 +27,9 @@
 	struct Mixer* MixerCreate(struct MixerOptions options, struct Status* st);
 	void MixerDelete(struct Mixer* mixer);
 
+	int MixerStart(struct Mixer* mixer, struct Status* st);
+	void MixerStop(struct Mixer* mixer); // TODO
+
 	struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct Status* st);
 	void SampleDelete(struct Sample*);
 

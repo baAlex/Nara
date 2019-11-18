@@ -32,7 +32,7 @@ SOFTWARE.
 #include <stdio.h>
 
 
-static inline void sResizeCallback(GLFWwindow* window, int new_width, int new_height)
+static void sResizeCallback(GLFWwindow* window, int new_width, int new_height)
 {
 	struct Context* context = glfwGetWindowUserPointer(window);
 
@@ -41,6 +41,11 @@ static inline void sResizeCallback(GLFWwindow* window, int new_width, int new_he
 	context->window_size.x = new_width;
 	context->window_size.y = new_height;
 	context->window_resized = true;
+}
+
+static void sErrorCallback(int code, const char* description)
+{
+	printf("[GLFW error] (%i) %s\n", code, description);
 }
 
 
@@ -60,6 +65,8 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 		return NULL;
 
 	memcpy(&context->options, &options, sizeof(struct ContextOptions));
+
+	glfwSetErrorCallback(sErrorCallback);
 
 	if (glfwInit() != GLFW_TRUE)
 	{

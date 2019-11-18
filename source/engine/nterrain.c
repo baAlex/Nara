@@ -647,37 +647,43 @@ int NTerrainDraw(struct Context* context, struct NTerrain* terrain, struct NTerr
 
 	int dcalls = 0;
 
+#ifndef TEST
+	SetHighlight(context, (struct Vector3){0.0f, 0.0f, 0.0f});
+
 	while ((node = NTerrainIterate(&state, &terrain->buffer, view)) != NULL)
 	{
-#ifndef TEST
 		if (temp != state.last_with_vertices)
 		{
 			temp = state.last_with_vertices;
 
 			SetVertices(context, &state.last_with_vertices->vertices);
-			dcalls += 3;
+			dcalls += 1;
 		}
 
 		if (state.in_border == false)
 		{
-			SetHighlight(context, (struct Vector3){0.0f, 0.0f, 0.0f});
+			Draw(context, &node->index);
+			dcalls += 1;
 		}
 		else
 		{
-			switch (state.depth)
+			/*switch (state.depth)
 			{
 			case 0: SetHighlight(context, (struct Vector3){0.0, 0.0, 1.0}); break;
 			case 1: SetHighlight(context, (struct Vector3){0.0, 1.0, 0.0}); break;
 			case 2: SetHighlight(context, (struct Vector3){1.0, 1.0, 0.0}); break;
 			case 3: SetHighlight(context, (struct Vector3){1.0, 0.25, 0.0}); break;
 			default: SetHighlight(context, (struct Vector3){1.0, 0.0, 0.0});
-			}
+			}*/
+
+			Draw(context, &node->index);
+			dcalls += 1;
+
+			//SetHighlight(context, (struct Vector3){0.0f, 0.0f, 0.0f});
 		}
 
-		Draw(context, &node->index);
-		dcalls += 2;
-#endif
 	}
+#endif
 
 	return dcalls;
 }

@@ -132,7 +132,7 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 
 			if ((mixer->playlist[pl].cursor += 1) >= mixer->playlist[pl].sample->length)
 			{
-				if((mixer->playlist[pl].options & PLAY_LOOP) == PLAY_LOOP)
+				if ((mixer->playlist[pl].options & PLAY_LOOP) == PLAY_LOOP)
 				{
 					mixer->playlist[pl].cursor = 0;
 					continue;
@@ -260,12 +260,6 @@ struct Mixer* MixerCreate(struct MixerOptions options, struct Status* st)
 		goto return_failure;
 	}
 
-	if ((errcode = Pa_StartStream(mixer->stream)) != paNoError)
-	{
-		StatusSet(st, "MixerCreate", STATUS_ERROR, "Starting stream: \"%s\"", Pa_GetErrorText(errcode));
-		goto return_failure;
-	}
-
 	// Bye!
 	printf("\n");
 	return mixer;
@@ -294,6 +288,34 @@ inline void MixerDelete(struct Mixer* mixer)
 		sFreeMarkedSamples(mixer);
 		free(mixer);
 	}
+}
+
+
+/*-----------------------------
+
+ MixerStart()
+-----------------------------*/
+int MixerStart(struct Mixer* mixer, struct Status* st)
+{
+	PaError errcode = paNoError;
+
+	if ((errcode = Pa_StartStream(mixer->stream)) != paNoError)
+	{
+		StatusSet(st, "MixerCreate", STATUS_ERROR, "Starting stream: \"%s\"", Pa_GetErrorText(errcode));
+		return 1;
+	}
+
+	return 0;
+}
+
+
+/*-----------------------------
+
+ MixerStop()
+-----------------------------*/
+void MixerStop(struct Mixer* mixer)
+{
+	(void)mixer;
 }
 
 
