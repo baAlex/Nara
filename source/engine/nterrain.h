@@ -58,7 +58,9 @@
 		struct Vector3 position;
 		struct Vector3 angle;
 		float max_distance;
-		float fov;
+		float aspect;
+
+		float fov; // TODO
 	};
 
 	struct NTerrainState
@@ -72,6 +74,9 @@
 		size_t future_depth;
 
 		struct NTerrainNode* last_with_vertices;
+
+		struct Vector3 frustum_position[5];
+		struct Vector3 frustum_normal[5];
 
 		struct AabRectangle view_rectangle;
 		bool in_border;

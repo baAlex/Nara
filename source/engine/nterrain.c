@@ -29,8 +29,8 @@ SOFTWARE.
 -----------------------------*/
 
 #include "nterrain.h"
-#include "utilities.h"
 #include "misc.h"
+#include "utilities.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -487,7 +487,7 @@ void NTerrainDelete(struct NTerrain* terrain)
 
  NTerrainIterate()
 -----------------------------*/
-static inline bool sCheckPlane(const struct NTerrainNode* node, struct Vector3 pos, struct Vector3 nor)
+static inline bool sCheckPlane(const struct AabBox bbox, struct Vector3 pos, struct Vector3 nor)
 {
 	struct Vector3 angle = {0};
 
@@ -495,15 +495,15 @@ static inline bool sCheckPlane(const struct NTerrainNode* node, struct Vector3 p
 	{
 		switch (i)
 		{
-		case 0: angle = Vector3Subtract((struct Vector3){node->bbox.min.x, node->bbox.min.y, node->bbox.min.z}, pos); break;
-		case 1: angle = Vector3Subtract((struct Vector3){node->bbox.max.x, node->bbox.min.y, node->bbox.min.z}, pos); break;
-		case 2: angle = Vector3Subtract((struct Vector3){node->bbox.max.x, node->bbox.max.y, node->bbox.min.z}, pos); break;
-		case 3: angle = Vector3Subtract((struct Vector3){node->bbox.min.x, node->bbox.max.y, node->bbox.min.z}, pos); break;
+		case 0: angle = Vector3Subtract((struct Vector3){bbox.min.x, bbox.min.y, bbox.min.z}, pos); break;
+		case 1: angle = Vector3Subtract((struct Vector3){bbox.max.x, bbox.min.y, bbox.min.z}, pos); break;
+		case 2: angle = Vector3Subtract((struct Vector3){bbox.max.x, bbox.max.y, bbox.min.z}, pos); break;
+		case 3: angle = Vector3Subtract((struct Vector3){bbox.min.x, bbox.max.y, bbox.min.z}, pos); break;
 
-		case 4: angle = Vector3Subtract((struct Vector3){node->bbox.min.x, node->bbox.min.y, node->bbox.max.z}, pos); break;
-		case 5: angle = Vector3Subtract((struct Vector3){node->bbox.max.x, node->bbox.min.y, node->bbox.max.z}, pos); break;
-		case 6: angle = Vector3Subtract((struct Vector3){node->bbox.max.x, node->bbox.max.y, node->bbox.max.z}, pos); break;
-		case 7: angle = Vector3Subtract((struct Vector3){node->bbox.min.x, node->bbox.max.y, node->bbox.max.z}, pos); break;
+		case 4: angle = Vector3Subtract((struct Vector3){bbox.min.x, bbox.min.y, bbox.max.z}, pos); break;
+		case 5: angle = Vector3Subtract((struct Vector3){bbox.max.x, bbox.min.y, bbox.max.z}, pos); break;
+		case 6: angle = Vector3Subtract((struct Vector3){bbox.max.x, bbox.max.y, bbox.max.z}, pos); break;
+		case 7: angle = Vector3Subtract((struct Vector3){bbox.min.x, bbox.max.y, bbox.max.z}, pos); break;
 		}
 
 		if (Vector3Dot(nor, Vector3Normalize(angle)) >= 0.f)
@@ -513,75 +513,52 @@ static inline bool sCheckPlane(const struct NTerrainNode* node, struct Vector3 p
 	return false;
 }
 
-static bool sCheckVisibility(const struct NTerrainNode* node, struct NTerrainView* view)
+static void sBuildFrustumPlanes(struct NTerrainState* state, const struct NTerrainView* view)
 {
 	// http://www.lighthouse3d.com/tutorials/view-frustum-culling/geometric-approach-extracting-the-planes/
+
+	// TODO: take FOV in consideration
+
 	// TODO: Dear future Alex, please study about the cross operation and why
 	// the right frustum plane require an inverted up vector. :)
-
-	// TODO, build all the five frustum planes for every node is an performance atrocity,
-	// we need to build them at the start of Iterate() and here, in CheckVisibility(),
-	// just check them agains the node in a for loop manner.
-
-	struct Vector3 plane_pos;
-	struct Vector3 plane_nor;
 
 	struct Vector3 forward;
 	struct Vector3 left;
 	struct Vector3 up;
 
-	int visible = 0;
-
 	VectorAxes(view->angle, &forward, &left, &up);
 
 	// Front frustum
-	plane_pos = Vector3Add(view->position, Vector3Scale(forward, view->max_distance));
-	plane_nor = Vector3Invert(forward);
-
-	if(sCheckPlane(node, plane_pos, plane_nor) == true)
-		visible++;
-
-	// Right frustum
-	plane_pos = Vector3Add(view->position, Vector3Scale(forward, view->max_distance));
-	plane_pos = Vector3Add(plane_pos, Vector3Scale(left, 640.0f/2.0f)); // TODO, take FOV in consideration
-
-	plane_nor = Vector3Subtract(plane_pos, view->position);
-	plane_nor = Vector3Cross(Vector3Normalize(plane_nor), Vector3Invert(up));
-
-	if(sCheckPlane(node, plane_pos, plane_nor) == true)
-		visible++;
+	state->frustum_position[0] = Vector3Add(view->position, Vector3Scale(forward, view->max_distance));
+	state->frustum_normal[0] = Vector3Invert(forward);
 
 	// Left frustum
-	plane_pos = Vector3Add(view->position, Vector3Scale(forward, view->max_distance));
-	plane_pos = Vector3Subtract(plane_pos, Vector3Scale(left, 640.0f/2.0f)); // TODO, take FOV in consideration
+	state->frustum_position[2] = Vector3Add(view->position, Vector3Scale(forward, 1.0f));
+	state->frustum_position[2] = Vector3Subtract(state->frustum_position[2], Vector3Scale(left, view->aspect / 2.0f));
 
-	plane_nor = Vector3Subtract(plane_pos, view->position);
-	plane_nor = Vector3Cross(Vector3Normalize(plane_nor), (up));
+	state->frustum_normal[2] = Vector3Subtract(state->frustum_position[2], view->position);
+	state->frustum_normal[2] = Vector3Cross(Vector3Normalize(state->frustum_normal[2]), up);
 
-	if(sCheckPlane(node, plane_pos, plane_nor) == true)
-		visible++;
+	// Right frustum
+	state->frustum_position[1] = Vector3Add(view->position, Vector3Scale(forward, 1.0f));
+	state->frustum_position[1] = Vector3Add(state->frustum_position[1], Vector3Scale(left, view->aspect / 2.0f));
+
+	state->frustum_normal[1] = Vector3Subtract(state->frustum_position[1], view->position);
+	state->frustum_normal[1] = Vector3Cross(Vector3Normalize(state->frustum_normal[1]), Vector3Invert(up));
 
 	// Top frustum
-	plane_pos = Vector3Add(view->position, Vector3Scale(forward, view->max_distance));
-	plane_pos = Vector3Add(plane_pos, Vector3Scale(up, 480.0f/2.0f)); // TODO, take FOV in consideration
+	state->frustum_position[3] = Vector3Add(view->position, Vector3Scale(forward, 1.0f));
+	state->frustum_position[3] = Vector3Add(state->frustum_position[3], Vector3Scale(up, 1.0f / 2.0f));
 
-	plane_nor = Vector3Subtract(plane_pos, view->position);
-	plane_nor = Vector3Cross(Vector3Normalize(plane_nor), left);
-
-	if(sCheckPlane(node, plane_pos, plane_nor) == true)
-		visible++;
+	state->frustum_normal[3] = Vector3Subtract(state->frustum_position[3], view->position);
+	state->frustum_normal[3] = Vector3Cross(Vector3Normalize(state->frustum_normal[3]), left);
 
 	// Bottom frustum
-	plane_pos = Vector3Add(view->position, Vector3Scale(forward, view->max_distance));
-	plane_pos = Vector3Subtract(plane_pos, Vector3Scale(up, 480.0f/2.0f)); // TODO, take FOV in consideration
+	state->frustum_position[4] = Vector3Add(view->position, Vector3Scale(forward, 1.0f));
+	state->frustum_position[4] = Vector3Subtract(state->frustum_position[4], Vector3Scale(up, 1.0f / 2.0f));
 
-	plane_nor = Vector3Subtract(plane_pos, view->position);
-	plane_nor = Vector3Cross(Vector3Normalize(plane_nor), Vector3Invert(left));
-
-	if(sCheckPlane(node, plane_pos, plane_nor) == true)
-		visible++;
-
-	return (visible == 5) ? true : false;
+	state->frustum_normal[4] = Vector3Subtract(state->frustum_position[4], view->position);
+	state->frustum_normal[4] = Vector3Cross(Vector3Normalize(state->frustum_normal[4]), Vector3Invert(left));
 }
 
 struct NTerrainNode* NTerrainIterate(struct NTerrainState* state, struct Buffer* buffer, struct NTerrainView* view)
@@ -594,6 +571,9 @@ struct NTerrainNode* NTerrainIterate(struct NTerrainState* state, struct Buffer*
 		state->future_return = state->start;
 		state->actual = state->start;
 		state->start = NULL;
+
+		if (view != NULL)
+			sBuildFrustumPlanes(state, view);
 	}
 
 again:
@@ -616,9 +596,10 @@ again:
 
 		if (state->actual->children != NULL &&
 		    (view == NULL ||
-		     AabCollisionBoxBox(((struct AabBox){
-		         Vector3Subtract(view->position, (struct Vector3){factor / 2.0f, factor / 2.0f, factor / 2.0f}),
-		         Vector3Add(view->position, (struct Vector3){factor / 2.0f, factor / 2.0f, factor / 2.0f})}),
+		     AabCollisionBoxBox(
+		         ((struct AabBox){
+		             Vector3Subtract(view->position, (struct Vector3){factor / 2.0f, factor / 2.0f, factor / 2.0f}),
+		             Vector3Add(view->position, (struct Vector3){factor / 2.0f, factor / 2.0f, factor / 2.0f})}),
 		         state->actual->bbox) == true))
 		{
 			if (buffer->size < (state->depth + 1) * sizeof(void*))
@@ -657,11 +638,15 @@ again:
 		}
 	}
 
-	// The current node is apropiate for the specified view?
+	// View based checks
 	if (view != NULL)
 	{
-		if (sCheckVisibility(state->actual, view) == false)
-			goto again;
+		// Check visibility against frustum planes
+		for (int f = 0; f < 5; f++)
+		{
+			if (sCheckPlane(state->actual->bbox, state->frustum_position[f], state->frustum_normal[f]) == false)
+				goto again;
+		}
 
 		// Determine if is at the border where LOD changes
 		state->in_border = false;
@@ -684,7 +669,7 @@ again:
 			align = Vector2Scale(align, (sNodeDimension(state->actual->parent)));
 
 			state->view_rectangle = (struct AabRectangle){{align.x - factor / 2.0f, align.y - factor / 2.0f},
-			                         {align.x + factor / 2.0f, align.y + factor / 2.0f}};
+			                                              {align.x + factor / 2.0f, align.y + factor / 2.0f}};
 
 			if (AabCollisionRectRect(state->view_rectangle, AabToRectangle(state->actual->bbox)) == true)
 				state->in_border = false;
@@ -740,9 +725,8 @@ int NTerrainDraw(struct Context* context, struct NTerrain* terrain, struct NTerr
 			Draw(context, &node->index);
 			dcalls += 1;
 
-			//SetHighlight(context, (struct Vector3){0.0f, 0.0f, 0.0f});
+			// SetHighlight(context, (struct Vector3){0.0f, 0.0f, 0.0f});
 		}
-
 	}
 #endif
 

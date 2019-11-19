@@ -46,7 +46,7 @@ SOFTWARE.
 #define NAME "Nara v0.2-alpha"
 #define NAME_SHORT "Nara"
 
-#define FOV 45
+#define FOV 45 // TODO, Matrix4Perspective() broken
 
 #define WINDOWS_WIDTH 1152
 #define WINDOWS_HEIGHT 480
@@ -62,6 +62,7 @@ static struct Mixer* s_mixer = NULL;
 static struct Timer s_timer = {0};
 
 static struct NTerrain* s_terrain = NULL;
+static struct NTerrainView s_terrain_view = {0};
 static struct Program s_terrain_program = {0};
 static struct Texture s_terrain_texture = {0};
 
@@ -100,7 +101,7 @@ static void sSetProjection(struct Vector2i window_size, struct Context* context)
 {
 	struct Matrix4 projection;
 
-	projection = Matrix4Perspective(FOV, (float)window_size.x / (float)window_size.y, 0.1f, 20000.0f);
+	projection = Matrix4Perspective(FOV, (float)window_size.x / (float)window_size.y, 0.1f, 1024.0f);
 	SetProjection(context, projection);
 }
 
@@ -197,7 +198,6 @@ int main()
 	{
 		struct ContextEvents events = {0};
 		struct EntityInput entities_input = {0};
-		struct NTerrainView terrain_view = {0};
 		struct Matrix4 matrix = {0};
 
 		int draw_calls = 0;
@@ -268,11 +268,12 @@ int main()
 				sSetProjection(events.window_size, s_context);
 
 			// Render
-			terrain_view.angle = camera->co.angle;
-			terrain_view.position = camera->co.position;
-			terrain_view.max_distance = 1024.0f;
+			s_terrain_view.angle = camera->co.angle;
+			s_terrain_view.position = camera->co.position;
+			s_terrain_view.max_distance = 1024.0f;
+			s_terrain_view.aspect = (float)events.window_size.x / (float)events.window_size.y;
 
-			draw_calls = NTerrainDraw(s_context, s_terrain, &terrain_view);
+			draw_calls = NTerrainDraw(s_context, s_terrain, &s_terrain_view);
 
 			if (s_timer.one_second == true)
 			{

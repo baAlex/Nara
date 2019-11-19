@@ -13,6 +13,7 @@ build ./objects/tests/tests/nterrain-tests.o: compile ./source/tests/nterrain-te
 build ./objects/tests/tests/canvas.o:         compile ./source/tests/canvas.c
 
 # Engine
+build ./objects/tests/engine/misc.o:     compile ./source/engine/misc.c
 build ./objects/tests/engine/nterrain.o: compile ./source/engine/nterrain.c
 
 # Lib Japan
@@ -37,6 +38,7 @@ build ./objects/tests/lib-japan/vector.o:           compile ./source/lib-japan/s
 build nterrain-tests: link $
 ./objects/tests/tests/nterrain-tests.o $
 ./objects/tests/tests/canvas.o $
+./objects/tests/engine/misc.o $
 ./objects/tests/engine/nterrain.o $
 ./objects/tests/lib-japan/aabounding.o $
 ./objects/tests/lib-japan/buffer.o $
