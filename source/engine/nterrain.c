@@ -150,7 +150,9 @@ static struct Index sGenerateIndex(struct Buffer* buffer, const struct NTerrainN
 	size_t const length = patterns_no * patterns_no * 6; // 6 = Two triangles vertices, as OpenGL ES2 did not have quads
 	size_t col = 0;
 
-	BufferResize(buffer, sizeof(uint16_t) * length); // TODO, check failure
+	if (buffer->size < sizeof(uint16_t) * length)
+		BufferResize(buffer, sizeof(uint16_t) * length); // TODO, check failure
+
 	uint16_t* temp_data = buffer->data;
 
 	{
@@ -228,7 +230,9 @@ static struct Vertices sGenerateVertices(struct Buffer* buffer, const struct NTe
 	// Generation on a temporary buffer
 	size_t const patterns_no = sPatternsInARow(sNodeDimension(node), pattern_dimension);
 
-	BufferResize(buffer, sizeof(struct Vertex) * (patterns_no + 1) * (patterns_no + 1));
+	if (buffer->size < sizeof(struct Vertex) * (patterns_no + 1) * (patterns_no + 1))
+		BufferResize(buffer, sizeof(struct Vertex) * (patterns_no + 1) * (patterns_no + 1));
+
 	struct Vertex* temp_data = buffer->data;
 
 	{

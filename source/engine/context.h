@@ -94,7 +94,7 @@
 	void SetTitle(struct Context* context, const char* title);
 	void SetProgram(struct Context* context, const struct Program* program);
 	void SetVertices(struct Context* context, const struct Vertices* vertices);
-	void SetTexture(struct Context* context, const struct Texture* texture);
+	void SetTexture(struct Context* context, int unit, const struct Texture* texture);
 	void SetProjection(struct Context* context, struct Matrix4 matrix);
 	void SetHighlight(struct Context* context, struct Vector3 value);
 	void SetCameraLookAt(struct Context* context, struct Vector3 target, struct Vector3 origin);

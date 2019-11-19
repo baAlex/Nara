@@ -64,7 +64,8 @@ static struct Timer s_timer = {0};
 static struct NTerrain* s_terrain = NULL;
 static struct NTerrainView s_terrain_view = {0};
 static struct Program s_terrain_program = {0};
-static struct Texture s_terrain_texture = {0};
+static struct Texture s_terrain_colormap = {0};
+static struct Texture s_terrain_detail = {0};
 
 static struct Dictionary* s_classes = NULL;
 static struct List s_entities = {0};
@@ -163,13 +164,16 @@ int main()
 
 	// Resources
 	{
-		if ((s_terrain = NTerrainCreate("./assets/heightmap.sgi", 75.0, 972.0, 36.0, 3, &st)) == NULL)
+		if ((s_terrain = NTerrainCreate("./assets/heightmap.sgi", 75.0*2, 972.0*3, 36.0, 3, &st)) == NULL)
 			goto return_failure;
 
 		if (ProgramInit(&s_terrain_program, (char*)g_terrain_vertex, (char*)g_terrain_fragment, &st) != 0)
 			goto return_failure;
 
-		if (TextureInit(&s_terrain_texture, "./assets/colormap.sgi", FILTER_TRILINEAR, &st) != 0)
+		if (TextureInit(&s_terrain_colormap, "./assets/colormap.sgi", FILTER_TRILINEAR, &st) != 0)
+			goto return_failure;
+
+		if (TextureInit(&s_terrain_detail, "./assets/detail.sgi", FILTER_TRILINEAR, &st) != 0)
 			goto return_failure;
 
 		if (SampleCreate(s_mixer, "./assets/rz1-closed-hithat.wav", &st) == NULL)
@@ -210,7 +214,8 @@ int main()
 
 		Play2d(s_mixer, 0.7f, PLAY_LOOP, "./assets/ambient01.au");
 		SetProgram(s_context, &s_terrain_program);
-		SetTexture(s_context, &s_terrain_texture);
+		SetTexture(s_context, 0, &s_terrain_colormap);
+		SetTexture(s_context, 1, &s_terrain_detail);
 
 		if (MixerStart(s_mixer, &st) != 0)
 			goto return_failure;
@@ -306,7 +311,8 @@ int main()
 	ListClean(&s_entities);
 
 	ProgramFree(&s_terrain_program);
-	TextureFree(&s_terrain_texture);
+	TextureFree(&s_terrain_colormap);
+	TextureFree(&s_terrain_detail);
 	NTerrainDelete(s_terrain);
 
 	MixerDelete(s_mixer);

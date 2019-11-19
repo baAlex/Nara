@@ -217,15 +217,30 @@ inline void SetProgram(struct Context* context, const struct Program* program)
 		context->u_projection = glGetUniformLocation(program->glptr, "projection");
 		context->u_camera_projection = glGetUniformLocation(program->glptr, "camera_projection");
 		context->u_camera_origin = glGetUniformLocation(program->glptr, "camera_origin");
-		context->u_texture = glGetUniformLocation(program->glptr, "color_texture");
 		context->u_highlight = glGetUniformLocation(program->glptr, "highlight");
+
+		context->u_texture[0] = glGetUniformLocation(program->glptr, "texture0");
+		context->u_texture[1] = glGetUniformLocation(program->glptr, "texture1");
+		context->u_texture[2] = glGetUniformLocation(program->glptr, "texture2");
+		context->u_texture[3] = glGetUniformLocation(program->glptr, "texture3");
+		context->u_texture[4] = glGetUniformLocation(program->glptr, "texture4");
+		context->u_texture[5] = glGetUniformLocation(program->glptr, "texture5");
+		context->u_texture[6] = glGetUniformLocation(program->glptr, "texture6");
+		context->u_texture[7] = glGetUniformLocation(program->glptr, "texture7");
 
 		glUseProgram(program->glptr);
 
 		glUniformMatrix4fv(context->u_projection, 1, GL_FALSE, &context->projection.e[0][0]);
 		glUniformMatrix4fv(context->u_camera_projection, 1, GL_FALSE, &context->camera.e[0][0]);
 		glUniform3fv(context->u_camera_origin, 1, (float*)&context->camera_origin);
-		glUniform1i(context->u_texture, 0); // Texture unit 0
+		glUniform1i(context->u_texture[0], 0);
+		glUniform1i(context->u_texture[1], 1);
+		glUniform1i(context->u_texture[2], 2);
+		glUniform1i(context->u_texture[3], 3);
+		glUniform1i(context->u_texture[4], 4);
+		glUniform1i(context->u_texture[5], 5);
+		glUniform1i(context->u_texture[6], 6);
+		glUniform1i(context->u_texture[7], 7);
 	}
 }
 
@@ -252,14 +267,11 @@ inline void SetVertices(struct Context* context, const struct Vertices* vertices
 
  SetTexture()
 -----------------------------*/
-inline void SetTexture(struct Context* context, const struct Texture* texture)
+inline void SetTexture(struct Context* context, int unit, const struct Texture* texture)
 {
-	if (texture != context->current_texture)
-	{
-		context->current_texture = texture;
-		glActiveTexture(GL_TEXTURE0); // Texture unit 0
-		glBindTexture(GL_TEXTURE_2D, context->current_texture->glptr);
-	}
+	(void)context;
+	glActiveTexture(GL_TEXTURE0 + unit);
+	glBindTexture(GL_TEXTURE_2D, texture->glptr);
 }
 
 

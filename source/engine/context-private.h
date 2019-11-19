@@ -40,7 +40,7 @@
 		GLint u_projection;        // For current program
 		GLint u_camera_projection; // "
 		GLint u_camera_origin;     // "
-		GLint u_texture;           // "
+		GLint u_texture[8];        // "
 		GLint u_highlight;         // "
 
 		// Input
