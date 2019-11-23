@@ -77,7 +77,9 @@ build ./objects/debug/lib-samplerate/src_sinc.o:   compile ./source/lib-samplera
 build ./objects/debug/lib-samplerate/src_zoh.o:    compile ./source/lib-samplerate/src/src_zoh.c
 
 # Sdk
-build ./objects/debug/sdk/sdk.o: compile ./source/sdk/sdk.c
+build ./objects/debug/sdk/sdk.o:     compile ./source/sdk/sdk.c
+build ./objects/debug/sdk/erosion.o: compile ./source/sdk/erosion.c
+build ./objects/debug/sdk/simplex.o: compile ./source/sdk/simplex.c
 
 # Link
 build nara-dbg: link $
@@ -133,4 +135,6 @@ build sdk-dbg: link $
 ./objects/debug/lib-japan/tree.o $
 ./objects/debug/lib-japan/utilities.o $
 ./objects/debug/lib-japan/vector.o $
-./objects/debug/sdk/sdk.o
+./objects/debug/sdk/sdk.o $
+./objects/debug/sdk/erosion.o $
+./objects/debug/sdk/simplex.o
