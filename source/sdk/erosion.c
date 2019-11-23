@@ -31,80 +31,41 @@ SOFTWARE.
 -----------------------------*/
 
 #include "erosion.h"
+#include "utilities.h"
+#include "vector.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-
-struct Vector2l
-{
-	double x;
-	double y;
-};
-
-static inline struct Vector2l Vector2lAdd(struct Vector2l a, struct Vector2l b)
-{
-	return (struct Vector2l){(a.x + b.x), (a.y + b.y)};
-}
-
-static inline struct Vector2l Vector2lSubtract(struct Vector2l a, struct Vector2l b)
-{
-	return (struct Vector2l){(a.x - b.x), (a.y - b.y)};
-}
-
-static inline struct Vector2l Vector2lScale(struct Vector2l v, double scale)
-{
-	return (struct Vector2l){(v.x * scale), (v.y * scale)};
-}
-
-static inline struct Vector2l Vector2lNormalize(struct Vector2l v)
-{
-	double length = sqrt(pow(v.x, 2.0f) + pow(v.y, 2.0f));
-	return (struct Vector2l){(v.x / length), (v.y / length)};
-}
-
 struct Particle
 {
-	struct Vector2l pos;
-	struct Vector2l dir;
-	double vel;
-	double sediment;
-	double water;
+	struct Vector2 pos;
+	struct Vector2 dir;
+	float vel;
+	float sediment;
+	float water;
 };
-
 
 struct HgTuple
 {
-	struct Vector2l gradient;
-	double height;
+	struct Vector2 gradient;
+	float height;
 };
 
 
-static inline double sMax(double a, double b)
-{
-	return (a > b) ? a : b;
-}
-
-
-static inline double sMin(double a, double b)
-{
-	return (a < b) ? a : b;
-}
-
-
-double BilinearInterpolation(int width, int height, const double* hmap, struct Vector2l pos)
+static float sBilinearInterpolation(int width, int height, const float* hmap, struct Vector2 pos)
 {
 	if (pos.x != pos.x || pos.y != pos.y)
-		return 0.0;
+		return 0.0f;
 
 	(void)height;
-	double u, v, ul, ur, ll, lr, ipl_l, ipl_r;
+	float u, v, ul, ur, ll, lr, ipl_l, ipl_r;
 
-	int x_i = (int)(pos.x);
-	int y_i = (int)(pos.y);
+	int x_i = (int)floorf(pos.x);
+	int y_i = (int)floorf(pos.y);
 
-	u = pos.x - x_i;
-	v = pos.y - y_i;
+	u = pos.x - floorf(pos.x);
+	v = pos.y - floorf(pos.y);
 
 	ul = hmap[y_i * width + x_i];
 	ur = hmap[y_i * width + x_i + 1];
@@ -119,26 +80,27 @@ double BilinearInterpolation(int width, int height, const double* hmap, struct V
 }
 
 
-static void sDeposit(int width, int height, double* hmap, struct Vector2l pos, double amount)
+static void sDeposit(int width, int height, float* hmap, struct Vector2 pos, float amount)
 {
 	(void)height;
 
 	// - Deposits sediment at position `pos` in heighmap `hmap`.
 	// - Deposition only affect immediate neighbouring gridpoints to `pos`.
 
-	int x_i = (int)pos.x;
-	int y_i = (int)pos.y;
-	double u = pos.x - x_i;
-	double v = pos.y - y_i;
+	int x_i = (int)floorf(pos.x);
+	int y_i = (int)floorf(pos.y);
 
-	hmap[y_i * width + x_i] += amount * (1 - u) * (1 - v);
-	hmap[y_i * width + x_i + 1] += amount * u * (1 - v);
-	hmap[(y_i + 1) * width + x_i] += amount * (1 - u) * v;
+	float u = pos.x - floorf(pos.x);
+	float v = pos.y - floorf(pos.y);
+
+	hmap[y_i * width + x_i] += amount * (1.0f - u) * (1.0f - v);
+	hmap[y_i * width + x_i + 1] += amount * u * (1.0f - v);
+	hmap[(y_i + 1) * width + x_i] += amount * (1.0f - u) * v;
 	hmap[(y_i + 1) * width + x_i + 1] += amount * u * v;
 }
 
 
-static void sErode(int width, int height, double* hmap, struct Vector2l pos, double amount, int radius)
+static void sErode(int width, int height, float* hmap, struct Vector2 pos, float amount, int radius)
 {
 	// - Erodes heighmap `hmap` at position `pos` by amount `amount`
 	// - Erosion is distributed over an area defined through p_radius
@@ -149,25 +111,25 @@ static void sErode(int width, int height, double* hmap, struct Vector2l pos, dou
 		return;
 	}
 
-	int x0 = (int)pos.x - radius;
-	int y0 = (int)pos.y - radius;
-	int x_start = sMax(0, x0);
-	int y_start = sMax(0, y0);
-	int x_end = sMin(width, x0 + 2 * radius + 1);
-	int y_end = sMin(height, y0 + 2 * radius + 1);
+	int x0 = (int)floorf(pos.x) - radius;
+	int y0 = (int)floorf(pos.y) - radius;
+	int x_start = Max(0, x0);
+	int y_start = Max(0, y0);
+	int x_end = Min(width, x0 + 2 * radius + 1);
+	int y_end = Min(height, y0 + 2 * radius + 1);
 
 	// Construct erosion/deposition kernel
-	double kernel[2 * radius + 1][2 * radius + 1];
-	double kernel_sum = 0;
+	float kernel[2 * radius + 1][2 * radius + 1];
+	float kernel_sum = 0.0f;
 
 	for (int y = y_start; y < y_end; y++)
 	{
 		for (int x = x_start; x < x_end; x++)
 		{
-			double d_x = x - pos.x;
-			double d_y = y - pos.y;
-			double distance = sqrt(d_x * d_x + d_y * d_y);
-			double w = fmax(0, radius - distance);
+			float d_x = (float)x - pos.x;
+			float d_y = (float)y - pos.y;
+			float distance = sqrtf(d_x * d_x + d_y * d_y);
+			float w = fmaxf(0.0f, (float)radius - distance);
 			kernel_sum += w;
 			kernel[y - y0][x - x0] = w;
 		}
@@ -185,15 +147,15 @@ static void sErode(int width, int height, double* hmap, struct Vector2l pos, dou
 }
 
 
-static struct Vector2l sGradientAt(int width, int height, const double* hmap, int x, int y)
+static struct Vector2 sGradientAt(int width, int height, const float* hmap, int x, int y)
 {
 	int idx = y * width + x;
 	// int right = y * hmap->width + min(x, hmap->width - 2);
 	// int below = min(y, hmap->height - 2) * hmap->width + x;
-	int right = idx + (((int)x > width - 2) ? 0 : 1);
-	int below = idx + (((int)y > height - 2) ? 0 : (int)width);
+	int right = idx + ((x > width - 2) ? 0 : 1);
+	int below = idx + ((y > height - 2) ? 0 : width);
 
-	struct Vector2l g;
+	struct Vector2 g;
 	g.x = hmap[right] - hmap[idx];
 	g.y = hmap[below] - hmap[idx];
 
@@ -201,23 +163,23 @@ static struct Vector2l sGradientAt(int width, int height, const double* hmap, in
 }
 
 
-static struct HgTuple sHeightGradientAt(int width, int height, const double* hmap, struct Vector2l pos)
+static struct HgTuple sHeightGradientAt(int width, int height, const float* hmap, struct Vector2 pos)
 {
 	struct HgTuple ret;
-	struct Vector2l ul, ur, ll, lr, ipl_l, ipl_r;
-	int x_i = lrint(pos.x);
-	int y_i = lrint(pos.y);
-	double u = pos.x - x_i;
-	double v = pos.y - y_i;
+	struct Vector2 ul, ur, ll, lr, ipl_l, ipl_r;
+	int x_i = (int)lround(pos.x);
+	int y_i = (int)lround(pos.y);
+	float u = pos.x - floorf(pos.x);
+	float v = pos.y - floorf(pos.y);
 
 	ul = sGradientAt(width, height, hmap, x_i, y_i);
 	ur = sGradientAt(width, height, hmap, x_i + 1, y_i);
 	ll = sGradientAt(width, height, hmap, x_i, y_i + 1);
 	lr = sGradientAt(width, height, hmap, x_i + 1, y_i + 1);
-	ipl_l = Vector2lAdd(Vector2lScale(ul, 1 - v), Vector2lScale(ll, v));
-	ipl_r = Vector2lAdd(Vector2lScale(ur, 1 - v), Vector2lScale(lr, v));
-	ret.gradient = Vector2lAdd(Vector2lScale(ipl_l, 1 - u), Vector2lScale(ipl_r, u));
-	ret.height = BilinearInterpolation(width, height, hmap, pos);
+	ipl_l = Vector2Add(Vector2Scale(ul, 1.0f - v), Vector2Scale(ll, v));
+	ipl_r = Vector2Add(Vector2Scale(ur, 1.0f - v), Vector2Scale(lr, v));
+	ret.gradient = Vector2Add(Vector2Scale(ipl_l, 1.0f - u), Vector2Scale(ipl_r, u));
+	ret.height = sBilinearInterpolation(width, height, hmap, pos);
 
 	return ret;
 }
@@ -227,7 +189,7 @@ static struct HgTuple sHeightGradientAt(int width, int height, const double* hma
 
  HydraulicErosion()
 -----------------------------*/
-void HydraulicErosion(int width, int height, double* hmap, struct ErodeOptions* options)
+void HydraulicErosion(int width, int height, float* hmap, struct ErodeOptions* options)
 {
 	// Simulate each struct Particle
 	for (int i = 0; i < options->n; i++)
@@ -237,59 +199,60 @@ void HydraulicErosion(int width, int height, double* hmap, struct ErodeOptions* 
 
 		// Spawn struct Particle
 		struct Particle p;
-		double denom = (RAND_MAX / ((double)width - 1.0));
+		float denom = ((float)RAND_MAX / ((float)width - 1.0f));
 
-		p.pos = (struct Vector2l){(double)rand() / denom, (double)rand() / denom};
-		p.dir = (struct Vector2l){0, 0};
-		p.vel = 0;
-		p.sediment = 0;
-		p.water = 1;
+		p.pos = (struct Vector2){(float)rand() / denom, (float)rand() / denom};
+		p.dir = (struct Vector2){0.0f, 0.0f};
+		p.vel = 0.0f;
+		p.sediment = 0.0f;
+		p.water = 1.0f;
 
 		for (int j = 0; j < options->ttl; j++)
 		{
 			// Interpolate gradient g and height h_old at p's position
-			struct Vector2l pos_old = p.pos;
+			struct Vector2 pos_old = p.pos;
 			struct HgTuple hg = sHeightGradientAt(width, height, hmap, pos_old);
-			struct Vector2l g = hg.gradient;
-			double h_old = hg.height;
+			struct Vector2 g = hg.gradient;
+			float h_old = hg.height;
 
 			// Calculate new dir vector
-			p.dir =
-			    Vector2lSubtract(Vector2lScale(p.dir, options->p_enertia), Vector2lScale(g, 1 - options->p_enertia));
-			p.dir = Vector2lNormalize(p.dir);
+			p.dir = Vector2Subtract(Vector2Scale(p.dir, options->p_enertia), Vector2Scale(g, 1 - options->p_enertia));
+			p.dir = Vector2Normalize(p.dir);
 
 			// Calculate new pos
-			p.pos = Vector2lAdd(p.pos, p.dir);
+			p.pos = Vector2Add(p.pos, p.dir);
 
 			// Check bounds
-			struct Vector2l pos_new = p.pos;
-			if (pos_new.x > (width - 1) || pos_new.x < 0 || pos_new.y > (height - 1) || pos_new.y < 0)
+			struct Vector2 pos_new = p.pos;
+			if (pos_new.x > (float)(width - 1) || pos_new.x < 0.0f || pos_new.y > (float)(height - 1) ||
+			    pos_new.y < 0.0f)
 				break;
 
 			// New height
-			double h_new = BilinearInterpolation(width, height, hmap, pos_new);
-			double h_diff = h_new - h_old;
+			float h_new = sBilinearInterpolation(width, height, hmap, pos_new);
+			float h_diff = h_new - h_old;
 
 			// Sediment capacity
-			double c = fmax(-h_diff, options->p_min_slope) * p.vel * p.water * options->p_capacity;
+			float c = fmaxf(-h_diff, options->p_min_slope) * p.vel * p.water * options->p_capacity;
 
 			// Decide whether to sErode or deposit depending on struct Particle properties
-			if (h_diff > 0 || p.sediment > c)
+			if (h_diff > 0.0f || p.sediment > c)
 			{
-				double to_deposit = (h_diff > 0) ? fmin(p.sediment, h_diff) : (p.sediment - c) * options->p_deposition;
+				float to_deposit =
+				    (h_diff > 0.0f) ? fminf(p.sediment, h_diff) : (p.sediment - c) * options->p_deposition;
 				p.sediment -= to_deposit;
 				sDeposit(width, height, hmap, pos_old, to_deposit);
 			}
 			else
 			{
-				double to_erode = fmin((c - p.sediment) * options->p_erosion, -h_diff);
+				float to_erode = fminf((c - p.sediment) * options->p_erosion, -h_diff);
 				p.sediment += to_erode;
 				sErode(width, height, hmap, pos_old, to_erode, options->p_radius);
 			}
 
 			// Update `vel` and `water`
-			p.vel = sqrt(p.vel * p.vel + h_diff * options->p_gravity);
-			p.water *= (1 - options->p_evaporation);
+			p.vel = sqrtf(p.vel * p.vel + h_diff * options->p_gravity);
+			p.water *= (1.0f - options->p_evaporation);
 		}
 	}
 }

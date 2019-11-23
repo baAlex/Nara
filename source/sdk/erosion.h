@@ -14,15 +14,15 @@
 		int n;
 		int ttl;
 		int p_radius;
-		double p_enertia;
-		double p_capacity;
-		double p_gravity;
-		double p_evaporation;
-		double p_erosion;
-		double p_deposition;
-		double p_min_slope;
+		float p_enertia;
+		float p_capacity;
+		float p_gravity;
+		float p_evaporation;
+		float p_erosion;
+		float p_deposition;
+		float p_min_slope;
 	};
 
-	void HydraulicErosion(int width, int height, double* hmap, struct ErodeOptions* options);
+	void HydraulicErosion(int width, int height, float* hmap, struct ErodeOptions* options);
 
 #endif

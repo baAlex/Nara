@@ -15,6 +15,6 @@
 	};
 
 	void SimplexSeed(struct Permutations*, long seed);
-	double Simplex2d(const struct Permutations* permutations, double x, double y);
+	float Simplex2d(const struct Permutations* permutations, float x, float y);
 
 #endif

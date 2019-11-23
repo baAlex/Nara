@@ -33,9 +33,9 @@ SOFTWARE.
 #include "simplex.h"
 #include <math.h>
 
-#define STRETCH_CONSTANT_2D -0.211324865405187
-#define SQUISH_CONSTANT_2D 0.366025403784439
-#define NORM_CONSTANT_2D 47.0
+#define STRETCH_CONSTANT_2D -0.211324865405187f
+#define SQUISH_CONSTANT_2D 0.366025403784439f
+#define NORM_CONSTANT_2D 47.0f
 
 
 static int8_t s_grandients[] = {
@@ -43,7 +43,7 @@ static int8_t s_grandients[] = {
 };
 
 
-static inline double sExtrapolate(const struct Permutations* permutations, int xsb, int ysb, double dx, double dy)
+static inline float sExtrapolate(const struct Permutations* permutations, int xsb, int ysb, float dx, float dy)
 {
 	int index = permutations->p[(permutations->p[xsb & 0xFF] + ysb) & 0xFF] & 0x0E;
 	return s_grandients[index] * dx + s_grandients[index + 1] * dy;
@@ -56,14 +56,14 @@ static inline double sExtrapolate(const struct Permutations* permutations, int x
 -----------------------------*/
 void SimplexSeed(struct Permutations* permutations, long seed)
 {
-	uint16_t source[256];
+	int16_t source[256];
 
 	seed = seed * 6364136223846793005l + 1442695040888963407l;
 	seed = seed * 6364136223846793005l + 1442695040888963407l;
 	seed = seed * 6364136223846793005l + 1442695040888963407l;
 
 	for (int i = 0; i < 256; i++)
-		source[i] = i;
+		source[i] = (int16_t)i;
 
 	for (int i = 255; i >= 0; i--)
 	{
@@ -84,63 +84,65 @@ void SimplexSeed(struct Permutations* permutations, long seed)
 
  Simplex2d()
 -----------------------------*/
-double Simplex2d(const struct Permutations* permutations, double x, double y)
+float Simplex2d(const struct Permutations* permutations, float x, float y)
 {
 	// Place input coordinates onto grid.
-	double stretchOffset = (x + y) * STRETCH_CONSTANT_2D;
-	double xs = x + stretchOffset;
-	double ys = y + stretchOffset;
+	float stretchOffset = (x + y) * STRETCH_CONSTANT_2D;
+	float xs = x + stretchOffset;
+	float ys = y + stretchOffset;
 
 	// Floor to get grid coordinates of rhombus (stretched square) super-cell origin.
-	int xsb = floor(xs);
-	int ysb = floor(ys);
+	int xsb = (int)floor(xs);
+	int ysb = (int)floor(ys);
 
 	// Skew out to get actual coordinates of rhombus origin. We'll need these later.
-	double squishOffset = (xsb + ysb) * SQUISH_CONSTANT_2D;
-	double xb = xsb + squishOffset;
-	double yb = ysb + squishOffset;
+	float squishOffset = (float)(xsb + ysb) * SQUISH_CONSTANT_2D;
+	float xb = (float)xsb + squishOffset;
+	float yb = (float)ysb + squishOffset;
 
 	// Compute grid coordinates relative to rhombus origin.
-	double xins = xs - xsb;
-	double yins = ys - ysb;
+	float xins = xs - (float)xsb;
+	float yins = ys - (float)ysb;
 
 	// Sum those together to get a value that determines which region we're in.
-	double inSum = xins + yins;
+	float inSum = xins + yins;
 
 	// Positions relative to origin point.
-	double dx0 = x - xb;
-	double dy0 = y - yb;
+	float dx0 = x - xb;
+	float dy0 = y - yb;
 
 	// We'll be defining these inside the next block and using them afterwards.
-	double dx_ext, dy_ext;
+	float dx_ext, dy_ext;
 	int xsv_ext, ysv_ext;
 
-	double value = 0;
+	float value = 0;
 
 	// Contribution (1,0)
-	double dx1 = dx0 - 1.0 - SQUISH_CONSTANT_2D;
-	double dy1 = dy0 - 0.0 - SQUISH_CONSTANT_2D;
-	double attn1 = 2.0 - dx1 * dx1 - dy1 * dy1;
-	if (attn1 > 0.0)
+	float dx1 = dx0 - 1.0f - SQUISH_CONSTANT_2D;
+	float dy1 = dy0 - 0.0f - SQUISH_CONSTANT_2D;
+	float attn1 = 2.0f - dx1 * dx1 - dy1 * dy1;
+
+	if (attn1 > 0.0f)
 	{
 		attn1 *= attn1;
-		value += attn1 * attn1 * sExtrapolate(permutations, xsb + 1.0, ysb + 0.0, dx1, dy1);
+		value += attn1 * attn1 * sExtrapolate(permutations, xsb + 1, ysb + 0, dx1, dy1);
 	}
 
 	// Contribution (0,1)
-	double dx2 = dx0 - 0.0 - SQUISH_CONSTANT_2D;
-	double dy2 = dy0 - 1.0 - SQUISH_CONSTANT_2D;
-	double attn2 = 2.0 - dx2 * dx2 - dy2 * dy2;
-	if (attn2 > 0.0)
+	float dx2 = dx0 - 0.0f - SQUISH_CONSTANT_2D;
+	float dy2 = dy0 - 1.0f - SQUISH_CONSTANT_2D;
+	float attn2 = 2.0f - dx2 * dx2 - dy2 * dy2;
+
+	if (attn2 > 0.0f)
 	{
 		attn2 *= attn2;
 		value += attn2 * attn2 * sExtrapolate(permutations, xsb + 0, ysb + 1, dx2, dy2);
 	}
 
-	if (inSum <= 1.0)
+	if (inSum <= 1.0f)
 	{
 		// We're inside the triangle (2-Simplex) at (0,0)
-		double zins = 1.0 - inSum;
+		float zins = 1.0f - inSum;
 
 		if (zins > xins || zins > yins)
 		{
@@ -149,15 +151,15 @@ double Simplex2d(const struct Permutations* permutations, double x, double y)
 			{
 				xsv_ext = xsb + 1;
 				ysv_ext = ysb - 1;
-				dx_ext = dx0 - 1.0;
-				dy_ext = dy0 + 1.0;
+				dx_ext = dx0 - 1.0f;
+				dy_ext = dy0 + 1.0f;
 			}
 			else
 			{
 				xsv_ext = xsb - 1;
 				ysv_ext = ysb + 1;
-				dx_ext = dx0 + 1.0;
-				dy_ext = dy0 - 1.0;
+				dx_ext = dx0 + 1.0f;
+				dy_ext = dy0 - 1.0f;
 			}
 		}
 		else
@@ -165,14 +167,14 @@ double Simplex2d(const struct Permutations* permutations, double x, double y)
 			//(1,0) and (0,1) are the closest two vertices.
 			xsv_ext = xsb + 1;
 			ysv_ext = ysb + 1;
-			dx_ext = dx0 - 1.0 - 2.0 * SQUISH_CONSTANT_2D;
-			dy_ext = dy0 - 1.0 - 2.0 * SQUISH_CONSTANT_2D;
+			dx_ext = dx0 - 1.0f - 2.0f * SQUISH_CONSTANT_2D;
+			dy_ext = dy0 - 1.0f - 2.0f * SQUISH_CONSTANT_2D;
 		}
 	}
 	else
 	{
 		// We're inside the triangle (2-Simplex) at (1,1)
-		double zins = 2 - inSum;
+		float zins = 2 - inSum;
 
 		if (zins < xins || zins < yins)
 		{
@@ -181,15 +183,15 @@ double Simplex2d(const struct Permutations* permutations, double x, double y)
 			{
 				xsv_ext = xsb + 2;
 				ysv_ext = ysb + 0;
-				dx_ext = dx0 - 2.0 - 2.0 * SQUISH_CONSTANT_2D;
-				dy_ext = dy0 + 0.0 - 2.0 * SQUISH_CONSTANT_2D;
+				dx_ext = dx0 - 2.0f - 2.0f * SQUISH_CONSTANT_2D;
+				dy_ext = dy0 + 0.0f - 2.0f * SQUISH_CONSTANT_2D;
 			}
 			else
 			{
 				xsv_ext = xsb + 0;
 				ysv_ext = ysb + 2;
-				dx_ext = dx0 + 0.0 - 2.0 * SQUISH_CONSTANT_2D;
-				dy_ext = dy0 - 2.0 - 2.0 * SQUISH_CONSTANT_2D;
+				dx_ext = dx0 + 0.0f - 2.0f * SQUISH_CONSTANT_2D;
+				dy_ext = dy0 - 2.0f - 2.0f * SQUISH_CONSTANT_2D;
 			}
 		}
 		else
@@ -203,12 +205,13 @@ double Simplex2d(const struct Permutations* permutations, double x, double y)
 
 		xsb += 1;
 		ysb += 1;
-		dx0 = dx0 - 1.0 - 2.0 * SQUISH_CONSTANT_2D;
-		dy0 = dy0 - 1.0 - 2.0 * SQUISH_CONSTANT_2D;
+		dx0 = dx0 - 1.0f - 2.0f * SQUISH_CONSTANT_2D;
+		dy0 = dy0 - 1.0f - 2.0f * SQUISH_CONSTANT_2D;
 	}
 
 	// Contribution (0,0) or (1,1)
-	double attn0 = 2.0 - dx0 * dx0 - dy0 * dy0;
+	float attn0 = 2.0f - dx0 * dx0 - dy0 * dy0;
+
 	if (attn0 > 0)
 	{
 		attn0 *= attn0;
@@ -216,7 +219,8 @@ double Simplex2d(const struct Permutations* permutations, double x, double y)
 	}
 
 	// Extra Vertex
-	double attn_ext = 2.0 - dx_ext * dx_ext - dy_ext * dy_ext;
+	float attn_ext = 2.0f - dx_ext * dx_ext - dy_ext * dy_ext;
+
 	if (attn_ext > 0)
 	{
 		attn_ext *= attn_ext;
