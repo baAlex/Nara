@@ -149,6 +149,9 @@ static void sErode(int width, int height, float* hmap, struct Vector2 pos, float
 
 static struct Vector2 sGradientAt(int width, int height, const float* hmap, int x, int y)
 {
+	x = x % width;
+	y = y % height;
+
 	int idx = y * width + x;
 	// int right = y * hmap->width + min(x, hmap->width - 2);
 	// int below = min(y, hmap->height - 2) * hmap->width + x;

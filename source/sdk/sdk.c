@@ -31,16 +31,19 @@ SOFTWARE.
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "erosion.h"
 #include "image.h"
 #include "simplex.h"
 #include "utilities.h"
+#include "vector.h"
 
 #define SEED 123456789
 #define WIDTH 1024
 #define HEIGHT 1024
 #define SCALE 200
+#define NORMAL_SCALE 2
 
 static struct Permutations s_perm_a;
 static struct Permutations s_perm_b;
@@ -49,22 +52,19 @@ static struct Permutations s_perm_d;
 static struct Permutations s_perm_e;
 
 
-int main()
+/*-----------------------------
+
+ sProcessHeightmap()
+-----------------------------*/
+static float* sProcessHeightmap(const char* filename, struct Status* st)
 {
-	struct Status st = {0};
 	float* buffer = NULL;
 	struct Image* image = NULL;
-
-	SimplexSeed(&s_perm_a, SEED);
-	SimplexSeed(&s_perm_b, SEED + 1);
-	SimplexSeed(&s_perm_c, SEED + 2);
-	SimplexSeed(&s_perm_d, SEED + 3);
-	SimplexSeed(&s_perm_e, SEED + 4);
 
 	if ((image = ImageCreate(IMAGE_GRAY16, WIDTH, HEIGHT)) == NULL ||
 	    (buffer = malloc((sizeof(float)) * WIDTH * HEIGHT)) == NULL)
 	{
-		StatusSet(&st, NULL, STATUS_MEMORY_ERROR, NULL);
+		StatusSet(st, NULL, STATUS_MEMORY_ERROR, NULL);
 		goto return_failure;
 	}
 
@@ -73,14 +73,13 @@ int main()
 	float max = 0.0f;
 
 	float scale = 1000.0f / (float)SCALE;
-	float min_dimension = (float)Min(image->width, image->height);
+	float min_dimension = (float)Min(WIDTH, HEIGHT);
 
-	// Generate heightmap
 	printf("Generating heightmap...\n");
 
-	for (size_t row = 0; row < image->height; row++)
+	for (size_t row = 0; row < HEIGHT; row++)
 	{
-		for (size_t col = 0; col < image->width; col++)
+		for (size_t col = 0; col < WIDTH; col++)
 		{
 			float x = ((float)row / min_dimension) * scale;
 			float y = ((float)col / min_dimension) * scale;
@@ -98,11 +97,11 @@ int main()
 			if (value < min)
 				min = min;
 
-			buffer[col + image->width * row] = value;
+			buffer[col + WIDTH * row] = value;
 		}
 	}
 
-	// Normalize heightmap
+	// Normalize
 	printf(" - Normalizing...\n");
 
 	for (size_t i = 0; i < (WIDTH * HEIGHT); i++)
@@ -135,32 +134,167 @@ int main()
 		HydraulicErosion(WIDTH, HEIGHT, buffer, &options);
 	}
 
-	// Save heightmap
+	// Save
 	{
-		printf("Saving heightmap...\n");
+		printf(" - Saving '%s'...\n", filename);
 		uint16_t* pixel = image->data;
 
 		for (size_t i = 0; i < (WIDTH * HEIGHT); i++)
 			pixel[i] = (uint16_t)((buffer[i] + 1.0f) * 32767.5f);
 
-		st = ImageSaveSgi(image, "heightmap.sgi");
+		struct Status temp_st = ImageSaveSgi(image, filename);
 
-		if (st.code != STATUS_SUCCESS)
+		if (temp_st.code != STATUS_SUCCESS)
+		{
+			if (st != NULL)
+				memcpy(st, &temp_st, sizeof(struct Status));
+
 			goto return_failure;
+		}
 	}
 
 	// Bye!
-	free(buffer);
 	ImageDelete(image);
-
-	return EXIT_SUCCESS;
+	return buffer;
 
 return_failure:
 	if (buffer != NULL)
 		free(buffer);
 	if (image != NULL)
 		ImageDelete(image);
+	return NULL;
+}
 
+
+/*-----------------------------
+
+ sProcessNormalmap()
+-----------------------------*/
+static inline float sHeightAt(const float* hmap, int x, int y)
+{
+	x = Clamp(x, 0, WIDTH - 1);
+	y = Clamp(y, 0, HEIGHT - 1);
+
+	return hmap[x + WIDTH * y];
+}
+
+static struct Vector3* sProcessNormalmap(const float* hmap, const char* filename, struct Status* st)
+{
+	// https://en.wikipedia.org/wiki/Sobel_operator
+	// https://en.wikipedia.org/wiki/Image_derivatives
+	// https://en.wikipedia.org/wiki/Kernel_(image_processing)#Convolution
+
+	struct Vector3* buffer = NULL;
+	struct Image* image = NULL;
+
+	if ((image = ImageCreate(IMAGE_RGB8, WIDTH, HEIGHT)) == NULL ||
+	    (buffer = malloc((sizeof(struct Vector3)) * WIDTH * HEIGHT)) == NULL)
+	{
+		StatusSet(st, NULL, STATUS_MEMORY_ERROR, NULL);
+		goto return_failure;
+	}
+
+	printf("Generating normalmap...\n");
+
+	for (int row = 0; row < HEIGHT; row++)
+	{
+		for (int col = 0; col < WIDTH; col++)
+		{
+			buffer[col + WIDTH * row].x =
+			    1.0f * (sHeightAt(hmap, col - 1, row - 1) - sHeightAt(hmap, col + 1, row - 1)) +
+			    2.0f * (sHeightAt(hmap, col - 1, row) - sHeightAt(hmap, col + 1, row)) +
+			    1.0f * (sHeightAt(hmap, col - 1, row + 1) - sHeightAt(hmap, col + 1, row + 1));
+
+			buffer[col + WIDTH * row].y =
+			    1.0f * (sHeightAt(hmap, col - 1, row - 1) - sHeightAt(hmap, col - 1, row + 1)) +
+			    2.0f * (sHeightAt(hmap, col, row - 1) - sHeightAt(hmap, col, row + 1)) +
+			    1.0f * (sHeightAt(hmap, col + 1, row - 1) - sHeightAt(hmap, col + 1, row + 1));
+
+			buffer[col + WIDTH * row].x *= NORMAL_SCALE;
+			buffer[col + WIDTH * row].y *= NORMAL_SCALE;
+			buffer[col + WIDTH * row].z = 1.0f;
+
+			buffer[col + WIDTH * row] = Vector3Normalize(buffer[col + WIDTH * row]);
+
+			// Slope
+			buffer[col + WIDTH * row].z = sqrtf(powf(buffer[col + WIDTH * row].x, 2.0f) + powf(buffer[col + WIDTH * row].y, 2.0));
+		}
+	}
+
+	// Save
+	{
+		printf(" - Saving '%s'...\n", filename);
+
+		struct
+		{
+			uint8_t r, g, b
+		}* pixel = image->data;
+
+		for (size_t i = 0; i < (WIDTH * HEIGHT); i++)
+		{
+			pixel[i].r = (uint8_t)floorf((buffer[i].x + 1.0f) * 128.0f);
+			pixel[i].g = (uint8_t)floorf((buffer[i].y + 1.0f) * 128.0f);
+			pixel[i].b = (uint8_t)floorf((buffer[i].z + 1.0f) * 128.0f);
+		}
+
+		struct Status temp_st = ImageSaveSgi(image, filename);
+
+		if (temp_st.code != STATUS_SUCCESS)
+		{
+			if (st != NULL)
+				memcpy(st, &temp_st, sizeof(struct Status));
+
+			goto return_failure;
+		}
+	}
+
+	// Bye!
+	ImageDelete(image);
+	return buffer;
+
+return_failure:
+	if (buffer != NULL)
+		free(buffer);
+	if (image != NULL)
+		ImageDelete(image);
+	return NULL;
+}
+
+
+/*-----------------------------
+
+ main()
+-----------------------------*/
+int main()
+{
+	struct Status st = {0};
+
+	float* heightmap = NULL;
+	struct Vector3* normalmap = NULL;
+
+	SimplexSeed(&s_perm_a, SEED);
+	SimplexSeed(&s_perm_b, SEED + 1);
+	SimplexSeed(&s_perm_c, SEED + 2);
+	SimplexSeed(&s_perm_d, SEED + 3);
+	SimplexSeed(&s_perm_e, SEED + 4);
+
+	if ((heightmap = sProcessHeightmap("heightmap.sgi", &st)) == NULL)
+		goto return_failure;
+
+	if ((normalmap = sProcessNormalmap(heightmap, "normalmap.sgi", &st)) == NULL)
+		goto return_failure;
+
+	// Bye!
+	free(heightmap);
+	free(normalmap);
+	return EXIT_SUCCESS;
+
+return_failure:
 	StatusPrint("Nara Sdk", st);
+
+	if (heightmap != NULL)
+		free(heightmap);
+	if (normalmap != NULL)
+		free(normalmap);
 	return EXIT_FAILURE;
 }
