@@ -39,7 +39,7 @@ SOFTWARE.
 #include "utilities.h"
 #include "vector.h"
 
-#define SEED 123456789
+#define SEED 666
 #define WIDTH 1024
 #define HEIGHT 1024
 #define SCALE 200
@@ -56,13 +56,13 @@ static struct Permutations s_perm_e;
 
  sProcessHeightmap()
 -----------------------------*/
-static float* sProcessHeightmap(const char* filename, struct Status* st)
+static float* sProcessHeightmap(int width, int height, const char* filename, struct Status* st)
 {
 	float* buffer = NULL;
 	struct Image* image = NULL;
 
-	if ((image = ImageCreate(IMAGE_GRAY16, WIDTH, HEIGHT)) == NULL ||
-	    (buffer = malloc((sizeof(float)) * WIDTH * HEIGHT)) == NULL)
+	if ((image = ImageCreate(IMAGE_GRAY16, (size_t)width, (size_t)height)) == NULL ||
+	    (buffer = malloc((sizeof(float)) * (size_t)width * (size_t)height)) == NULL)
 	{
 		StatusSet(st, NULL, STATUS_MEMORY_ERROR, NULL);
 		goto return_failure;
@@ -73,13 +73,13 @@ static float* sProcessHeightmap(const char* filename, struct Status* st)
 	float max = 0.0f;
 
 	float scale = 1000.0f / (float)SCALE;
-	float min_dimension = (float)Min(WIDTH, HEIGHT);
+	float min_dimension = (float)Min(width, height);
 
 	printf("Generating heightmap...\n");
 
-	for (size_t row = 0; row < HEIGHT; row++)
+	for (int row = 0; row < height; row++)
 	{
-		for (size_t col = 0; col < WIDTH; col++)
+		for (int col = 0; col < width; col++)
 		{
 			float x = ((float)row / min_dimension) * scale;
 			float y = ((float)col / min_dimension) * scale;
@@ -97,22 +97,17 @@ static float* sProcessHeightmap(const char* filename, struct Status* st)
 			if (value < min)
 				min = min;
 
-			buffer[col + WIDTH * row] = value;
+			buffer[col + width * row] = value;
 		}
 	}
 
 	// Normalize
 	printf(" - Normalizing...\n");
 
-	for (size_t i = 0; i < (WIDTH * HEIGHT); i++)
+	for (int i = 0; i < (width * height); i++)
 	{
 		buffer[i] = buffer[i] * (1.0f / max);
-
-		if (buffer[i] < -1.0f)
-			buffer[i] = -1.0f;
-
-		if (buffer[i] > 1.0f)
-			buffer[i] = 1.0f;
+		buffer[i] = Clamp(buffer[i], -1.0f, 1.0f);
 	}
 
 	// Simulate hydraulic erosion
@@ -131,7 +126,7 @@ static float* sProcessHeightmap(const char* filename, struct Status* st)
 		options.p_deposition = 1.0f;
 		options.p_min_slope = 0.1f;
 
-		HydraulicErosion(WIDTH, HEIGHT, buffer, &options);
+		HydraulicErosion(width, height, buffer, &options);
 	}
 
 	// Save
@@ -139,18 +134,11 @@ static float* sProcessHeightmap(const char* filename, struct Status* st)
 		printf(" - Saving '%s'...\n", filename);
 		uint16_t* pixel = image->data;
 
-		for (size_t i = 0; i < (WIDTH * HEIGHT); i++)
+		for (int i = 0; i < (width * height); i++)
 			pixel[i] = (uint16_t)((buffer[i] + 1.0f) * 32767.5f);
 
-		struct Status temp_st = ImageSaveSgi(image, filename);
-
-		if (temp_st.code != STATUS_SUCCESS)
-		{
-			if (st != NULL)
-				memcpy(st, &temp_st, sizeof(struct Status));
-
+		if(ImageSaveSgi(image, filename, st) != 0)
 			goto return_failure;
-		}
 	}
 
 	// Bye!
@@ -170,15 +158,16 @@ return_failure:
 
  sProcessNormalmap()
 -----------------------------*/
-static inline float sHeightAt(const float* hmap, int x, int y)
+static inline float sHeightAt(const float* hmap, int width, int height, int x, int y)
 {
-	x = Clamp(x, 0, WIDTH - 1);
-	y = Clamp(y, 0, HEIGHT - 1);
+	x = Clamp(x, 0, width - 1);
+	y = Clamp(y, 0, height - 1);
 
-	return hmap[x + WIDTH * y];
+	return hmap[x + width * y];
 }
 
-static struct Vector3* sProcessNormalmap(const float* hmap, const char* filename, struct Status* st)
+static struct Vector3* sProcessNormalmap(int width, int height, const float* hmap, const char* filename,
+                                         struct Status* st)
 {
 	// https://en.wikipedia.org/wiki/Sobel_operator
 	// https://en.wikipedia.org/wiki/Image_derivatives
@@ -187,8 +176,8 @@ static struct Vector3* sProcessNormalmap(const float* hmap, const char* filename
 	struct Vector3* buffer = NULL;
 	struct Image* image = NULL;
 
-	if ((image = ImageCreate(IMAGE_RGB8, WIDTH, HEIGHT)) == NULL ||
-	    (buffer = malloc((sizeof(struct Vector3)) * WIDTH * HEIGHT)) == NULL)
+	if ((image = ImageCreate(IMAGE_RGB8, (size_t)width, (size_t)height)) == NULL ||
+	    (buffer = malloc((sizeof(struct Vector3)) * (size_t)width * (size_t)height)) == NULL)
 	{
 		StatusSet(st, NULL, STATUS_MEMORY_ERROR, NULL);
 		goto return_failure;
@@ -196,28 +185,28 @@ static struct Vector3* sProcessNormalmap(const float* hmap, const char* filename
 
 	printf("Generating normalmap...\n");
 
-	for (int row = 0; row < HEIGHT; row++)
+	for (int row = 0; row < height; row++)
 	{
-		for (int col = 0; col < WIDTH; col++)
+		for (int col = 0; col < width; col++)
 		{
-			buffer[col + WIDTH * row].x =
-			    1.0f * (sHeightAt(hmap, col - 1, row - 1) - sHeightAt(hmap, col + 1, row - 1)) +
-			    2.0f * (sHeightAt(hmap, col - 1, row) - sHeightAt(hmap, col + 1, row)) +
-			    1.0f * (sHeightAt(hmap, col - 1, row + 1) - sHeightAt(hmap, col + 1, row + 1));
+			buffer[col + width * row].x =
+			    1.0f * (sHeightAt(hmap, width, height, col - 1, row - 1) - sHeightAt(hmap, width, height, col + 1, row - 1)) +
+			    2.0f * (sHeightAt(hmap, width, height, col - 1, row) - sHeightAt(hmap, width, height, col + 1, row)) +
+			    1.0f * (sHeightAt(hmap, width, height, col - 1, row + 1) - sHeightAt(hmap, width, height, col + 1, row + 1));
 
-			buffer[col + WIDTH * row].y =
-			    1.0f * (sHeightAt(hmap, col - 1, row - 1) - sHeightAt(hmap, col - 1, row + 1)) +
-			    2.0f * (sHeightAt(hmap, col, row - 1) - sHeightAt(hmap, col, row + 1)) +
-			    1.0f * (sHeightAt(hmap, col + 1, row - 1) - sHeightAt(hmap, col + 1, row + 1));
+			buffer[col + width * row].y =
+			    1.0f * (sHeightAt(hmap, width, height, col - 1, row - 1) - sHeightAt(hmap, width, height, col - 1, row + 1)) +
+			    2.0f * (sHeightAt(hmap, width, height, col, row - 1) - sHeightAt(hmap, width, height, col, row + 1)) +
+			    1.0f * (sHeightAt(hmap, width, height, col + 1, row - 1) - sHeightAt(hmap, width, height, col + 1, row + 1));
 
-			buffer[col + WIDTH * row].x *= NORMAL_SCALE;
-			buffer[col + WIDTH * row].y *= NORMAL_SCALE;
-			buffer[col + WIDTH * row].z = 1.0f;
+			buffer[col + width * row].x *= NORMAL_SCALE;
+			buffer[col + width * row].y *= NORMAL_SCALE;
+			buffer[col + width * row].z = 1.0f;
 
-			buffer[col + WIDTH * row] = Vector3Normalize(buffer[col + WIDTH * row]);
+			buffer[col + width * row] = Vector3Normalize(buffer[col + width * row]);
 
 			// Slope
-			buffer[col + WIDTH * row].z = sqrtf(powf(buffer[col + WIDTH * row].x, 2.0f) + powf(buffer[col + WIDTH * row].y, 2.0));
+			buffer[col + width * row].z = sqrtf(powf(buffer[col + width * row].x, 2.0f) + powf(buffer[col + width * row].y, 2.0));
 		}
 	}
 
@@ -230,22 +219,15 @@ static struct Vector3* sProcessNormalmap(const float* hmap, const char* filename
 			uint8_t r, g, b
 		}* pixel = image->data;
 
-		for (size_t i = 0; i < (WIDTH * HEIGHT); i++)
+		for (int i = 0; i < (width * height); i++)
 		{
 			pixel[i].r = (uint8_t)floorf((buffer[i].x + 1.0f) * 128.0f);
 			pixel[i].g = (uint8_t)floorf((buffer[i].y + 1.0f) * 128.0f);
 			pixel[i].b = (uint8_t)floorf((buffer[i].z + 1.0f) * 128.0f);
 		}
 
-		struct Status temp_st = ImageSaveSgi(image, filename);
-
-		if (temp_st.code != STATUS_SUCCESS)
-		{
-			if (st != NULL)
-				memcpy(st, &temp_st, sizeof(struct Status));
-
+		if(ImageSaveSgi(image, filename, st) != 0)
 			goto return_failure;
-		}
 	}
 
 	// Bye!
@@ -265,23 +247,67 @@ return_failure:
 
  main()
 -----------------------------*/
-int main()
+int main(int argc, const char* argv[])
 {
 	struct Status st = {0};
 
 	float* heightmap = NULL;
+	int heightmap_width = 0;
+	int heightmap_height = 0;
+
 	struct Vector3* normalmap = NULL;
 
-	SimplexSeed(&s_perm_a, SEED);
-	SimplexSeed(&s_perm_b, SEED + 1);
-	SimplexSeed(&s_perm_c, SEED + 2);
-	SimplexSeed(&s_perm_d, SEED + 3);
-	SimplexSeed(&s_perm_e, SEED + 4);
+	if (argc <= 1)
+	{
+		SimplexSeed(&s_perm_a, SEED);
+		SimplexSeed(&s_perm_b, SEED + 1);
+		SimplexSeed(&s_perm_c, SEED + 2);
+		SimplexSeed(&s_perm_d, SEED + 3);
+		SimplexSeed(&s_perm_e, SEED + 4);
 
-	if ((heightmap = sProcessHeightmap("heightmap.sgi", &st)) == NULL)
-		goto return_failure;
+		if ((heightmap = sProcessHeightmap(WIDTH, HEIGHT, "heightmap.sgi", &st)) == NULL)
+			goto return_failure;
 
-	if ((normalmap = sProcessNormalmap(heightmap, "normalmap.sgi", &st)) == NULL)
+		heightmap_width = WIDTH;
+		heightmap_height = HEIGHT;
+	}
+	else
+	{
+		struct Image* image = NULL;
+		printf("Loading heightmap '%s'...\n", argv[1]);
+
+		if ((image = ImageLoad(argv[1], &st)) == NULL)
+			goto return_failure;
+
+		if ((heightmap = malloc(image->width * image->height * sizeof(float))) == NULL)
+		{
+			StatusSet(&st, "main", STATUS_MEMORY_ERROR, NULL);
+			goto return_failure;
+		}
+
+		if (image->format == IMAGE_GRAY16)
+		{
+			for (size_t i = 0; i < (image->width * image->height); i++)
+				heightmap[i] = (float)(((uint16_t*)image->data)[i]) / 65536.0f;
+		}
+		else if (image->format == IMAGE_GRAY8)
+		{
+			for (size_t i = 0; i < (image->width * image->height); i++)
+				heightmap[i] = (float)(((uint16_t*)image->data)[i]) / 255.0f;
+		}
+		else
+		{
+			StatusSet(&st, "main", STATUS_UNKNOWN_FILE_FORMAT, "Only grayscale images supported as heightmaps");
+			goto return_failure;
+		}
+
+		heightmap_width = (int)image->width;
+		heightmap_height = (int)image->height;
+
+		ImageDelete(image);
+	}
+
+	if ((normalmap = sProcessNormalmap(heightmap_width, heightmap_height, heightmap, "normalmap.sgi", &st)) == NULL)
 		goto return_failure;
 
 	// Bye!

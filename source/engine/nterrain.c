@@ -91,14 +91,8 @@ static float sHeightmapElevation(const struct Image* hmap, struct Vector2 cords)
 
 	} data = {.raw = hmap->data};
 
-	if (cords.x > 1.0f)
-		cords.x = 1.0f;
-	if (cords.y > 1.0f)
-		cords.y = 1.0f;
-	if (cords.x < -1.0f)
-		cords.x = -1.0f;
-	if (cords.y < -1.0f)
-		cords.y = -1.0f;
+	cords.x = Clamp(cords.x, -1.0f, 1.0f);
+	cords.y = Clamp(cords.y, -1.0f, 1.0f);
 
 	// TODO, think a better replacement for the -1
 	float u = cords.x * (float)(hmap->width - 1);
