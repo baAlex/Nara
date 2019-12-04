@@ -59,8 +59,7 @@
 		struct Vector3 angle;
 		float max_distance;
 		float aspect;
-
-		float fov; // TODO
+		float fov;
 	};
 
 	struct NTerrainState

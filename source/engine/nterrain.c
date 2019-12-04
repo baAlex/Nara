@@ -515,7 +515,7 @@ static void sBuildFrustumPlanes(struct NTerrainState* state, const struct NTerra
 {
 	// http://www.lighthouse3d.com/tutorials/view-frustum-culling/geometric-approach-extracting-the-planes/
 
-	// TODO: take FOV in consideration
+	// TODO: beyond 90º the fov stops working... definitively PI is the problem
 
 	// TODO: Dear future Alex, please study about the cross operation and why
 	// the right frustum plane require an inverted up vector. :)
@@ -532,28 +532,31 @@ static void sBuildFrustumPlanes(struct NTerrainState* state, const struct NTerra
 
 	// Left frustum
 	state->frustum_position[2] = Vector3Add(view->position, Vector3Scale(forward, 1.0f));
-	state->frustum_position[2] = Vector3Subtract(state->frustum_position[2], Vector3Scale(left, view->aspect / 2.0f));
+	state->frustum_position[2] =
+	    Vector3Subtract(state->frustum_position[2], Vector3Scale(left, (RadToDeg(view->fov) / 90.0f) * view->aspect));
 
 	state->frustum_normal[2] = Vector3Subtract(state->frustum_position[2], view->position);
 	state->frustum_normal[2] = Vector3Cross(Vector3Normalize(state->frustum_normal[2]), up);
 
 	// Right frustum
 	state->frustum_position[1] = Vector3Add(view->position, Vector3Scale(forward, 1.0f));
-	state->frustum_position[1] = Vector3Add(state->frustum_position[1], Vector3Scale(left, view->aspect / 2.0f));
+	state->frustum_position[1] =
+	    Vector3Add(state->frustum_position[1], Vector3Scale(left, (RadToDeg(view->fov) / 90.0f) * view->aspect));
 
 	state->frustum_normal[1] = Vector3Subtract(state->frustum_position[1], view->position);
 	state->frustum_normal[1] = Vector3Cross(Vector3Normalize(state->frustum_normal[1]), Vector3Invert(up));
 
 	// Top frustum
 	state->frustum_position[3] = Vector3Add(view->position, Vector3Scale(forward, 1.0f));
-	state->frustum_position[3] = Vector3Add(state->frustum_position[3], Vector3Scale(up, 1.0f / 2.0f));
+	state->frustum_position[3] = Vector3Add(state->frustum_position[3], Vector3Scale(up, RadToDeg(view->fov) / 90.0f));
 
 	state->frustum_normal[3] = Vector3Subtract(state->frustum_position[3], view->position);
 	state->frustum_normal[3] = Vector3Cross(Vector3Normalize(state->frustum_normal[3]), left);
 
 	// Bottom frustum
 	state->frustum_position[4] = Vector3Add(view->position, Vector3Scale(forward, 1.0f));
-	state->frustum_position[4] = Vector3Subtract(state->frustum_position[4], Vector3Scale(up, 1.0f / 2.0f));
+	state->frustum_position[4] =
+	    Vector3Subtract(state->frustum_position[4], Vector3Scale(up, RadToDeg(view->fov) / 90.0f));
 
 	state->frustum_normal[4] = Vector3Subtract(state->frustum_position[4], view->position);
 	state->frustum_normal[4] = Vector3Cross(Vector3Normalize(state->frustum_normal[4]), Vector3Invert(left));

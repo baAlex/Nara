@@ -46,11 +46,11 @@ SOFTWARE.
 #define NAME "Nara v0.2-alpha"
 #define NAME_SHORT "Nara"
 
-#define FOV 45 // TODO, Matrix4Perspective() broken
+#define FOV 75.0f
 
-#define WINDOWS_WIDTH 1152
-#define WINDOWS_HEIGHT 480
-#define WINDOWS_MIN_WIDTH 240
+#define WINDOWS_WIDTH 1200
+#define WINDOWS_HEIGHT 600
+#define WINDOWS_MIN_WIDTH 200
 #define WINDOWS_MIN_HEIGHT 100
 
 
@@ -106,7 +106,7 @@ static void sSetProjection(struct Vector2i window_size, struct Context* context)
 {
 	struct Matrix4 projection;
 
-	projection = Matrix4Perspective(FOV, (float)window_size.x / (float)window_size.y, 0.1f, 1024.0f);
+	projection = Matrix4Perspective(DegToRad(FOV), (float)window_size.x / (float)window_size.y, 0.1f, 1024.0f);
 	SetProjection(context, projection);
 }
 
@@ -168,7 +168,7 @@ int main()
 
 	// Resources
 	{
-		if ((s_terrain = NTerrainCreate("./assets/heightmap.sgi", 150.0, 972.0 * 2.0, 36.0, 3, &st)) == NULL)
+		if ((s_terrain = NTerrainCreate("./assets/heightmap.sgi", 150.0, 1944.0, 72.0, 3, &st)) == NULL)
 			goto return_failure;
 
 		if (ProgramInit(&s_terrain_program, (char*)g_terrain_vertex, (char*)g_terrain_fragment, &st) != 0)
@@ -236,6 +236,10 @@ int main()
 		if (MixerStart(s_mixer, &st) != 0)
 			goto return_failure;
 
+		s_terrain_view.aspect = (float)WINDOWS_WIDTH / (float)WINDOWS_HEIGHT;
+		s_terrain_view.max_distance = 1024.0f;
+		s_terrain_view.fov = DegToRad(FOV);
+
 		while (1)
 		{
 			// Update engine
@@ -283,23 +287,25 @@ int main()
 				matrix = Matrix4Multiply(matrix, Matrix4Translate(Vector3Invert(camera->co.position)));
 
 				SetCamera(s_context, matrix, camera->co.position);
+
+				s_terrain_view.angle = camera->co.angle;
+				s_terrain_view.position = camera->co.position;
 			}
 
 			if (events.resized == true)
+			{
 				sSetProjection(events.window_size, s_context);
+				s_terrain_view.aspect = (float)events.window_size.x / (float)events.window_size.y;
+			}
 
-			// Render
-			s_terrain_view.angle = camera->co.angle;
-			s_terrain_view.position = camera->co.position;
-			s_terrain_view.max_distance = 1024.0f;
-			s_terrain_view.aspect = (float)events.window_size.x / (float)events.window_size.y;
-
+			// Render terrain
 			draw_calls = NTerrainDraw(s_context, s_terrain, &s_terrain_view);
 
 			if (s_timer.one_second == true)
 			{
 				sprintf(title, "%s | dcalls: %i, fps: %i (~%.02f)", NAME, draw_calls, s_timer.frames_per_second,
 				        s_timer.miliseconds_betwen);
+
 				SetTitle(s_context, title);
 			}
 
