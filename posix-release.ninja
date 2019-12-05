@@ -5,7 +5,7 @@ cflags = `pkg-config --cflags glfw3 portaudio-2.0` -O3 -flto -mtune=generic $
 lflags = `pkg-config --libs glfw3 portaudio-2.0` -lm
 
 rule generate
- command = python3 ./tools/c-ify.py $in $out
+ command = python3 ./source/c-ify.py $in $out
 
 rule compile
  command = cc $cflags -c $in -o $out
@@ -21,14 +21,15 @@ build ./objects/release/engine/terrain-vertex.c:   generate ./source/engine/terr
 # Engine
 build ./objects/release/engine/context-input.o:    compile ./source/engine/context-input.c
 build ./objects/release/engine/context-opengl.o:   compile ./source/engine/context-opengl.c
-build ./objects/release/engine/context.o:          compile ./source/engine/context.c
+build ./objects/release/engine/options.o:          compile ./source/engine/options.c
 build ./objects/release/engine/entity.o:           compile ./source/engine/entity.c
 build ./objects/release/engine/misc.o:             compile ./source/engine/misc.c
 build ./objects/release/engine/mixer.o:            compile ./source/engine/mixer.c
 build ./objects/release/engine/nterrain.o:         compile ./source/engine/nterrain.c
+build ./objects/release/engine/context.o:          compile ./source/engine/context.c
+build ./objects/release/engine/timer.o:            compile ./source/engine/timer.c
 build ./objects/release/engine/terrain-fragment.o: compile ./objects/release/engine/terrain-fragment.c
 build ./objects/release/engine/terrain-vertex.o:   compile ./objects/release/engine/terrain-vertex.c
-build ./objects/release/engine/timer.o:            compile ./source/engine/timer.c
 
 # Game
 build ./objects/release/game/camera.o: compile ./source/game/camera.c
@@ -80,9 +81,10 @@ build nara: link $
 ./objects/release/engine/misc.o $
 ./objects/release/engine/mixer.o $
 ./objects/release/engine/nterrain.o $
+./objects/release/engine/options.o $
+./objects/release/engine/timer.o $
 ./objects/release/engine/terrain-fragment.o $
 ./objects/release/engine/terrain-vertex.o $
-./objects/release/engine/timer.o $
 ./objects/release/game/camera.o $
 ./objects/release/game/nara.o $
 ./objects/release/game/point.o $

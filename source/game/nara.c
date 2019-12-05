@@ -37,6 +37,7 @@ SOFTWARE.
 #include "../engine/entity.h"
 #include "../engine/mixer.h"
 #include "../engine/nterrain.h"
+#include "../engine/options.h"
 #include "../engine/timer.h"
 
 #include "game.h"
@@ -74,6 +75,48 @@ static struct Texture s_dirt = {0};
 static struct Dictionary* s_classes = NULL;
 static struct List s_entities = {0};
 
+static struct Options* s_options = NULL;
+
+
+/*-----------------------------
+
+ sInitializeOptions()
+-----------------------------*/
+static struct Options* sInitializeOptions(int argc, const char* argv[])
+{
+	// TODO, check errors
+	struct Options* options = OptionsCreate();
+
+	if (options != NULL)
+	{
+		OptionsRegister(options, "r_width", 1200, NULL);
+		OptionsRegister(options, "r_height", 600, NULL);
+		OptionsRegister(options, "r_fullscreen", false, NULL);
+		OptionsRegister(options, "r_vsync", true, NULL);
+		OptionsRegister(options, "r_samples", 2, NULL);
+		OptionsRegister(options, "r_max_distance", 1024, NULL);
+		OptionsRegister(options, "r_wireframe", false, NULL);
+		OptionsRegister(options, "r_filter", "trilinear", NULL);
+
+		OptionsRegister(options, "s_volume", 0.8f, NULL);
+		OptionsRegister(options, "s_frequency", 48000, NULL);
+		OptionsRegister(options, "s_channels", 2, NULL);
+		OptionsRegister(options, "s_max_sounds", 32, NULL);
+		OptionsRegister(options, "s_sampling", "sinc_medium", NULL);
+
+		OptionsRegister(options, "terrain_subvidisions", 3, NULL);
+		OptionsRegister(options, "terrain_lod_factor", 0, NULL);
+
+		OptionsRegister(options, "sensitivity", 1.0f, NULL);
+		OptionsRegister(options, "fov", 90, NULL);
+	}
+
+	OptionsReadArguments(options, argc, argv, NULL);
+	OptionsReadFile(options, "user.cfg", NULL);
+
+	return options;
+}
+
 
 /*-----------------------------
 
@@ -81,18 +124,22 @@ static struct List s_entities = {0};
 -----------------------------*/
 static struct Dictionary* sInitializeClasses()
 {
+	// TODO, check errors
 	struct Dictionary* classes = DictionaryCreate(NULL);
 	struct Class* class = NULL;
 
-	class = ClassCreate(classes, "Camera");
-	class->func_start = GameCameraStart;
-	class->func_think = GameCameraThink;
-	class->func_delete = GameCameraDelete;
+	if (classes != NULL)
+	{
+		class = ClassCreate(classes, "Camera");
+		class->func_start = GameCameraStart;
+		class->func_think = GameCameraThink;
+		class->func_delete = GameCameraDelete;
 
-	class = ClassCreate(classes, "Point");
-	class->func_start = GamePointStart;
-	class->func_think = GamePointThink;
-	class->func_delete = GamePointDelete;
+		class = ClassCreate(classes, "Point");
+		class->func_start = GamePointStart;
+		class->func_think = GamePointThink;
+		class->func_delete = GamePointDelete;
+	}
 
 	return classes;
 }
@@ -133,12 +180,18 @@ static inline bool sSingleClick(bool evn, bool* state)
 
  main()
 -----------------------------*/
-int main()
+int main(int argc, const char* argv[])
 {
 	struct Status st = {0};
 	struct Entity* camera = NULL;
 
 	printf("%s\n", NAME);
+
+	if ((s_options = sInitializeOptions(argc, argv)) == NULL)
+	{
+		StatusSet(&st, "sInitializeOptions", STATUS_MEMORY_ERROR, NULL);
+		goto return_failure;
+	}
 
 	// Engine initialization
 	{
@@ -329,6 +382,7 @@ int main()
 	}
 
 	// Bye!
+	OptionsDelete(s_options);
 	DictionaryDelete(s_classes);
 	ListClean(&s_entities);
 
@@ -346,6 +400,7 @@ int main()
 	return EXIT_SUCCESS;
 
 return_failure:
+	// TODO, clean... :(
 	StatusPrint(NAME_SHORT, st);
 	return EXIT_FAILURE;
 }

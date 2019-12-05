@@ -7,8 +7,8 @@ Check implemented features and future work in the [projects tab](https://github.
 
 Any help is welcomed ⛰️📐️!.
 
-![screenshot](./documentation/screenshot-terrain.jpg)
-![screenshot](./documentation/screenshot-wire.jpg)
+![screenshot](./resources/screenshot-terrain.jpg)
+![screenshot](./resources/screenshot-wire.jpg)
 
 
 Dependencies

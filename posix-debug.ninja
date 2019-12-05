@@ -9,7 +9,7 @@ lflags = `pkg-config --libs glfw3 portaudio-2.0` -lm
 
 
 rule generate
- command = python3 ./tools/c-ify.py $in $out
+ command = python3 ./source/c-ify.py $in $out
 
 rule compile
  command = cc $cflags -c $in -o $out
@@ -33,9 +33,10 @@ build ./objects/debug/engine/entity.o:           compile_strict ./source/engine/
 build ./objects/debug/engine/misc.o:             compile_strict ./source/engine/misc.c
 build ./objects/debug/engine/mixer.o:            compile_strict ./source/engine/mixer.c
 build ./objects/debug/engine/nterrain.o:         compile_strict ./source/engine/nterrain.c
+build ./objects/debug/engine/options.o:          compile_strict ./source/engine/options.c
+build ./objects/debug/engine/timer.o:            compile_strict ./source/engine/timer.c
 build ./objects/debug/engine/terrain-fragment.o: compile_strict ./objects/debug/engine/terrain-fragment.c
 build ./objects/debug/engine/terrain-vertex.o:   compile_strict ./objects/debug/engine/terrain-vertex.c
-build ./objects/debug/engine/timer.o:            compile_strict ./source/engine/timer.c
 
 # Game
 build ./objects/debug/game/camera.o: compile_strict ./source/game/camera.c
@@ -90,9 +91,10 @@ build nara-dbg: link $
 ./objects/debug/engine/misc.o $
 ./objects/debug/engine/mixer.o $
 ./objects/debug/engine/nterrain.o $
+./objects/debug/engine/options.o $
+./objects/debug/engine/timer.o $
 ./objects/debug/engine/terrain-fragment.o $
 ./objects/debug/engine/terrain-vertex.o $
-./objects/debug/engine/timer.o $
 ./objects/debug/game/camera.o $
 ./objects/debug/game/nara.o $
 ./objects/debug/game/point.o $
