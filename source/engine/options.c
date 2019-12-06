@@ -30,21 +30,75 @@ SOFTWARE.
 
 #include "options.h"
 #include "dictionary.h"
-#include <stdlib.h>
 
-struct Options
+#include <ctype.h>
+#include <limits.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+
+enum SetBy
 {
-	int nothing;
+	SET_DEFAULT = 0,
+	SET_BY_ARGUMENTS,
+	SET_BY_FILE
 };
+
+enum Type
+{
+	TYPE_INT = 0,
+	TYPE_FLOAT,
+	TYPE_BOOL,
+	TYPE_STRING
+};
+
+union Value {
+	int integer;
+	float floating;
+	bool boolean;
+	const char* string;
+};
+
+struct Cvar
+{
+	enum Type type;
+	enum SetBy set_by;
+	union Value value;
+};
+
+
+static void sPrintCallback(struct DictionaryItem* item, void* data)
+{
+	(void)data;
+	struct Cvar* cvar = (struct Cvar*)item->data;
+
+	switch (cvar->type)
+	{
+	case TYPE_INT:
+		printf(" - %s = %i [i%s]\n", item->key, cvar->value.integer, (cvar->set_by == SET_DEFAULT) ? "" : ", (*)");
+		break;
+	case TYPE_FLOAT:
+		printf(" - %s = %f [f%s]\n", item->key, cvar->value.floating, (cvar->set_by == SET_DEFAULT) ? "" : ", (*)");
+		break;
+	case TYPE_BOOL:
+		printf(" - %s = %s [b%s]\n", item->key, (cvar->value.boolean == true) ? "true" : "false",
+		       (cvar->set_by == SET_DEFAULT) ? "" : ", (*)");
+		break;
+	case TYPE_STRING:
+		printf(" - %s = \"%s\" [s%s]\n", item->key, cvar->value.string, (cvar->set_by == SET_DEFAULT) ? "" : ", (*)");
+	}
+}
 
 
 /*-----------------------------
 
  OptionsCreate()
 -----------------------------*/
-struct Options* OptionsCreate()
+inline struct Options* OptionsCreate()
 {
-	return malloc(1);
+	return (struct Options*)DictionaryCreate(NULL);
 }
 
 
@@ -52,16 +106,164 @@ struct Options* OptionsCreate()
 
  OptionsDelete()
 -----------------------------*/
-void OptionsDelete(struct Options* options) {}
+inline void OptionsDelete(struct Options* options)
+{
+	DictionaryDelete((struct Dictionary*)options);
+}
 
 
 /*-----------------------------
 
  OptionsReadArguments()
 -----------------------------*/
-int OptionsReadArguments(struct Options* options, int argc, const char* argv[], struct Status* st)
+static inline void sStoreString(const char* org, const char** dest)
 {
-	return 1;
+	// TODO
+	*dest = org;
+}
+
+static inline int sStoreBool(const char* org, bool* dest)
+{
+	bool value = false;
+	bool value_set = false;
+
+	for (const char* c = org; *c != '\0'; c++)
+	{
+		if (value_set == false)
+		{
+			if (isspace((int)*c) == 0) // If not
+			{
+				if (strncmp(c, "true", strlen("true")) == 0)
+				{
+					value = true;
+					value_set = true;
+					c += strlen("true") - 1;
+				}
+				else if (strncmp(c, "false", strlen("false")) == 0)
+				{
+					value = false;
+					value_set = true;
+					c += strlen("false") - 1;
+				}
+				else
+					return 1;
+			}
+		}
+		else if (isspace((int)*c) == 0) // If not
+			return 1;
+	}
+
+	*dest = value;
+	return 0;
+}
+
+static inline int sStoreFloat(const char* org, float* dest)
+{
+	char* end = NULL;
+	float value = strtof(org, &end); // "Past the last character interpreted"
+
+	if (*end != '\0')
+		for (; *end != '\0'; end++)
+		{
+			if (isspace((int)*end) == 0) // If not
+				return 1;
+		}
+
+	*dest = value;
+	return 0;
+}
+
+static inline int sStoreInt(const char* org, int* dest)
+{
+	char* end = NULL;
+	long value = strtol(org, &end, 0);
+
+	if (*end != '\0')
+		for (; *end != '\0'; end++)
+		{
+			if (isspace((int)*end) == 0)
+			{
+				// Try with float
+				float temp = 0.0f;
+
+				if (sStoreFloat(org, &temp) != 0)
+					return 1;
+
+				value = lroundf(temp);
+				break;
+			}
+		}
+
+	if (value > INT_MAX || value < INT_MIN)
+		return 1;
+
+	*dest = (int)value;
+	return 0;
+}
+
+void OptionsReadArguments(struct Options* options, int argc, const char* argv[])
+{
+	struct DictionaryItem* item = NULL;
+	struct Cvar* cvar = NULL;
+	union Value old_value;
+
+	for (int i = 1; i < argc; i++)
+	{
+		// Check key
+		if (argv[i][0] != '-')
+		{
+			printf("[Warning] Unexpected token '%s'\n", (argv[i]));
+			continue;
+		}
+
+		if ((item = DictionaryGet((struct Dictionary*)options, (argv[i] + 1))) == NULL)
+		{
+			printf("[Warning] Unknown option '%s'\n", (argv[i] + 1));
+			continue;
+		}
+
+		// Check value
+		cvar = item->data;
+		memcpy(&old_value, &cvar->value, sizeof(union Value));
+
+		if ((i + 1) == argc)
+		{
+			printf("[Warning] No value for option '%s'\n", (argv[i] + 1));
+
+			i++; // Important!
+			continue;
+		}
+
+		switch (cvar->type)
+		{
+		case TYPE_INT:
+			if (sStoreInt(argv[i + 1], &cvar->value.integer) != 0)
+				printf("[Warning] Token '%s' can't be cast into a integer value as '%s' requires\n", argv[i + 1],
+				       (argv[i] + 1));
+			break;
+		case TYPE_FLOAT:
+			if (sStoreFloat(argv[i + 1], &cvar->value.floating) != 0)
+				printf("[Warning] Token '%s' can't be cast into a decimal value as '%s' requires\n", argv[i + 1],
+				       (argv[i] + 1));
+			break;
+		case TYPE_BOOL:
+			if (sStoreBool(argv[i + 1], &cvar->value.boolean) != 0)
+				printf("[Warning] Token '%s' can't be cast into a boolean value as '%s' requires\n", argv[i + 1],
+				       (argv[i] + 1));
+			break;
+		case TYPE_STRING: sStoreString(argv[i + 1], &cvar->value.string);
+		}
+
+		if (memcmp(&old_value, &cvar->value, sizeof(union Value)) != 0) // Something change?
+			cvar->set_by = SET_BY_ARGUMENTS;
+
+		i++; // Important!
+	}
+
+#ifdef DEBUG
+	printf("(OptionsReadArguments)\n");
+	DictionaryIterate((struct Dictionary*)options, sPrintCallback, NULL);
+#endif
 }
 
 
@@ -71,6 +273,13 @@ int OptionsReadArguments(struct Options* options, int argc, const char* argv[], 
 -----------------------------*/
 int OptionsReadFile(struct Options* options, const char* filename, struct Status* st)
 {
+	(void)st;
+
+#ifdef DEBUG
+	printf("(OptionsReadFile, '%s')\n", filename);
+	DictionaryIterate((struct Dictionary*)options, sPrintCallback, NULL);
+#endif
+
 	return 1;
 }
 
@@ -79,23 +288,85 @@ int OptionsReadFile(struct Options* options, const char* filename, struct Status
 
  OptionsRegister()
 -----------------------------*/
-int OptionsRegisterInt(struct Options* options, const char* name, int default_value, struct Status* st)
+static struct Cvar* sOptionsRegister(struct Options* options, const char* key, struct Status* st)
 {
+	struct DictionaryItem* item = NULL;
+
+	StatusSet(st, "sOptionsRegister", STATUS_SUCCESS, NULL);
+
+	for (const char* c = key; *c != '\0'; c++)
+	{
+		if (isalnum((int)*c) == 0 // If not
+		    && *c != '_')
+		{
+			StatusSet(st, "sOptionsRegister", STATUS_INVALID_ARGUMENT, "Only alphanumeric options names allowed");
+			return NULL;
+		}
+	}
+
+	if ((item = DictionaryAdd((struct Dictionary*)options, key, NULL, sizeof(struct Cvar))) == NULL)
+	{
+		StatusSet(st, "sOptionsRegister", STATUS_MEMORY_ERROR, NULL);
+		return NULL;
+	}
+
+	memset(item->data, 0, sizeof(struct Cvar));
+	return item->data;
+}
+
+inline int OptionsRegisterInt(struct Options* options, const char* key, int default_value, struct Status* st)
+{
+	struct Cvar* cvar = sOptionsRegister(options, key, st);
+
+	if (cvar != NULL)
+	{
+		cvar->type = TYPE_INT;
+		cvar->value.integer = default_value;
+		return 0;
+	}
+
 	return 1;
 }
 
-int OptionsRegisterBool(struct Options* options, const char* name, bool default_value, struct Status* st)
+inline int OptionsRegisterBool(struct Options* options, const char* key, bool default_value, struct Status* st)
 {
+	struct Cvar* cvar = sOptionsRegister(options, key, st);
+
+	if (cvar != NULL)
+	{
+		cvar->type = TYPE_BOOL;
+		cvar->value.boolean = default_value;
+		return 0;
+	}
+
 	return 1;
 }
 
-int OptionsRegisterFloat(struct Options* options, const char* name, float default_value, struct Status* st)
+inline int OptionsRegisterFloat(struct Options* options, const char* key, float default_value, struct Status* st)
 {
+	struct Cvar* cvar = sOptionsRegister(options, key, st);
+
+	if (cvar != NULL)
+	{
+		cvar->type = TYPE_FLOAT;
+		cvar->value.floating = default_value;
+		return 0;
+	}
+
 	return 1;
 }
 
-int OptionsRegisterString(struct Options* options, const char* name, const char* default_value, struct Status* st)
+inline int OptionsRegisterString(struct Options* options, const char* key, const char* default_value, struct Status* st)
 {
+	struct Cvar* cvar = sOptionsRegister(options, key, st);
+
+	if (cvar != NULL)
+	{
+		cvar->type = TYPE_STRING;
+		cvar->value.string = default_value;
+		return 0;
+	}
+
 	return 1;
 }
 
@@ -104,22 +375,42 @@ int OptionsRegisterString(struct Options* options, const char* name, const char*
 
  OptionsRetrieve()
 -----------------------------*/
-int OptionsRetrieveInt(const struct Options* options, const char* name, int* dest, struct Status* st)
+inline int OptionsRetrieveInt(const struct Options* options, const char* key, int* dest, struct Status* st)
 {
+	(void)options;
+	(void)key;
+	(void)dest;
+	(void)st;
+
 	return 1;
 }
 
-int OptionsRetrieveBool(const struct Options* options, const char* name, bool* dest, struct Status* st)
+inline int OptionsRetrieveBool(const struct Options* options, const char* key, bool* dest, struct Status* st)
 {
+	(void)options;
+	(void)key;
+	(void)dest;
+	(void)st;
+
 	return 1;
 }
 
-int OptionsRetrieveFloat(const struct Options* options, const char* name, float* dest, struct Status* st)
+inline int OptionsRetrieveFloat(const struct Options* options, const char* key, float* dest, struct Status* st)
 {
+	(void)options;
+	(void)key;
+	(void)dest;
+	(void)st;
+
 	return 1;
 }
 
-int OptionsRetrieveString(const struct Options* options, const char* name, char* dest, struct Status* st)
+inline int OptionsRetrieveString(const struct Options* options, const char* key, char* dest, struct Status* st)
 {
+	(void)options;
+	(void)key;
+	(void)dest;
+	(void)st;
+
 	return 1;
 }

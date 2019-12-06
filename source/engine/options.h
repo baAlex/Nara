@@ -15,7 +15,7 @@
 	struct Options* OptionsCreate();
 	void OptionsDelete(struct Options*);
 
-	int OptionsReadArguments(struct Options*, int argc, const char* argv[], struct Status*);
+	void OptionsReadArguments(struct Options*, int argc, const char* argv[]);
 	int OptionsReadFile(struct Options*, const char* filename, struct Status*);
 
 	int OptionsRegisterInt(struct Options*, const char* name, int default_value, struct Status*);

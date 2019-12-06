@@ -91,11 +91,11 @@ static struct Options* sInitializeOptions(int argc, const char* argv[])
 	{
 		OptionsRegister(options, "r_width", 1200, NULL);
 		OptionsRegister(options, "r_height", 600, NULL);
-		OptionsRegister(options, "r_fullscreen", false, NULL);
-		OptionsRegister(options, "r_vsync", true, NULL);
+		OptionsRegisterBool(options, "r_fullscreen", false, NULL); // Mhhh...
+		OptionsRegisterBool(options, "r_vsync", true, NULL);       // Mhhh...
 		OptionsRegister(options, "r_samples", 2, NULL);
 		OptionsRegister(options, "r_max_distance", 1024, NULL);
-		OptionsRegister(options, "r_wireframe", false, NULL);
+		OptionsRegisterBool(options, "r_wireframe", false, NULL); // Mhhh...
 		OptionsRegister(options, "r_filter", "trilinear", NULL);
 
 		OptionsRegister(options, "s_volume", 0.8f, NULL);
@@ -111,8 +111,8 @@ static struct Options* sInitializeOptions(int argc, const char* argv[])
 		OptionsRegister(options, "fov", 90, NULL);
 	}
 
-	OptionsReadArguments(options, argc, argv, NULL);
-	OptionsReadFile(options, "user.cfg", NULL);
+	// OptionsReadFile(options, "user.cfg", NULL);
+	OptionsReadArguments(options, argc, argv);
 
 	return options;
 }
