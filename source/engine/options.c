@@ -30,6 +30,7 @@ SOFTWARE.
 
 #include "options.h"
 #include "dictionary.h"
+#include "utilities.h"
 
 #include <ctype.h>
 #include <limits.h>
@@ -55,39 +56,41 @@ enum Type
 };
 
 union Value {
-	int integer;
-	float floating;
-	bool boolean;
-	const char* string;
+	int i;
+	float f;
+	bool b;
+	const char* s;
 };
 
-struct Cvar
+struct Option
 {
 	enum Type type;
 	enum SetBy set_by;
 	union Value value;
+	union Value min;
+	union Value max;
 };
 
 
 static void sPrintCallback(struct DictionaryItem* item, void* data)
 {
 	(void)data;
-	struct Cvar* cvar = (struct Cvar*)item->data;
+	struct Option* option = (struct Option*)item->data;
 
-	switch (cvar->type)
+	switch (option->type)
 	{
 	case TYPE_INT:
-		printf(" - %s = %i [i%s]\n", item->key, cvar->value.integer, (cvar->set_by == SET_DEFAULT) ? "" : ", (*)");
+		printf(" - %s = %i [i%s]\n", item->key, option->value.i, (option->set_by == SET_DEFAULT) ? "" : ", (*)");
 		break;
 	case TYPE_FLOAT:
-		printf(" - %s = %f [f%s]\n", item->key, cvar->value.floating, (cvar->set_by == SET_DEFAULT) ? "" : ", (*)");
+		printf(" - %s = %f [f%s]\n", item->key, option->value.f, (option->set_by == SET_DEFAULT) ? "" : ", (*)");
 		break;
 	case TYPE_BOOL:
-		printf(" - %s = %s [b%s]\n", item->key, (cvar->value.boolean == true) ? "true" : "false",
-		       (cvar->set_by == SET_DEFAULT) ? "" : ", (*)");
+		printf(" - %s = %s [b%s]\n", item->key, (option->value.b == true) ? "true" : "false",
+		       (option->set_by == SET_DEFAULT) ? "" : ", (*)");
 		break;
 	case TYPE_STRING:
-		printf(" - %s = \"%s\" [s%s]\n", item->key, cvar->value.string, (cvar->set_by == SET_DEFAULT) ? "" : ", (*)");
+		printf(" - %s = \"%s\" [s%s]\n", item->key, option->value.s, (option->set_by == SET_DEFAULT) ? "" : ", (*)");
 	}
 }
 
@@ -157,7 +160,7 @@ static inline int sStoreBool(const char* org, bool* dest)
 	return 0;
 }
 
-static inline int sStoreFloat(const char* org, float* dest)
+static inline int sStoreFloat(const char* org, float* dest, float min, float max)
 {
 	char* end = NULL;
 	float value = strtof(org, &end); // "Past the last character interpreted"
@@ -169,11 +172,11 @@ static inline int sStoreFloat(const char* org, float* dest)
 				return 1;
 		}
 
-	*dest = value;
+	*dest = Clamp(value, min, max);
 	return 0;
 }
 
-static inline int sStoreInt(const char* org, int* dest)
+static inline int sStoreInt(const char* org, int* dest, int min, int max)
 {
 	char* end = NULL;
 	long value = strtol(org, &end, 0);
@@ -186,7 +189,7 @@ static inline int sStoreInt(const char* org, int* dest)
 				// Try with float
 				float temp = 0.0f;
 
-				if (sStoreFloat(org, &temp) != 0)
+				if (sStoreFloat(org, &temp, (float)min, (float)max) != 0)
 					return 1;
 
 				value = lroundf(temp);
@@ -197,14 +200,14 @@ static inline int sStoreInt(const char* org, int* dest)
 	if (value > INT_MAX || value < INT_MIN)
 		return 1;
 
-	*dest = (int)value;
+	*dest = Clamp((int)value, min, max);
 	return 0;
 }
 
 void OptionsReadArguments(struct Options* options, int argc, const char* argv[])
 {
 	struct DictionaryItem* item = NULL;
-	struct Cvar* cvar = NULL;
+	struct Option* option = NULL;
 	union Value old_value;
 
 	for (int i = 1; i < argc; i++)
@@ -223,8 +226,8 @@ void OptionsReadArguments(struct Options* options, int argc, const char* argv[])
 		}
 
 		// Check value
-		cvar = item->data;
-		memcpy(&old_value, &cvar->value, sizeof(union Value));
+		option = item->data;
+		memcpy(&old_value, &option->value, sizeof(union Value));
 
 		if ((i + 1) == argc)
 		{
@@ -234,28 +237,28 @@ void OptionsReadArguments(struct Options* options, int argc, const char* argv[])
 			continue;
 		}
 
-		switch (cvar->type)
+		switch (option->type)
 		{
 		case TYPE_INT:
-			if (sStoreInt(argv[i + 1], &cvar->value.integer) != 0)
+			if (sStoreInt(argv[i + 1], &option->value.i, option->min.i, option->max.i) != 0)
 				printf("[Warning] Token '%s' can't be cast into a integer value as '%s' requires\n", argv[i + 1],
 				       (argv[i] + 1));
 			break;
 		case TYPE_FLOAT:
-			if (sStoreFloat(argv[i + 1], &cvar->value.floating) != 0)
+			if (sStoreFloat(argv[i + 1], &option->value.f, option->min.f, option->max.f) != 0)
 				printf("[Warning] Token '%s' can't be cast into a decimal value as '%s' requires\n", argv[i + 1],
 				       (argv[i] + 1));
 			break;
 		case TYPE_BOOL:
-			if (sStoreBool(argv[i + 1], &cvar->value.boolean) != 0)
+			if (sStoreBool(argv[i + 1], &option->value.b) != 0)
 				printf("[Warning] Token '%s' can't be cast into a boolean value as '%s' requires\n", argv[i + 1],
 				       (argv[i] + 1));
 			break;
-		case TYPE_STRING: sStoreString(argv[i + 1], &cvar->value.string);
+		case TYPE_STRING: sStoreString(argv[i + 1], &option->value.s);
 		}
 
-		if (memcmp(&old_value, &cvar->value, sizeof(union Value)) != 0) // Something change?
-			cvar->set_by = SET_BY_ARGUMENTS;
+		if (memcmp(&old_value, &option->value, sizeof(union Value)) != 0) // Something change?
+			option->set_by = SET_BY_ARGUMENTS;
 
 		i++; // Important!
 	}
@@ -286,11 +289,12 @@ int OptionsReadFile(struct Options* options, const char* filename, struct Status
 
 /*-----------------------------
 
- OptionsRegister()
+ sOptionsRegister()
 -----------------------------*/
-static struct Cvar* sOptionsRegister(struct Options* options, const char* key, struct Status* st)
+static struct Option* sOptionsRegister(struct Options* options, const char* key, enum Type type, struct Status* st)
 {
 	struct DictionaryItem* item = NULL;
+	struct Option* option = NULL;
 
 	StatusSet(st, "sOptionsRegister", STATUS_SUCCESS, NULL);
 
@@ -304,24 +308,78 @@ static struct Cvar* sOptionsRegister(struct Options* options, const char* key, s
 		}
 	}
 
-	if ((item = DictionaryAdd((struct Dictionary*)options, key, NULL, sizeof(struct Cvar))) == NULL)
+	if ((item = DictionaryAdd((struct Dictionary*)options, key, NULL, sizeof(struct Option))) == NULL)
 	{
 		StatusSet(st, "sOptionsRegister", STATUS_MEMORY_ERROR, NULL);
 		return NULL;
 	}
 
-	memset(item->data, 0, sizeof(struct Cvar));
+	option = item->data;
+
+	memset(option, 0, sizeof(struct Option));
+	option->type = type;
+
 	return item->data;
 }
 
-inline int OptionsRegisterInt(struct Options* options, const char* key, int default_value, struct Status* st)
-{
-	struct Cvar* cvar = sOptionsRegister(options, key, st);
 
-	if (cvar != NULL)
+/*-----------------------------
+
+ sOptionsRetrieve()
+-----------------------------*/
+static inline const char* sTypeName(enum Type type)
+{
+	switch (type)
 	{
-		cvar->type = TYPE_INT;
-		cvar->value.integer = default_value;
+	case TYPE_INT: return "integer";
+	case TYPE_FLOAT: return "decimal";
+	case TYPE_BOOL: return "boolean";
+	case TYPE_STRING: return "string";
+	}
+
+	return NULL;
+}
+
+static struct Option* sOptionsRetrieve(const struct Options* options, const char* key, enum Type type,
+                                       struct Status* st)
+{
+	struct DictionaryItem* item = NULL;
+	struct Option* option = NULL;
+
+	StatusSet(st, "sOptionsRetrieve", STATUS_SUCCESS, NULL);
+
+	if ((item = DictionaryGet((struct Dictionary*)options, key)) == NULL)
+	{
+		StatusSet(st, "sOptionsRetrieve", STATUS_ERROR, "Option '%s' not registered", key);
+		return NULL;
+	}
+
+	option = item->data;
+
+	if (option->type != type)
+	{
+		StatusSet(st, "sOptionsRetrieve", STATUS_ERROR, "Option '%s' has an %s value (%s requested)", key,
+		          sTypeName(option->type), sTypeName(type));
+		return NULL;
+	}
+
+	return option;
+}
+
+
+/*-----------------------------
+
+ lol no generics
+-----------------------------*/
+inline int OptionsRegisterInt(struct Options* options, const char* key, int default_value, int min, int max,
+                              struct Status* st)
+{
+	struct Option* option = sOptionsRegister(options, key, TYPE_INT, st);
+	if (option != NULL)
+	{
+		option->value.i = Clamp(default_value, min, max);
+		option->min.i = min;
+		option->max.i = max;
 		return 0;
 	}
 
@@ -330,26 +388,25 @@ inline int OptionsRegisterInt(struct Options* options, const char* key, int defa
 
 inline int OptionsRegisterBool(struct Options* options, const char* key, bool default_value, struct Status* st)
 {
-	struct Cvar* cvar = sOptionsRegister(options, key, st);
-
-	if (cvar != NULL)
+	struct Option* option = sOptionsRegister(options, key, TYPE_BOOL, st);
+	if (option != NULL)
 	{
-		cvar->type = TYPE_BOOL;
-		cvar->value.boolean = default_value;
+		option->value.b = default_value;
 		return 0;
 	}
 
 	return 1;
 }
 
-inline int OptionsRegisterFloat(struct Options* options, const char* key, float default_value, struct Status* st)
+inline int OptionsRegisterFloat(struct Options* options, const char* key, float default_value, float min, float max,
+                                struct Status* st)
 {
-	struct Cvar* cvar = sOptionsRegister(options, key, st);
-
-	if (cvar != NULL)
+	struct Option* option = sOptionsRegister(options, key, TYPE_FLOAT, st);
+	if (option != NULL)
 	{
-		cvar->type = TYPE_FLOAT;
-		cvar->value.floating = default_value;
+		option->value.f = Clamp(default_value, min, max);
+		option->min.f = min;
+		option->max.f = max;
 		return 0;
 	}
 
@@ -358,59 +415,60 @@ inline int OptionsRegisterFloat(struct Options* options, const char* key, float 
 
 inline int OptionsRegisterString(struct Options* options, const char* key, const char* default_value, struct Status* st)
 {
-	struct Cvar* cvar = sOptionsRegister(options, key, st);
-
-	if (cvar != NULL)
+	struct Option* option = sOptionsRegister(options, key, TYPE_STRING, st);
+	if (option != NULL)
 	{
-		cvar->type = TYPE_STRING;
-		cvar->value.string = default_value;
+		option->value.s = default_value;
 		return 0;
 	}
 
 	return 1;
 }
 
-
-/*-----------------------------
-
- OptionsRetrieve()
------------------------------*/
 inline int OptionsRetrieveInt(const struct Options* options, const char* key, int* dest, struct Status* st)
 {
-	(void)options;
-	(void)key;
-	(void)dest;
-	(void)st;
+	struct Option* option = sOptionsRetrieve(options, key, TYPE_INT, st);
+	if (option != NULL)
+	{
+		*dest = option->value.i;
+		return 0;
+	}
 
 	return 1;
 }
 
 inline int OptionsRetrieveBool(const struct Options* options, const char* key, bool* dest, struct Status* st)
 {
-	(void)options;
-	(void)key;
-	(void)dest;
-	(void)st;
+	struct Option* option = sOptionsRetrieve(options, key, TYPE_BOOL, st);
+	if (option != NULL)
+	{
+		*dest = option->value.b;
+		return 0;
+	}
 
 	return 1;
 }
 
 inline int OptionsRetrieveFloat(const struct Options* options, const char* key, float* dest, struct Status* st)
 {
-	(void)options;
-	(void)key;
-	(void)dest;
-	(void)st;
+	struct Option* option = sOptionsRetrieve(options, key, TYPE_FLOAT, st);
+	if (option != NULL)
+	{
+		*dest = option->value.f;
+		return 0;
+	}
 
 	return 1;
 }
 
-inline int OptionsRetrieveString(const struct Options* options, const char* key, char* dest, struct Status* st)
+inline int OptionsRetrieveString(const struct Options* options, const char* key, const char** dest, struct Status* st)
 {
-	(void)options;
-	(void)key;
-	(void)dest;
-	(void)st;
+	struct Option* option = sOptionsRetrieve(options, key, TYPE_STRING, st);
+	if (option != NULL)
+	{
+		*dest = option->value.s;
+		return 0;
+	}
 
 	return 1;
 }

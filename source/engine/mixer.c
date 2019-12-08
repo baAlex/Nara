@@ -70,8 +70,13 @@ struct ToPlay
 struct Mixer
 {
 	PaStream* stream;
-	struct MixerOptions options;
 	struct Buffer buffer;
+	struct
+	{
+		int frequency;
+		int channels;
+		float volume;
+	} cfg;
 
 	struct Dictionary* samples;
 	size_t samples_no;
@@ -111,7 +116,7 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 	float* output = raw_output;
 	float* data = NULL;
 
-	const size_t channels = (size_t)mixer->options.channels;
+	const size_t channels = (size_t)mixer->cfg.channels;
 
 	for (unsigned long i = 0; i < (frames_no * channels); i += channels)
 	{
@@ -159,7 +164,7 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 		// Global volume
 		for (size_t ch = 0; ch < channels; ch++)
 		{
-			output[i + ch] *= mixer->options.volume;
+			output[i + ch] *= mixer->cfg.volume;
 
 			if (output[i + ch] > 1.0f)
 			{
@@ -225,7 +230,7 @@ static void sToCommonFormat(const void* in, size_t in_size, size_t in_channels, 
 
  MixerCreate()
 -----------------------------*/
-struct Mixer* MixerCreate(struct MixerOptions options, struct Status* st)
+struct Mixer* MixerCreate(const struct Options* options, struct Status* st)
 {
 	struct Mixer* mixer = NULL;
 	PaError errcode = paNoError;
@@ -240,11 +245,10 @@ struct Mixer* MixerCreate(struct MixerOptions options, struct Status* st)
 		return NULL;
 	}
 
-	options.channels = Clamp(options.channels, 1, 2);
-	options.frequency = Clamp(options.frequency, 6000, 48000);
-	options.volume = Clamp(options.volume, 0.0f, 1.0f);
-
-	memcpy(&mixer->options, &options, sizeof(struct MixerOptions));
+	if (OptionsRetrieve(options, "s_volume", &mixer->cfg.volume, st) != 0 ||
+	    OptionsRetrieve(options, "s_frequency", &mixer->cfg.frequency, st) != 0 ||
+	    OptionsRetrieve(options, "s_channels", &mixer->cfg.channels, st) != 0)
+		goto return_failure;
 
 	if ((errcode = Pa_Initialize()) != paNoError)
 	{
@@ -253,7 +257,7 @@ struct Mixer* MixerCreate(struct MixerOptions options, struct Status* st)
 	}
 
 	// Create stream
-	if ((errcode = Pa_OpenDefaultStream(&mixer->stream, 0, options.channels, paFloat32, (double)options.frequency,
+	if ((errcode = Pa_OpenDefaultStream(&mixer->stream, 0, mixer->cfg.channels, paFloat32, (double)mixer->cfg.frequency,
 	                                    paFramesPerBufferUnspecified, sCallback, mixer)) != paNoError)
 	{
 		StatusSet(st, "MixerCreate", STATUS_ERROR, "Opening stream: \"%s\"", Pa_GetErrorText(errcode));
@@ -365,7 +369,7 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct St
 	// Reformat (we use float everywhere)
 	float* reformat_dest = NULL;
 	{
-		size_t reformat_size = ex.length * Min(ex.channels, (size_t)mixer->options.channels) * sizeof(float);
+		size_t reformat_size = ex.length * Min(ex.channels, (size_t)mixer->cfg.channels) * sizeof(float);
 		struct Status temp_st = {0};
 
 		if (BufferResize(&mixer->buffer, ex.uncompressed_size + reformat_size) == NULL)
@@ -388,13 +392,13 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct St
 		}
 
 		sToCommonFormat(mixer->buffer.data, ex.uncompressed_size, ex.channels, ex.format, reformat_dest,
-		                Min(ex.channels, (size_t)mixer->options.channels));
+		                Min(ex.channels, (size_t)mixer->cfg.channels));
 	}
 
 	// Resample
 	{
-		size_t resampled_length = ex.length * (size_t)ceil((double)mixer->options.frequency / (double)ex.frequency);
-		size_t resampled_size = resampled_length * sizeof(float) * Min(ex.channels, (size_t)mixer->options.channels);
+		size_t resampled_length = ex.length * (size_t)ceil((double)mixer->cfg.frequency / (double)ex.frequency);
+		size_t resampled_size = resampled_length * sizeof(float) * Min(ex.channels, (size_t)mixer->cfg.channels);
 
 		if ((item = DictionaryAdd(mixer->samples, filename, NULL, sizeof(struct Sample) + resampled_size)) == NULL)
 		{
@@ -405,7 +409,7 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct St
 		sample = item->data;
 		sample->item = item;
 		sample->length = resampled_length;
-		sample->channels = Min(ex.channels, (size_t)mixer->options.channels);
+		sample->channels = Min(ex.channels, (size_t)mixer->cfg.channels);
 		sample->references = 0;
 		sample->to_delete = false;
 
@@ -415,10 +419,10 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct St
 		                         .data_out = sample->data,
 		                         .input_frames = (long)ex.length,
 		                         .output_frames = (long)resampled_length,
-		                         .src_ratio = (double)mixer->options.frequency / (double)ex.frequency};
+		                         .src_ratio = (double)mixer->cfg.frequency / (double)ex.frequency};
 
 		// TODO, hardcoded SRC_LINEAR
-		if (src_simple(&resample_cfg, SRC_LINEAR, Min((int)ex.channels, mixer->options.channels)) != 0)
+		if (src_simple(&resample_cfg, SRC_LINEAR, Min((int)ex.channels, mixer->cfg.channels)) != 0)
 		{
 			StatusSet(st, "SampleCreate", STATUS_ERROR, "src_simple() error. File: \"%s\"", filename);
 			goto return_failure;

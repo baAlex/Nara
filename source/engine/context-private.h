@@ -12,6 +12,7 @@
 	#include <string.h>
 
 	#include "context.h"
+	#include "utilities.h"
 	#include "glad.h" // Before GLFW
 
 	#define GLFW_INCLUDE_ES2
@@ -23,7 +24,15 @@
 	struct Context
 	{
 		GLFWwindow* window;
-		struct ContextOptions options; // Set at initialization
+		struct
+		{
+			int width;
+			int height;
+			int samples;
+			bool fullscreen;
+			bool vsync;
+			bool wireframe;
+		} cfg;
 
 		struct Vector2i window_size; // sResizeCallback()
 		bool window_resized;         // sResizeCallback()

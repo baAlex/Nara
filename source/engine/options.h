@@ -18,24 +18,15 @@
 	void OptionsReadArguments(struct Options*, int argc, const char* argv[]);
 	int OptionsReadFile(struct Options*, const char* filename, struct Status*);
 
-	int OptionsRegisterInt(struct Options*, const char* name, int default_value, struct Status*);
+	int OptionsRegisterInt(struct Options*, const char* name, int default_value, int min, int max, struct Status*);
 	int OptionsRegisterBool(struct Options*, const char* name, bool default_value, struct Status*);
-	int OptionsRegisterFloat(struct Options*, const char* name, float default_value, struct Status*);
+	int OptionsRegisterFloat(struct Options*, const char* name, float default_value, float min, float max, struct Status*);
 	int OptionsRegisterString(struct Options*, const char* name, const char* default_value, struct Status*);
 
 	int OptionsRetrieveInt(const struct Options*, const char* name, int* dest, struct Status*);
 	int OptionsRetrieveBool(const struct Options*, const char* name, bool* dest, struct Status*);
 	int OptionsRetrieveFloat(const struct Options*, const char* name, float* dest, struct Status*);
-	int OptionsRetrieveString(const struct Options*, const char* name, char* dest, struct Status*);
-
-	#define OptionsRegister(options, name, value, st) _Generic((value), \
-		int: OptionsRegisterInt, \
-		bool: OptionsRegisterBool, \
-		float: OptionsRegisterFloat, \
-		char*: OptionsRegisterString, \
-		const char*: OptionsRegisterString, \
-		default: OptionsRegisterInt \
-	)(options, name, value, st)
+	int OptionsRetrieveString(const struct Options*, const char* name, const char** dest, struct Status*);
 
 	#define OptionsRetrieve(options, name, dest, st) _Generic((dest), \
 		int*: OptionsRetrieveInt, \

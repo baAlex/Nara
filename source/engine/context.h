@@ -11,6 +11,7 @@
 	#include "status.h"
 	#include "vector.h"
 	#include "matrix.h"
+	#include "options.h"
 
 	enum Filter
 	{
@@ -73,21 +74,7 @@
 		struct Vector2i window_size;
 	};
 
-	struct ContextOptions
-	{
-		char* caption;
-
-		struct Vector2i window_size;
-		struct Vector2i window_min_size;
-		struct Vector3 clean_color;
-
-		int samples;
-
-		bool fullscreen;
-		bool disable_vsync;
-	};
-
-	struct Context* ContextCreate(struct ContextOptions options, struct Status* st);
+	struct Context* ContextCreate(const struct Options* options, const char* caption, struct Status* st);
 	void ContextDelete(struct Context* context);
 	void ContextUpdate(struct Context* context, struct ContextEvents* out_events);
 
@@ -99,6 +86,8 @@
 	void SetHighlight(struct Context* context, struct Vector3 value);
 	void SetCameraLookAt(struct Context* context, struct Vector3 target, struct Vector3 origin);
 	void SetCameraMatrix(struct Context* context, struct Matrix4 matrix, struct Vector3 origin);
+
+	struct Vector2i GetWindowSize(const struct Context* context);
 
 	void Draw(struct Context* context, const struct Index* index);
 

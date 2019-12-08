@@ -31,6 +31,13 @@ SOFTWARE.
 #include "context-private.h"
 #include <stdio.h>
 
+#define MIN_WIDTH 320
+#define MIN_HEIGHT 240
+
+#define CLEAN_R 0.80f // TODO, a skybox is needed
+#define CLEAN_G 0.82f
+#define CLEAN_B 0.84f
+
 
 static void sResizeCallback(GLFWwindow* window, int new_width, int new_height)
 {
@@ -53,7 +60,7 @@ static void sErrorCallback(int code, const char* description)
 
  ContextCreate()
 -----------------------------*/
-struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
+struct Context* ContextCreate(const struct Options* options, const char* caption, struct Status* st)
 {
 	struct Context* context = NULL;
 
@@ -64,7 +71,13 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	if ((context = calloc(1, sizeof(struct Context))) == NULL)
 		return NULL;
 
-	memcpy(&context->options, &options, sizeof(struct ContextOptions));
+	if (OptionsRetrieve(options, "r_width", &context->cfg.width, st) != 0 ||
+	    OptionsRetrieve(options, "r_height", &context->cfg.height, st) != 0 ||
+	    OptionsRetrieve(options, "r_samples", &context->cfg.samples, st) != 0 ||
+	    OptionsRetrieve(options, "r_fullscreen", &context->cfg.fullscreen, st) != 0 ||
+	    OptionsRetrieve(options, "r_wireframe", &context->cfg.wireframe, st) != 0 ||
+	    OptionsRetrieve(options, "r_vsync", &context->cfg.vsync, st) != 0)
+		goto return_failure;
 
 	glfwSetErrorCallback(sErrorCallback);
 
@@ -79,10 +92,9 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-	glfwWindowHint(GLFW_SAMPLES, options.samples);
+	glfwWindowHint(GLFW_SAMPLES, context->cfg.samples);
 
-	if ((context->window =
-	         glfwCreateWindow(options.window_size.x, options.window_size.y, options.caption, NULL, NULL)) == NULL)
+	if ((context->window = glfwCreateWindow(context->cfg.width, context->cfg.height, caption, NULL, NULL)) == NULL)
 	{
 		StatusSet(st, "ContextCreate", STATUS_ERROR, "Creating GLFW window");
 		goto return_failure;
@@ -96,12 +108,11 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 		goto return_failure;
 	}
 
-	if (options.disable_vsync == true)
+	if (context->cfg.vsync == false)
 		glfwSwapInterval(0);
 
 	// Callbacks and pretty things
-	glfwSetWindowSizeLimits(context->window, options.window_min_size.x, options.window_min_size.y, GLFW_DONT_CARE,
-	                        GLFW_DONT_CARE);
+	glfwSetWindowSizeLimits(context->window, MIN_WIDTH, MIN_HEIGHT, GLFW_DONT_CARE, GLFW_DONT_CARE);
 
 	glfwSetWindowUserPointer(context->window, context);
 
@@ -110,7 +121,7 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	glfwSetCursorPosCallback(context->window, MousePositionCallback);
 	glfwSetMouseButtonCallback(context->window, MouseClickCallback);
 
-	if (context->options.fullscreen == true)
+	if (context->cfg.fullscreen == true)
 	{
 		const GLFWvidmode* vid_mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
 		glfwSetWindowMonitor(context->window, glfwGetPrimaryMonitor(), 0, 0, vid_mode->width, vid_mode->height,
@@ -118,7 +129,7 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 	}
 
 	// OpenGL initialization
-	glClearColor(options.clean_color.x, options.clean_color.y, options.clean_color.z, 1.0);
+	glClearColor(CLEAN_R, CLEAN_G, CLEAN_B, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glEnable(GL_DEPTH_TEST);
@@ -141,8 +152,10 @@ struct Context* ContextCreate(struct ContextOptions options, struct Status* st)
 
 	context->active_gamepad = FindGamedpad();
 
-	context->window_size = context->options.window_size;
-	sResizeCallback(context->window, context->options.window_size.x, context->options.window_size.y);
+	context->window_size.x = context->cfg.width;
+	context->window_size.y = context->cfg.height;
+
+	sResizeCallback(context->window, context->window_size.x, context->window_size.y);
 
 	// Bye!
 	printf("\n");
@@ -340,5 +353,16 @@ inline void Draw(struct Context* context, const struct Index* index)
 {
 	(void)context;
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index->glptr);
-	glDrawElements(GL_TRIANGLES, (GLsizei)index->length, GL_UNSIGNED_SHORT, NULL);
+	glDrawElements((context->cfg.wireframe == false) ? GL_TRIANGLES : GL_LINES, (GLsizei)index->length,
+	               GL_UNSIGNED_SHORT, NULL);
+}
+
+
+/*-----------------------------
+
+ GetWindowSize()
+-----------------------------*/
+inline struct Vector2i GetWindowSize(const struct Context* context)
+{
+	return context->window_size;
 }

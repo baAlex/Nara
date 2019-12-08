@@ -28,6 +28,7 @@ SOFTWARE.
  - Alexander Brandt 2019
 -----------------------------*/
 
+#include <limits.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,12 +49,6 @@ SOFTWARE.
 #define NAME_SHORT "Nara"
 
 #define FOV 75.0f
-
-#define WINDOWS_WIDTH 1200
-#define WINDOWS_HEIGHT 600
-#define WINDOWS_MIN_WIDTH 200
-#define WINDOWS_MIN_HEIGHT 100
-
 
 extern const uint8_t g_terrain_vertex[];
 extern const uint8_t g_terrain_fragment[];
@@ -89,26 +84,28 @@ static struct Options* sInitializeOptions(int argc, const char* argv[])
 
 	if (options != NULL)
 	{
-		OptionsRegister(options, "r_width", 1200, NULL);
-		OptionsRegister(options, "r_height", 600, NULL);
-		OptionsRegisterBool(options, "r_fullscreen", false, NULL); // Mhhh...
-		OptionsRegisterBool(options, "r_vsync", true, NULL);       // Mhhh...
-		OptionsRegister(options, "r_samples", 2, NULL);
-		OptionsRegister(options, "r_max_distance", 1024, NULL);
-		OptionsRegisterBool(options, "r_wireframe", false, NULL); // Mhhh...
-		OptionsRegister(options, "r_filter", "trilinear", NULL);
+		OptionsRegisterInt(options, "r_width", 1200, 320, INT_MAX, NULL); // Ok
+		OptionsRegisterInt(options, "r_height", 600, 240, INT_MAX, NULL); // Ok
+		OptionsRegisterBool(options, "r_fullscreen", false, NULL);        // Ok
+		OptionsRegisterBool(options, "r_vsync", true, NULL);              // Ok
+		OptionsRegisterInt(options, "r_samples", 2, 0, 16, NULL);         // Ok
+		OptionsRegisterBool(options, "r_wireframe", false, NULL);         // Ok
 
-		OptionsRegister(options, "s_volume", 0.8f, NULL);
-		OptionsRegister(options, "s_frequency", 48000, NULL);
-		OptionsRegister(options, "s_channels", 2, NULL);
-		OptionsRegister(options, "s_max_sounds", 32, NULL);
-		OptionsRegister(options, "s_sampling", "sinc_medium", NULL);
+		OptionsRegisterFloat(options, "r_max_distance", 1024.0f, 100.0f, 4096.0f, NULL);
+		OptionsRegisterString(options, "r_filter", "trilinear", NULL);
 
-		OptionsRegister(options, "terrain_subvidisions", 3, NULL);
-		OptionsRegister(options, "terrain_lod_factor", 0, NULL);
+		OptionsRegisterFloat(options, "s_volume", 0.8f, 0.0f, 1.0f, NULL);    // Ok, TODO: 0.0f didn't disable the mixer
+		OptionsRegisterInt(options, "s_frequency", 48000, 8000, 48000, NULL); // Ok, TODO: low frequencies = white spaces in resamples
+		OptionsRegisterInt(options, "s_channels", 2, 1, 2, NULL);             // Ok, TODO: zero channels = crash
 
-		OptionsRegister(options, "sensitivity", 1.0f, NULL);
-		OptionsRegister(options, "fov", 90, NULL);
+		OptionsRegisterInt(options, "s_max_sounds", 32, 0, 64, NULL);
+		OptionsRegisterString(options, "s_sampling", "sinc_medium", NULL);
+
+		OptionsRegisterInt(options, "terrain_subvidisions", 3, 0, 6, NULL);
+		OptionsRegisterInt(options, "terrain_lod_factor", 0, 0, 6, NULL);
+
+		OptionsRegisterFloat(options, "sensitivity", 1.0f, 0.0f, 10.0f, NULL);
+		OptionsRegisterFloat(options, "fov", 90.0f, 10.0f, 90.0f, NULL);
 	}
 
 	// OptionsReadFile(options, "user.cfg", NULL);
@@ -149,8 +146,9 @@ static struct Dictionary* sInitializeClasses()
 
  sSetProjection()
 -----------------------------*/
-static void sSetProjection(struct Vector2i window_size, struct Context* context)
+static void sSetProjection(struct Context* context)
 {
+	struct Vector2i window_size = GetWindowSize(context);
 	struct Matrix4 projection;
 
 	projection = Matrix4Perspective(DegToRad(FOV), (float)window_size.x / (float)window_size.y, 0.1f, 1024.0f);
@@ -194,30 +192,13 @@ int main(int argc, const char* argv[])
 	}
 
 	// Engine initialization
-	{
-		struct ContextOptions context_options = {0};
-		struct MixerOptions mixer_options = {0};
+	if ((s_context = ContextCreate(s_options, NAME, &st)) == NULL)
+		goto return_failure;
 
-		context_options.caption = NAME_SHORT;
-		context_options.window_size = (struct Vector2i){WINDOWS_WIDTH, WINDOWS_HEIGHT};
-		context_options.window_min_size = (struct Vector2i){WINDOWS_MIN_WIDTH, WINDOWS_MIN_HEIGHT};
-		context_options.clean_color = (struct Vector3){0.80f, 0.82f, 0.84f};
-		context_options.fullscreen = false;
-		context_options.disable_vsync = false;
-		context_options.samples = 2;
+	if ((s_mixer = MixerCreate(s_options, &st)) == NULL)
+		goto return_failure;
 
-		mixer_options.frequency = 48000;
-		mixer_options.channels = 2;
-		mixer_options.volume = 0.8f;
-
-		if ((s_context = ContextCreate(context_options, &st)) == NULL)
-			goto return_failure;
-
-		if ((s_mixer = MixerCreate(mixer_options, &st)) == NULL)
-			goto return_failure;
-
-		TimerInit(&s_timer);
-	}
+	TimerInit(&s_timer);
 
 	// Resources
 	{
@@ -261,7 +242,7 @@ int main(int argc, const char* argv[])
 		camera->co.position = (struct Vector3){128.0f, 128.0f, 256.0f};
 		camera->co.angle = (struct Vector3){-50.0f, 0.0f, 45.0f};
 
-		sSetProjection((struct Vector2i){WINDOWS_WIDTH, WINDOWS_HEIGHT}, s_context);
+		sSetProjection(s_context);
 	}
 
 	// Game loop
@@ -289,7 +270,7 @@ int main(int argc, const char* argv[])
 		if (MixerStart(s_mixer, &st) != 0)
 			goto return_failure;
 
-		s_terrain_view.aspect = (float)WINDOWS_WIDTH / (float)WINDOWS_HEIGHT;
+		s_terrain_view.aspect = (float)GetWindowSize(s_context).x / (float)GetWindowSize(s_context).y;
 		s_terrain_view.max_distance = 1024.0f;
 		s_terrain_view.fov = DegToRad(FOV);
 
@@ -347,7 +328,7 @@ int main(int argc, const char* argv[])
 
 			if (events.resized == true)
 			{
-				sSetProjection(events.window_size, s_context);
+				sSetProjection(s_context);
 				s_terrain_view.aspect = (float)events.window_size.x / (float)events.window_size.y;
 			}
 
