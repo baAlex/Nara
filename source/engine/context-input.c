@@ -152,12 +152,6 @@ void InputStep(struct Context* context)
 	}
 
 	// Combine both gamepad and keyboard input into final events
-	context->combined.mouse.x = context->mouse.mouse.x;
-	context->combined.mouse.y = context->mouse.mouse.y;
-	context->combined.mouse.a = context->mouse.mouse.a;
-	context->combined.mouse.b = context->mouse.mouse.b;
-	context->combined.mouse.c = context->mouse.mouse.c;
-
 	context->combined.a = (context->keyboard.a == true || context->gamepad.a == GLFW_TRUE) ? true : false;
 	context->combined.b = (context->keyboard.b == true || context->gamepad.b == GLFW_TRUE) ? true : false;
 	context->combined.x = (context->keyboard.x == true || context->gamepad.x == GLFW_TRUE) ? true : false;
@@ -223,6 +217,18 @@ void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 	// Two states old school buttons
 	switch (key)
 	{
+	case GLFW_KEY_F2: context->fcallback[1](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
+	case GLFW_KEY_F3: context->fcallback[2](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
+	case GLFW_KEY_F4: context->fcallback[3](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
+	case GLFW_KEY_F5: context->fcallback[4](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
+	case GLFW_KEY_F6: context->fcallback[5](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
+	case GLFW_KEY_F7: context->fcallback[6](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
+	case GLFW_KEY_F8: context->fcallback[7](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
+	case GLFW_KEY_F9: context->fcallback[8](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
+	case GLFW_KEY_F10: context->fcallback[9](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
+	case GLFW_KEY_F11: context->fcallback[10](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
+	case GLFW_KEY_F12: context->fcallback[11](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
+
 	case GLFW_KEY_1: context->keyboard.a = (action == GLFW_PRESS) ? true : false; break;
 	case GLFW_KEY_2: context->keyboard.b = (action == GLFW_PRESS) ? true : false; break;
 	case GLFW_KEY_3: context->keyboard.x = (action == GLFW_PRESS) ? true : false; break;
@@ -233,7 +239,7 @@ void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 
 	case GLFW_KEY_SPACE: context->keyboard.view = (action == GLFW_PRESS) ? true : false; break;
 	case GLFW_KEY_ENTER: context->keyboard.menu = (action == GLFW_PRESS) ? true : false; break;
-	case GLFW_KEY_F1: context->keyboard.guide = (action == GLFW_PRESS) ? true : false; break;
+	case GLFW_KEY_ESCAPE: context->keyboard.guide = (action == GLFW_PRESS) ? true : false; break;
 
 	case GLFW_KEY_T: context->keyboard.ls = (action == GLFW_PRESS) ? true : false; break;
 	case GLFW_KEY_Y: context->keyboard.rs = (action == GLFW_PRESS) ? true : false; break;
@@ -251,37 +257,8 @@ void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 	context->keyboard.left_analog.v = sKeysToAxe(action, key, context->keyboard.left_analog.v, GLFW_KEY_S, GLFW_KEY_W);
 	context->keyboard.left_analog.h = sKeysToAxe(action, key, context->keyboard.left_analog.h, GLFW_KEY_D, GLFW_KEY_A);
 
-	context->keyboard.right_analog.v = sKeysToAxe(action, key, context->keyboard.right_analog.v, GLFW_KEY_DOWN, GLFW_KEY_UP);
-	context->keyboard.right_analog.h = sKeysToAxe(action, key, context->keyboard.right_analog.h, GLFW_KEY_RIGHT, GLFW_KEY_LEFT);
-}
-
-
-/*-----------------------------
-
- MousePositionCallback()
------------------------------*/
-void MousePositionCallback(GLFWwindow* window, double x, double y)
-{
-	struct Context* context = glfwGetWindowUserPointer(window);
-
-	context->mouse.mouse.x = (float)x;
-	context->mouse.mouse.y = (float)y;
-}
-
-
-/*-----------------------------
-
- MouseClickCallback()
------------------------------*/
-void MouseClickCallback(GLFWwindow* window, int button, int action, int mods)
-{
-	(void)mods;
-	struct Context* context = glfwGetWindowUserPointer(window);
-
-	switch (button)
-	{
-		case GLFW_MOUSE_BUTTON_1: context->mouse.mouse.a = (action == GLFW_PRESS) ? true : false; break;
-		case GLFW_MOUSE_BUTTON_2: context->mouse.mouse.b = (action == GLFW_PRESS) ? true : false; break;
-		case GLFW_MOUSE_BUTTON_3: context->mouse.mouse.c = (action == GLFW_PRESS) ? true : false; break;
-	}
+	context->keyboard.right_analog.v =
+	    sKeysToAxe(action, key, context->keyboard.right_analog.v, GLFW_KEY_DOWN, GLFW_KEY_UP);
+	context->keyboard.right_analog.h =
+	    sKeysToAxe(action, key, context->keyboard.right_analog.h, GLFW_KEY_RIGHT, GLFW_KEY_LEFT);
 }

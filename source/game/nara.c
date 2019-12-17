@@ -92,14 +92,16 @@ static struct Options* sInitializeOptions(int argc, const char* argv[])
 		OptionsRegisterBool(options, "r_wireframe", false, NULL);         // Ok
 
 		OptionsRegisterFloat(options, "r_max_distance", 1024.0f, 100.0f, 4096.0f, NULL);
-		OptionsRegisterString(options, "r_filter", "trilinear", NULL);
+		OptionsRegisterString(options, "r_filter", "trilinear",
+		                      "pixel, bilinear, trilinear, pixel_bilinear, pixel_trilinear", NULL);
 
-		OptionsRegisterFloat(options, "s_volume", 0.8f, 0.0f, 1.0f, NULL);    // Ok, TODO: 0.0f didn't disable the mixer
+		OptionsRegisterFloat(options, "s_volume", 0.8f, 0.0f, 1.0f, NULL); // Ok, TODO: 0.0f didn't disable the mixer
 		OptionsRegisterInt(options, "s_frequency", 48000, 8000, 48000, NULL); // Ok, TODO: low frequencies = white spaces in resamples
-		OptionsRegisterInt(options, "s_channels", 2, 1, 2, NULL);             // Ok, TODO: zero channels = crash
+		OptionsRegisterInt(options, "s_channels", 2, 1, 2, NULL); // Ok, TODO: zero channels = crash
 
 		OptionsRegisterInt(options, "s_max_sounds", 32, 0, 64, NULL);
-		OptionsRegisterString(options, "s_sampling", "sinc_medium", NULL);
+		OptionsRegisterString(options, "s_sampling", "sinc_medium",
+		                      "linear, zero_order, sinc_low, sinc_medium, sinc_high", NULL);
 
 		OptionsRegisterInt(options, "terrain_subvidisions", 3, 0, 6, NULL);
 		OptionsRegisterInt(options, "terrain_lod_factor", 0, 0, 6, NULL);
@@ -178,6 +180,24 @@ static inline bool sSingleClick(bool evn, bool* state)
 
  main()
 -----------------------------*/
+static void sFullscreen(const struct Context* context, const struct ContextEvents* events, bool press)
+{
+	(void)context;
+	(void)events;
+
+	if (press == true)
+		printf("Hai, hai...\n");
+}
+
+static void sScreenshot(const struct Context* context, const struct ContextEvents* events, bool press)
+{
+	(void)context;
+	(void)events;
+
+	if (press == true)
+		printf("Haaiii!!!!\n");
+}
+
 int main(int argc, const char* argv[])
 {
 	struct Status st = {0};
@@ -199,6 +219,9 @@ int main(int argc, const char* argv[])
 		goto return_failure;
 
 	TimerInit(&s_timer);
+
+	SetFunctionKeyCallback(s_context, 11, sFullscreen);
+	SetFunctionKeyCallback(s_context, 12, sScreenshot);
 
 	// Resources
 	{

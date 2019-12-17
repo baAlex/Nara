@@ -67,8 +67,17 @@ struct Option
 	enum Type type;
 	enum SetBy set_by;
 	union Value value;
-	union Value min;
-	union Value max;
+
+	union
+	{
+		struct
+		{
+			union Value min;
+			union Value max;
+		};
+
+		struct Dictionary* possible_values;
+	};
 };
 
 
@@ -413,7 +422,8 @@ inline int OptionsRegisterFloat(struct Options* options, const char* key, float 
 	return 1;
 }
 
-inline int OptionsRegisterString(struct Options* options, const char* key, const char* default_value, struct Status* st)
+inline int OptionsRegisterString(struct Options* options, const char* key, const char* default_value,
+                                 const char* possible_values, struct Status* st)
 {
 	struct Option* option = sOptionsRegister(options, key, TYPE_STRING, st);
 	if (option != NULL)

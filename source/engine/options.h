@@ -21,7 +21,7 @@
 	int OptionsRegisterInt(struct Options*, const char* name, int default_value, int min, int max, struct Status*);
 	int OptionsRegisterBool(struct Options*, const char* name, bool default_value, struct Status*);
 	int OptionsRegisterFloat(struct Options*, const char* name, float default_value, float min, float max, struct Status*);
-	int OptionsRegisterString(struct Options*, const char* name, const char* default_value, struct Status*);
+	int OptionsRegisterString(struct Options*, const char* name, const char* default_value, const char* possible_values, struct Status*);
 
 	int OptionsRetrieveInt(const struct Options*, const char* name, int* dest, struct Status*);
 	int OptionsRetrieveBool(const struct Options*, const char* name, bool* dest, struct Status*);

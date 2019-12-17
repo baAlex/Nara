@@ -13,7 +13,7 @@ uniform lowp vec3 highlight;
 varying lowp vec2 uv;
 varying lowp vec3 position;
 
-const lowp vec4 fog_color = vec4(0.80, 0.80, 0.84, 1.0);
+const lowp vec4 fog_color = vec4(0.82, 0.85, 0.87, 1.0);
 const lowp vec3 sun_direction = normalize(vec3(0.7, 0.3, 0.1));
 const lowp vec3 sun_color = vec3(1.0, 1.0, 1.0);
 

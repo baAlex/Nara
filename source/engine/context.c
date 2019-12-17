@@ -34,9 +34,9 @@ SOFTWARE.
 #define MIN_WIDTH 320
 #define MIN_HEIGHT 240
 
-#define CLEAN_R 0.80f // TODO, a skybox is needed
-#define CLEAN_G 0.82f
-#define CLEAN_B 0.84f
+#define CLEAN_R 0.82f // TODO, a skybox is needed
+#define CLEAN_G 0.85f
+#define CLEAN_B 0.87f
 
 
 static void sResizeCallback(GLFWwindow* window, int new_width, int new_height)
@@ -118,8 +118,6 @@ struct Context* ContextCreate(const struct Options* options, const char* caption
 
 	glfwSetFramebufferSizeCallback(context->window, sResizeCallback);
 	glfwSetKeyCallback(context->window, KeyboardCallback);
-	glfwSetCursorPosCallback(context->window, MousePositionCallback);
-	glfwSetMouseButtonCallback(context->window, MouseClickCallback);
 
 	if (context->cfg.fullscreen == true)
 	{
@@ -205,6 +203,17 @@ void ContextUpdate(struct Context* context, struct ContextEvents* out_events)
 		out_events->resized = context->window_resized;
 		out_events->close = (glfwWindowShouldClose(context->window) == GLFW_TRUE) ? true : false;
 	}
+}
+
+
+/*-----------------------------
+
+ SetFunctionKeyCallback()
+-----------------------------*/
+inline void SetFunctionKeyCallback(struct Context* context, int key,
+                                   void (*callback)(const struct Context*, const struct ContextEvents*, bool press))
+{
+	context->fcallback[key - 1] = callback;
 }
 
 

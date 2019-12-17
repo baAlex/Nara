@@ -62,12 +62,6 @@
 		struct { float h, v, t; } left_analog;
 		struct { float h, v, t; } right_analog;
 
-		struct
-		{
-			float x, y;
-			bool a, b, c;
-		} mouse;
-
 		// Window
 		bool resized;
 		bool close;
@@ -77,6 +71,8 @@
 	struct Context* ContextCreate(const struct Options* options, const char* caption, struct Status* st);
 	void ContextDelete(struct Context* context);
 	void ContextUpdate(struct Context* context, struct ContextEvents* out_events);
+
+	void SetFunctionKeyCallback(struct Context* context, int key, void (*)(const struct Context*, const struct ContextEvents*, bool press));
 
 	void SetTitle(struct Context* context, const char* title);
 	void SetProgram(struct Context* context, const struct Program* program);

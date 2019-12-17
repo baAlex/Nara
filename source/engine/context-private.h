@@ -58,13 +58,12 @@
 		struct ContextEvents mouse;    // MousePosCallback(), MouseClickCallback()
 		struct ContextEvents gamepad;  // InputStep()
 		struct ContextEvents combined; // InputStep()
+
+		void (*fcallback[12])(const struct Context*, const struct ContextEvents*, bool);
 	};
 
 	void InputStep(struct Context* context);
-
 	void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
-	void MousePositionCallback(GLFWwindow* window, double x, double y);
-	void MouseClickCallback(GLFWwindow* window, int button, int action, int mods);
 
 	int FindGamedpad();
 
