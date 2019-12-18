@@ -3,6 +3,9 @@
 /sdk
 /sdk-dbg
 /nterrain-tests
+
+/Nara - *.sgi
+
 /.ninja_deps
 /.ninja_log
 /objects/

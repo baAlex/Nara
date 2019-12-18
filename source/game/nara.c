@@ -33,6 +33,7 @@ SOFTWARE.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "../engine/context.h"
 #include "../engine/entity.h"
@@ -195,7 +196,17 @@ static void sScreenshot(const struct Context* context, const struct ContextEvent
 	(void)events;
 
 	if (press == true)
-		printf("Haaiii!!!!\n");
+	{
+		char timestr[64] = {0};
+		char filename[64] = {0};
+
+		time_t t;
+		time(&t);
+
+		strftime(timestr, 64, "%Y-%m-%e, %H:%M:%S", localtime(&t));
+		sprintf(filename, "%s - %s (%lX).sgi", NAME_SHORT, timestr, s_timer.frame_number);
+		TakeScreenshot(context, filename, NULL);
+	}
 }
 
 int main(int argc, const char* argv[])
@@ -262,7 +273,7 @@ int main(int argc, const char* argv[])
 
 		EntityCreate(&s_entities, ClassGet(s_classes, "Point"));
 		camera = EntityCreate(&s_entities, ClassGet(s_classes, "Camera"));
-		camera->co.position = (struct Vector3){128.0f, 128.0f, 256.0f};
+		camera->co.position = (struct Vector3){700.0f, 700.0f, 256.0f};
 		camera->co.angle = (struct Vector3){-50.0f, 0.0f, 45.0f};
 
 		sSetProjection(s_context);

@@ -93,6 +93,8 @@
 		default: SetCameraLookAt \
 	)(context, val, origin)
 
+	int TakeScreenshot(const struct Context* context, const char* filename, struct Status* st);
+
 	int ProgramInit(struct Program* out, const char* vertex_code, const char* fragment_code, struct Status* st);
 	void ProgramFree(struct Program* program);
 

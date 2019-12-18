@@ -185,12 +185,13 @@ inline void ContextDelete(struct Context* context)
 -----------------------------*/
 void ContextUpdate(struct Context* context, struct ContextEvents* out_events)
 {
+	context->window_resized = false;
+	glfwPollEvents();
+
+	// Flip buffers *after* process the inputs callbacks, so
+	// if these takes time at least the screen didn't goes black
 	glfwSwapBuffers(context->window);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	context->window_resized = false;
-
-	glfwPollEvents();
 
 	if (out_events != NULL)
 	{
@@ -374,4 +375,42 @@ inline void Draw(struct Context* context, const struct Index* index)
 inline struct Vector2i GetWindowSize(const struct Context* context)
 {
 	return context->window_size;
+}
+
+
+/*-----------------------------
+
+ TakeScreenshot()
+-----------------------------*/
+int TakeScreenshot(const struct Context* context, const char* filename, struct Status* st)
+{
+	struct Image* image = NULL;
+	GLenum error;
+
+	if ((image = ImageCreate(IMAGE_RGBA8, (size_t)context->window_size.x, (size_t)context->window_size.y)) == NULL)
+	{
+		StatusSet(st, "TakeScreenshot", STATUS_MEMORY_ERROR, NULL);
+		goto return_failure;
+	}
+
+	glReadPixels(0, 0, context->window_size.x, context->window_size.y, GL_RGBA, GL_UNSIGNED_BYTE, image->data);
+
+	if ((error = glGetError()) != GL_NO_ERROR)
+	{
+		// TODO, glReadPixels has tons of corners where it can fail.
+		StatusSet(st, "TakeScreenshot", STATUS_ERROR, NULL);
+		goto return_failure;
+	}
+
+	if ((ImageSaveSgi(image, filename, st)) != 0)
+		goto return_failure;
+
+	ImageDelete(image);
+	return 0;
+
+return_failure:
+	if (image != NULL)
+		ImageDelete(image);
+
+	return 1;
 }
