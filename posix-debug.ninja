@@ -33,7 +33,6 @@ build ./objects/debug/engine/entity.o:           compile_strict ./source/engine/
 build ./objects/debug/engine/misc.o:             compile_strict ./source/engine/misc.c
 build ./objects/debug/engine/mixer.o:            compile_strict ./source/engine/mixer.c
 build ./objects/debug/engine/nterrain.o:         compile_strict ./source/engine/nterrain.c
-build ./objects/debug/engine/options.o:          compile_strict ./source/engine/options.c
 build ./objects/debug/engine/timer.o:            compile_strict ./source/engine/timer.c
 build ./objects/debug/engine/terrain-fragment.o: compile_strict ./objects/debug/engine/terrain-fragment.c
 build ./objects/debug/engine/terrain-vertex.o:   compile_strict ./objects/debug/engine/terrain-vertex.c
@@ -55,6 +54,7 @@ build ./objects/debug/lib-japan/image/format-sgi.o: compile_strict ./source/lib-
 build ./objects/debug/lib-japan/image/image.o:      compile_strict ./source/lib-japan/source/image/image.c
 build ./objects/debug/lib-japan/list.o:             compile_strict ./source/lib-japan/source/list.c
 build ./objects/debug/lib-japan/matrix.o:           compile_strict ./source/lib-japan/source/matrix.c
+build ./objects/debug/lib-japan/options.o:          compile_strict ./source/lib-japan/source/options.c
 build ./objects/debug/lib-japan/sound/format-au.o:  compile_strict ./source/lib-japan/source/sound/format-au.c
 build ./objects/debug/lib-japan/sound/format-wav.o: compile_strict ./source/lib-japan/source/sound/format-wav.c
 build ./objects/debug/lib-japan/sound/laws.o:       compile_strict ./source/lib-japan/source/sound/laws.c
@@ -91,7 +91,6 @@ build nara-dbg: link $
 ./objects/debug/engine/misc.o $
 ./objects/debug/engine/mixer.o $
 ./objects/debug/engine/nterrain.o $
-./objects/debug/engine/options.o $
 ./objects/debug/engine/timer.o $
 ./objects/debug/engine/terrain-fragment.o $
 ./objects/debug/engine/terrain-vertex.o $
@@ -107,6 +106,7 @@ build nara-dbg: link $
 ./objects/debug/lib-japan/image/image.o $
 ./objects/debug/lib-japan/list.o $
 ./objects/debug/lib-japan/matrix.o $
+./objects/debug/lib-japan/options.o $
 ./objects/debug/lib-japan/sound/format-au.o $
 ./objects/debug/lib-japan/sound/format-wav.o $
 ./objects/debug/lib-japan/sound/laws.o $
@@ -129,6 +129,7 @@ build sdk-dbg: link $
 ./objects/debug/lib-japan/image/image.o $
 ./objects/debug/lib-japan/list.o $
 ./objects/debug/lib-japan/matrix.o $
+./objects/debug/lib-japan/options.o $
 ./objects/debug/lib-japan/sound/format-au.o $
 ./objects/debug/lib-japan/sound/format-wav.o $
 ./objects/debug/lib-japan/sound/laws.o $

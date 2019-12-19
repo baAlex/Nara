@@ -35,18 +35,19 @@ SOFTWARE.
 #include <string.h>
 #include <time.h>
 
-#include "buffer.h"
-#include "dictionary.h"
+#include "japan-buffer.h"
+#include "japan-dictionary.h"
+#include "japan-utilities.h"
+
 #include "mixer.h"
 #include "samplerate.h"
-#include "utilities.h"
 
 #define PLAY_LEN 8
 
 
 struct Sample
 {
-	struct DictionaryItem* item;
+	struct jaDictionaryItem* item;
 
 	int references;
 	bool to_delete;
@@ -70,7 +71,7 @@ struct ToPlay
 struct Mixer
 {
 	PaStream* stream;
-	struct Buffer buffer;
+	struct jaBuffer buffer;
 	struct
 	{
 		int frequency;
@@ -78,9 +79,9 @@ struct Mixer
 		float volume;
 	} cfg;
 
-	struct Dictionary* samples;
+	struct jaDictionary* samples;
 	size_t samples_no;
-	struct Buffer marked_samples; // To free them
+	struct jaBuffer marked_samples; // To free them
 
 	struct ToPlay playlist[PLAY_LEN];
 	size_t last_index;
@@ -95,8 +96,8 @@ static void sFreeMarkedSamples(struct Mixer* mixer)
 {
 	for (size_t i = 0; i < mixer->samples_no; i++)
 	{
-		if (((struct DictionaryItem**)mixer->marked_samples.data)[i] != NULL)
-			DictionaryRemove(((struct DictionaryItem**)mixer->marked_samples.data)[i]);
+		if (((struct jaDictionaryItem**)mixer->marked_samples.data)[i] != NULL)
+			jaDictionaryRemove(((struct jaDictionaryItem**)mixer->marked_samples.data)[i]);
 	}
 }
 
@@ -149,13 +150,13 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 				// Mark sample as deleted if there are no further use
 				if (mixer->playlist[pl].sample->to_delete == true && mixer->playlist[pl].sample->references <= 0)
 				{
-					struct DictionaryItem* item = mixer->playlist[pl].sample->item;
-					DictionaryDetach(item);
+					struct jaDictionaryItem* item = mixer->playlist[pl].sample->item;
+					jaDictionaryDetach(item);
 
 					for (size_t z = 0; z < mixer->samples_no; z++)
 					{
-						if (((struct DictionaryItem**)mixer->marked_samples.data)[z] == NULL)
-							((struct DictionaryItem**)mixer->marked_samples.data)[z] = item;
+						if (((struct jaDictionaryItem**)mixer->marked_samples.data)[z] == NULL)
+							((struct jaDictionaryItem**)mixer->marked_samples.data)[z] = item;
 					}
 				}
 			}
@@ -181,8 +182,8 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 
  sToCommonFormat()
 -----------------------------*/
-static void sToCommonFormat(const void* in, size_t in_size, size_t in_channels, enum SoundFormat in_format, float* out,
-                            size_t out_channels)
+static void sToCommonFormat(const void* in, size_t in_size, size_t in_channels, enum jaSoundFormat in_format,
+                            float* out, size_t out_channels)
 {
 	union {
 		const void* raw;
@@ -197,7 +198,7 @@ static void sToCommonFormat(const void* in, size_t in_size, size_t in_channels, 
 	float mix;
 
 	// Cycle in frame steps
-	for (size_t bytes_read = 0; bytes_read < in_size; bytes_read += ((size_t)SoundBps(in_format) * in_channels))
+	for (size_t bytes_read = 0; bytes_read < in_size; bytes_read += ((size_t)jaBytesPerSample(in_format) * in_channels))
 	{
 		// Re format (now cycling though samples)
 		for (size_t c = 0; c < in_channels; c++)
@@ -220,7 +221,7 @@ static void sToCommonFormat(const void* in, size_t in_size, size_t in_channels, 
 		}
 
 		// Next
-		org.i8 += ((size_t)SoundBps(in_format) * in_channels);
+		org.i8 += ((size_t)jaBytesPerSample(in_format) * in_channels);
 		out += out_channels;
 	}
 }
@@ -230,29 +231,29 @@ static void sToCommonFormat(const void* in, size_t in_size, size_t in_channels, 
 
  MixerCreate()
 -----------------------------*/
-struct Mixer* MixerCreate(const struct Options* options, struct Status* st)
+struct Mixer* MixerCreate(const struct jaOptions* options, struct jaStatus* st)
 {
 	struct Mixer* mixer = NULL;
 	PaError errcode = paNoError;
 
-	StatusSet(st, "MixerCreate", STATUS_SUCCESS, NULL);
+	jaStatusSet(st, "MixerCreate", STATUS_SUCCESS, NULL);
 	printf("- Lib-Portaudio: %s\n", (Pa_GetVersionInfo() != NULL) ? Pa_GetVersionInfo()->versionText : "");
 
 	// Initialization
-	if ((mixer = calloc(1, sizeof(struct Mixer))) == NULL || (mixer->samples = DictionaryCreate(NULL)) == NULL)
+	if ((mixer = calloc(1, sizeof(struct Mixer))) == NULL || (mixer->samples = jaDictionaryCreate(NULL)) == NULL)
 	{
-		StatusSet(st, "MixerCreate", STATUS_MEMORY_ERROR, NULL);
+		jaStatusSet(st, "MixerCreate", STATUS_MEMORY_ERROR, NULL);
 		return NULL;
 	}
 
-	if (OptionsRetrieve(options, "s_volume", &mixer->cfg.volume, st) != 0 ||
-	    OptionsRetrieve(options, "s_frequency", &mixer->cfg.frequency, st) != 0 ||
-	    OptionsRetrieve(options, "s_channels", &mixer->cfg.channels, st) != 0)
+	if (jaOptionsRetrieve(options, "s_volume", &mixer->cfg.volume, st) != 0 ||
+	    jaOptionsRetrieve(options, "s_frequency", &mixer->cfg.frequency, st) != 0 ||
+	    jaOptionsRetrieve(options, "s_channels", &mixer->cfg.channels, st) != 0)
 		goto return_failure;
 
 	if ((errcode = Pa_Initialize()) != paNoError)
 	{
-		StatusSet(st, "MixerCreate", STATUS_ERROR, "Initialiting Portaudio: \"%s\"", Pa_GetErrorText(errcode));
+		jaStatusSet(st, "MixerCreate", STATUS_ERROR, "Initialiting Portaudio: \"%s\"", Pa_GetErrorText(errcode));
 		goto return_failure;
 	}
 
@@ -260,7 +261,7 @@ struct Mixer* MixerCreate(const struct Options* options, struct Status* st)
 	if ((errcode = Pa_OpenDefaultStream(&mixer->stream, 0, mixer->cfg.channels, paFloat32, (double)mixer->cfg.frequency,
 	                                    paFramesPerBufferUnspecified, sCallback, mixer)) != paNoError)
 	{
-		StatusSet(st, "MixerCreate", STATUS_ERROR, "Opening stream: \"%s\"", Pa_GetErrorText(errcode));
+		jaStatusSet(st, "MixerCreate", STATUS_ERROR, "Opening stream: \"%s\"", Pa_GetErrorText(errcode));
 		goto return_failure;
 	}
 
@@ -287,8 +288,8 @@ inline void MixerDelete(struct Mixer* mixer)
 
 		Pa_Terminate();
 
-		DictionaryDelete(mixer->samples);
-		BufferClean(&mixer->buffer);
+		jaDictionaryDelete(mixer->samples);
+		jaBufferClean(&mixer->buffer);
 		sFreeMarkedSamples(mixer);
 		free(mixer);
 	}
@@ -299,13 +300,13 @@ inline void MixerDelete(struct Mixer* mixer)
 
  MixerStart()
 -----------------------------*/
-int MixerStart(struct Mixer* mixer, struct Status* st)
+int MixerStart(struct Mixer* mixer, struct jaStatus* st)
 {
 	PaError errcode = paNoError;
 
 	if ((errcode = Pa_StartStream(mixer->stream)) != paNoError)
 	{
-		StatusSet(st, "MixerCreate", STATUS_ERROR, "Starting stream: \"%s\"", Pa_GetErrorText(errcode));
+		jaStatusSet(st, "MixerCreate", STATUS_ERROR, "Starting stream: \"%s\"", Pa_GetErrorText(errcode));
 		return 1;
 	}
 
@@ -327,18 +328,18 @@ void MixerStop(struct Mixer* mixer)
 
  SampleCreate()
 -----------------------------*/
-struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct Status* st)
+struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct jaStatus* st)
 {
-	struct DictionaryItem* item = NULL;
+	struct jaDictionaryItem* item = NULL;
 	struct Sample* sample = NULL;
-	struct SoundEx ex = {0};
+	struct jaSoundEx ex = {0};
 	FILE* file = NULL;
 
-	StatusSet(st, "SampleCreate", STATUS_SUCCESS, NULL);
+	jaStatusSet(st, "SampleCreate", STATUS_SUCCESS, NULL);
 	sFreeMarkedSamples(mixer);
 
 	// Alredy exists?
-	item = DictionaryGet(mixer->samples, filename);
+	item = jaDictionaryGet(mixer->samples, filename);
 
 	if (item != NULL)
 		return item->data;
@@ -346,70 +347,70 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct St
 	// Open
 	if ((file = fopen(filename, "rb")) == NULL)
 	{
-		StatusSet(st, "SampleCreate", STATUS_IO_ERROR, "File: \"%s\"", filename);
+		jaStatusSet(st, "SampleCreate", STATUS_IO_ERROR, "File: \"%s\"", filename);
 		return NULL;
 	}
 
-	if (SoundExLoad(file, &ex, st) != 0)
+	if (jaSoundExLoad(file, &ex, st) != 0)
 		goto return_failure;
 
 	if (fseek(file, (long)ex.data_offset, SEEK_SET) != 0)
 	{
-		StatusSet(st, "SampleCreate", STATUS_UNEXPECTED_EOF, "File: \"%s\"", filename);
+		jaStatusSet(st, "SampleCreate", STATUS_UNEXPECTED_EOF, "File: \"%s\"", filename);
 		goto return_failure;
 	}
 
 	if (ex.uncompressed_size > (10 * 1024 * 1024))
 	{
-		StatusSet(st, "SampleCreate", STATUS_UNSUPPORTED_FEATURE, "Only files small than 10 Mb supported. File: \"%s\"",
-		          filename);
+		jaStatusSet(st, "SampleCreate", STATUS_UNSUPPORTED_FEATURE,
+		            "Only files small than 10 Mb supported. File: \"%s\"", filename);
 		goto return_failure;
 	}
 
 	// Reformat (we use float everywhere)
 	float* reformat_dest = NULL;
 	{
-		size_t reformat_size = ex.length * Min(ex.channels, (size_t)mixer->cfg.channels) * sizeof(float);
-		struct Status temp_st = {0};
+		size_t reformat_size = ex.length * jaMin(ex.channels, (size_t)mixer->cfg.channels) * sizeof(float);
+		struct jaStatus temp_st = {0};
 
-		if (BufferResize(&mixer->buffer, ex.uncompressed_size + reformat_size) == NULL)
+		if (jaBufferResize(&mixer->buffer, ex.uncompressed_size + reformat_size) == NULL)
 		{
-			StatusSet(st, "SampleCreate", STATUS_MEMORY_ERROR, "File: \"%s\"", filename);
+			jaStatusSet(st, "SampleCreate", STATUS_MEMORY_ERROR, "File: \"%s\"", filename);
 			goto return_failure;
 		}
 
 		reformat_dest = (float*)(((uint8_t*)mixer->buffer.data) + ex.uncompressed_size);
 		memset(reformat_dest, 0, reformat_size);
 
-		SoundExRead(file, ex, ex.uncompressed_size, mixer->buffer.data, &temp_st);
+		jaSoundExRead(file, ex, ex.uncompressed_size, mixer->buffer.data, &temp_st);
 
 		if (temp_st.code != STATUS_SUCCESS)
 		{
 			if (st != NULL)
-				memcpy(st, &temp_st, sizeof(struct Status));
+				memcpy(st, &temp_st, sizeof(struct jaStatus));
 
 			goto return_failure;
 		}
 
 		sToCommonFormat(mixer->buffer.data, ex.uncompressed_size, ex.channels, ex.format, reformat_dest,
-		                Min(ex.channels, (size_t)mixer->cfg.channels));
+		                jaMin(ex.channels, (size_t)mixer->cfg.channels));
 	}
 
 	// Resample
 	{
 		size_t resampled_length = ex.length * (size_t)ceil((double)mixer->cfg.frequency / (double)ex.frequency);
-		size_t resampled_size = resampled_length * sizeof(float) * Min(ex.channels, (size_t)mixer->cfg.channels);
+		size_t resampled_size = resampled_length * sizeof(float) * jaMin(ex.channels, (size_t)mixer->cfg.channels);
 
-		if ((item = DictionaryAdd(mixer->samples, filename, NULL, sizeof(struct Sample) + resampled_size)) == NULL)
+		if ((item = jaDictionaryAdd(mixer->samples, filename, NULL, sizeof(struct Sample) + resampled_size)) == NULL)
 		{
-			StatusSet(st, "SampleCreate", STATUS_MEMORY_ERROR, "File: \"%s\"", filename);
+			jaStatusSet(st, "SampleCreate", STATUS_MEMORY_ERROR, "File: \"%s\"", filename);
 			goto return_failure;
 		}
 
 		sample = item->data;
 		sample->item = item;
 		sample->length = resampled_length;
-		sample->channels = Min(ex.channels, (size_t)mixer->cfg.channels);
+		sample->channels = jaMin(ex.channels, (size_t)mixer->cfg.channels);
 		sample->references = 0;
 		sample->to_delete = false;
 
@@ -422,9 +423,9 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct St
 		                         .src_ratio = (double)mixer->cfg.frequency / (double)ex.frequency};
 
 		// TODO, hardcoded SRC_LINEAR
-		if (src_simple(&resample_cfg, SRC_LINEAR, Min((int)ex.channels, mixer->cfg.channels)) != 0)
+		if (src_simple(&resample_cfg, SRC_LINEAR, jaMin((int)ex.channels, mixer->cfg.channels)) != 0)
 		{
-			StatusSet(st, "SampleCreate", STATUS_ERROR, "src_simple() error. File: \"%s\"", filename);
+			jaStatusSet(st, "SampleCreate", STATUS_ERROR, "src_simple() error. File: \"%s\"", filename);
 			goto return_failure;
 		}
 	}
@@ -432,9 +433,9 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct St
 	// Resize list to keep deleted samples
 	mixer->samples_no += 1;
 
-	if (BufferResizeZero(&mixer->marked_samples, sizeof(void*) * mixer->samples_no) == NULL)
+	if (jaBufferResizeZero(&mixer->marked_samples, sizeof(void*) * mixer->samples_no) == NULL)
 	{
-		StatusSet(st, "SampleCreate", STATUS_MEMORY_ERROR, "File: \"%s\"", filename);
+		jaStatusSet(st, "SampleCreate", STATUS_MEMORY_ERROR, "File: \"%s\"", filename);
 		goto return_failure;
 	}
 
@@ -446,7 +447,7 @@ return_failure:
 	if (file != NULL)
 		fclose(file);
 	if (item != NULL)
-		DictionaryRemove(item);
+		jaDictionaryRemove(item);
 
 	return NULL;
 }
@@ -468,7 +469,7 @@ inline void SampleDelete(struct Sample* sample)
 -----------------------------*/
 inline void Play2dFile(struct Mixer* mixer, float volume, enum PlayOptions options, const char* filename)
 {
-	struct DictionaryItem* item = DictionaryGet(mixer->samples, filename);
+	struct jaDictionaryItem* item = jaDictionaryGet(mixer->samples, filename);
 	struct Sample* sample = NULL;
 
 	if (item != NULL)

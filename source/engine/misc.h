@@ -7,8 +7,8 @@
 #ifndef MISC_H
 #define MISC_H
 
-	#include "vector.h"
+	#include "japan-vector.h"
 
-	void VectorAxes(struct Vector3 angle, struct Vector3* forward, struct Vector3* left, struct Vector3* up);
+	void VectorAxes(struct jaVector3 angle, struct jaVector3* forward, struct jaVector3* left, struct jaVector3* up);
 
 #endif

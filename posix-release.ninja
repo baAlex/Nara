@@ -21,7 +21,6 @@ build ./objects/release/engine/terrain-vertex.c:   generate ./source/engine/terr
 # Engine
 build ./objects/release/engine/context-input.o:    compile ./source/engine/context-input.c
 build ./objects/release/engine/context-opengl.o:   compile ./source/engine/context-opengl.c
-build ./objects/release/engine/options.o:          compile ./source/engine/options.c
 build ./objects/release/engine/entity.o:           compile ./source/engine/entity.c
 build ./objects/release/engine/misc.o:             compile ./source/engine/misc.c
 build ./objects/release/engine/mixer.o:            compile ./source/engine/mixer.c
@@ -48,6 +47,7 @@ build ./objects/release/lib-japan/image/format-sgi.o: compile ./source/lib-japan
 build ./objects/release/lib-japan/image/image.o:      compile ./source/lib-japan/source/image/image.c
 build ./objects/release/lib-japan/list.o:             compile ./source/lib-japan/source/list.c
 build ./objects/release/lib-japan/matrix.o:           compile ./source/lib-japan/source/matrix.c
+build ./objects/release/lib-japan/options.o:          compile ./source/lib-japan/source/options.c
 build ./objects/release/lib-japan/sound/format-au.o:  compile ./source/lib-japan/source/sound/format-au.c
 build ./objects/release/lib-japan/sound/format-wav.o: compile ./source/lib-japan/source/sound/format-wav.c
 build ./objects/release/lib-japan/sound/laws.o:       compile ./source/lib-japan/source/sound/laws.c
@@ -81,7 +81,6 @@ build nara: link $
 ./objects/release/engine/misc.o $
 ./objects/release/engine/mixer.o $
 ./objects/release/engine/nterrain.o $
-./objects/release/engine/options.o $
 ./objects/release/engine/timer.o $
 ./objects/release/engine/terrain-fragment.o $
 ./objects/release/engine/terrain-vertex.o $
@@ -97,6 +96,7 @@ build nara: link $
 ./objects/release/lib-japan/image/image.o $
 ./objects/release/lib-japan/list.o $
 ./objects/release/lib-japan/matrix.o $
+./objects/release/lib-japan/options.o $
 ./objects/release/lib-japan/sound/format-au.o $
 ./objects/release/lib-japan/sound/format-wav.o $
 ./objects/release/lib-japan/sound/laws.o $
@@ -119,6 +119,7 @@ build sdk: link $
 ./objects/release/lib-japan/image/image.o $
 ./objects/release/lib-japan/list.o $
 ./objects/release/lib-japan/matrix.o $
+./objects/release/lib-japan/options.o $
 ./objects/release/lib-japan/sound/format-au.o $
 ./objects/release/lib-japan/sound/format-wav.o $
 ./objects/release/lib-japan/sound/laws.o $

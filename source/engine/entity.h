@@ -10,9 +10,9 @@
 	#include <stddef.h>
 	#include <stdbool.h>
 
-	#include "vector.h"
-	#include "list.h"
-	#include "dictionary.h"
+	#include "japan-vector.h"
+	#include "japan-list.h"
+	#include "japan-dictionary.h"
 
 	struct Entity;
 
@@ -32,13 +32,13 @@
 
 	struct EntityCommon
 	{
-		struct Vector3 position;
-		struct Vector3 angle;
+		struct jaVector3 position;
+		struct jaVector3 angle;
 	};
 
 	struct Class
 	{
-		struct DictionaryItem* item;
+		struct jaDictionaryItem* item;
 
 		void* (*func_start)(const struct EntityCommon*);
 		void (*func_delete)(void*);
@@ -50,7 +50,7 @@
 
 	struct Entity
 	{
-		struct ListItem* item;
+		struct jaListItem* item;
 		struct Class* class;
 
 		void* blob;
@@ -62,13 +62,13 @@
 		bool to_delete;
 	};
 
-	struct Class* ClassCreate(struct Dictionary*, const char* name);
-	struct Class* ClassGet(struct Dictionary*, const char* name);
+	struct Class* ClassCreate(struct jaDictionary*, const char* name);
+	struct Class* ClassGet(struct jaDictionary*, const char* name);
 	void ClassDelete(struct Class*);
 
-	struct Entity* EntityCreate(struct List*, struct Class* class);
+	struct Entity* EntityCreate(struct jaList*, struct Class* class);
 	void EntityDelete(struct Entity*); // Marks entity to be deleted after the update cycle
 
-	void EntitiesUpdate(struct List*, struct EntityInput input); // TODO: pass input as pointer
+	void EntitiesUpdate(struct jaList*, struct EntityInput input); // TODO: pass input as pointer
 
 #endif

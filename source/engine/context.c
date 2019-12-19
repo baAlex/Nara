@@ -60,30 +60,30 @@ static void sErrorCallback(int code, const char* description)
 
  ContextCreate()
 -----------------------------*/
-struct Context* ContextCreate(const struct Options* options, const char* caption, struct Status* st)
+struct Context* ContextCreate(const struct jaOptions* options, const char* caption, struct jaStatus* st)
 {
 	struct Context* context = NULL;
 
-	StatusSet(st, "ContextCreate", STATUS_SUCCESS, NULL);
+	jaStatusSet(st, "ContextCreate", STATUS_SUCCESS, NULL);
 	printf("- Lib-GLFW: %s\n", glfwGetVersionString());
 
 	// Initialization
 	if ((context = calloc(1, sizeof(struct Context))) == NULL)
 		return NULL;
 
-	if (OptionsRetrieve(options, "r_width", &context->cfg.width, st) != 0 ||
-	    OptionsRetrieve(options, "r_height", &context->cfg.height, st) != 0 ||
-	    OptionsRetrieve(options, "r_samples", &context->cfg.samples, st) != 0 ||
-	    OptionsRetrieve(options, "r_fullscreen", &context->cfg.fullscreen, st) != 0 ||
-	    OptionsRetrieve(options, "r_wireframe", &context->cfg.wireframe, st) != 0 ||
-	    OptionsRetrieve(options, "r_vsync", &context->cfg.vsync, st) != 0)
+	if (jaOptionsRetrieve(options, "r_width", &context->cfg.width, st) != 0 ||
+	    jaOptionsRetrieve(options, "r_height", &context->cfg.height, st) != 0 ||
+	    jaOptionsRetrieve(options, "r_samples", &context->cfg.samples, st) != 0 ||
+	    jaOptionsRetrieve(options, "r_fullscreen", &context->cfg.fullscreen, st) != 0 ||
+	    jaOptionsRetrieve(options, "r_wireframe", &context->cfg.wireframe, st) != 0 ||
+	    jaOptionsRetrieve(options, "r_vsync", &context->cfg.vsync, st) != 0)
 		goto return_failure;
 
 	glfwSetErrorCallback(sErrorCallback);
 
 	if (glfwInit() != GLFW_TRUE)
 	{
-		StatusSet(st, "ContextCreate", STATUS_ERROR, "Initialiting GLFW");
+		jaStatusSet(st, "ContextCreate", STATUS_ERROR, "Initialiting GLFW");
 		goto return_failure;
 	}
 
@@ -96,7 +96,7 @@ struct Context* ContextCreate(const struct Options* options, const char* caption
 
 	if ((context->window = glfwCreateWindow(context->cfg.width, context->cfg.height, caption, NULL, NULL)) == NULL)
 	{
-		StatusSet(st, "ContextCreate", STATUS_ERROR, "Creating GLFW window");
+		jaStatusSet(st, "ContextCreate", STATUS_ERROR, "Creating GLFW window");
 		goto return_failure;
 	}
 
@@ -104,7 +104,7 @@ struct Context* ContextCreate(const struct Options* options, const char* caption
 
 	if (gladLoadGLES2Loader((GLADloadproc)glfwGetProcAddress) == 0) // After MakeContext()
 	{
-		StatusSet(st, "ContextCreate", STATUS_ERROR, "Initialiting GLAD");
+		jaStatusSet(st, "ContextCreate", STATUS_ERROR, "Initialiting GLAD");
 		goto return_failure;
 	}
 
@@ -302,9 +302,9 @@ inline void SetTexture(struct Context* context, int unit, const struct Texture* 
 
  SetProjection()
 -----------------------------*/
-inline void SetProjection(struct Context* context, struct Matrix4 matrix)
+inline void SetProjection(struct Context* context, struct jaMatrix4 matrix)
 {
-	memcpy(&context->projection, &matrix, sizeof(struct Matrix4));
+	memcpy(&context->projection, &matrix, sizeof(struct jaMatrix4));
 
 	if (context->current_program != NULL)
 		glUniformMatrix4fv(context->u_projection, 1, GL_FALSE, &context->projection.e[0][0]);
@@ -315,10 +315,10 @@ inline void SetProjection(struct Context* context, struct Matrix4 matrix)
 
  SetCameraLookAt()
 -----------------------------*/
-inline void SetCameraLookAt(struct Context* context, struct Vector3 target, struct Vector3 origin)
+inline void SetCameraLookAt(struct Context* context, struct jaVector3 target, struct jaVector3 origin)
 {
 	context->camera_origin = origin;
-	context->camera = Matrix4LookAt(origin, target, (struct Vector3){0.0, 0.0, 1.0});
+	context->camera = jaMatrix4LookAt(origin, target, (struct jaVector3){0.0, 0.0, 1.0});
 
 	if (context->current_program != NULL)
 	{
@@ -332,7 +332,7 @@ inline void SetCameraLookAt(struct Context* context, struct Vector3 target, stru
 
  SetCameraMatrix()
 -----------------------------*/
-inline void SetCameraMatrix(struct Context* context, struct Matrix4 matrix, struct Vector3 origin)
+inline void SetCameraMatrix(struct Context* context, struct jaMatrix4 matrix, struct jaVector3 origin)
 {
 	context->camera_origin = origin;
 	context->camera = matrix;
@@ -349,7 +349,7 @@ inline void SetCameraMatrix(struct Context* context, struct Matrix4 matrix, stru
 
  SetHighlight()
 -----------------------------*/
-inline void SetHighlight(struct Context* context, struct Vector3 value)
+inline void SetHighlight(struct Context* context, struct jaVector3 value)
 {
 	glUniform3fv(context->u_highlight, 1, (float*)&value);
 }
@@ -372,7 +372,7 @@ inline void Draw(struct Context* context, const struct Index* index)
 
  GetWindowSize()
 -----------------------------*/
-inline struct Vector2i GetWindowSize(const struct Context* context)
+inline struct jaVector2i GetWindowSize(const struct Context* context)
 {
 	return context->window_size;
 }
@@ -382,14 +382,14 @@ inline struct Vector2i GetWindowSize(const struct Context* context)
 
  TakeScreenshot()
 -----------------------------*/
-int TakeScreenshot(const struct Context* context, const char* filename, struct Status* st)
+int TakeScreenshot(const struct Context* context, const char* filename, struct jaStatus* st)
 {
-	struct Image* image = NULL;
+	struct jaImage* image = NULL;
 	GLenum error;
 
-	if ((image = ImageCreate(IMAGE_RGBA8, (size_t)context->window_size.x, (size_t)context->window_size.y)) == NULL)
+	if ((image = jaImageCreate(IMAGE_RGBA8, (size_t)context->window_size.x, (size_t)context->window_size.y)) == NULL)
 	{
-		StatusSet(st, "TakeScreenshot", STATUS_MEMORY_ERROR, NULL);
+		jaStatusSet(st, "TakeScreenshot", STATUS_MEMORY_ERROR, NULL);
 		goto return_failure;
 	}
 
@@ -398,19 +398,19 @@ int TakeScreenshot(const struct Context* context, const char* filename, struct S
 	if ((error = glGetError()) != GL_NO_ERROR)
 	{
 		// TODO, glReadPixels has tons of corners where it can fail.
-		StatusSet(st, "TakeScreenshot", STATUS_ERROR, NULL);
+		jaStatusSet(st, "TakeScreenshot", STATUS_ERROR, NULL);
 		goto return_failure;
 	}
 
-	if ((ImageSaveSgi(image, filename, st)) != 0)
+	if ((jaImageSaveSgi(image, filename, st)) != 0)
 		goto return_failure;
 
-	ImageDelete(image);
+	jaImageDelete(image);
 	return 0;
 
 return_failure:
 	if (image != NULL)
-		ImageDelete(image);
+		jaImageDelete(image);
 
 	return 1;
 }

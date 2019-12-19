@@ -28,10 +28,11 @@ SOFTWARE.
  - Alexander Brandt 2019
 -----------------------------*/
 
-#include "entity.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "entity.h"
 
 
 static void sFreeEntityFromList(void* data)
@@ -55,12 +56,12 @@ static void sFreeEntityFromList(void* data)
 
  ClassCreate()
 -----------------------------*/
-struct Class* ClassCreate(struct Dictionary* dictionary, const char* name)
+struct Class* ClassCreate(struct jaDictionary* dictionary, const char* name)
 {
-	struct DictionaryItem* item = NULL;
+	struct jaDictionaryItem* item = NULL;
 	struct Class* class = NULL;
 
-	if ((item = DictionaryAdd(dictionary, name, NULL, sizeof(struct Class))) != NULL)
+	if ((item = jaDictionaryAdd(dictionary, name, NULL, sizeof(struct Class))) != NULL)
 	{
 		class = item->data;
 
@@ -77,10 +78,10 @@ struct Class* ClassCreate(struct Dictionary* dictionary, const char* name)
 
  ClassGet()
 -----------------------------*/
-inline struct Class* ClassGet(struct Dictionary* dictionary, const char* name)
+inline struct Class* ClassGet(struct jaDictionary* dictionary, const char* name)
 {
-	struct DictionaryItem* item = NULL;
-	return ((item = DictionaryGet(dictionary, name)) != NULL) ? (struct Class*)item->data : NULL;
+	struct jaDictionaryItem* item = NULL;
+	return ((item = jaDictionaryGet(dictionary, name)) != NULL) ? (struct Class*)item->data : NULL;
 }
 
 
@@ -93,12 +94,12 @@ inline void ClassDelete(struct Class* class)
 	if (class->references != 0)
 	{
 		class->to_delete = true;
-		DictionaryDetach(class->item);
+		jaDictionaryDetach(class->item);
 	}
 	else
 	{
 		printf("(ClassDelete) '%s' deleted (%p)\n", class->item->key, (void*)class);
-		DictionaryRemove(class->item);
+		jaDictionaryRemove(class->item);
 	}
 }
 
@@ -107,12 +108,12 @@ inline void ClassDelete(struct Class* class)
 
  EntityCreate()
 -----------------------------*/
-struct Entity* EntityCreate(struct List* list, struct Class* class)
+struct Entity* EntityCreate(struct jaList* list, struct Class* class)
 {
-	struct ListItem* item = NULL;
+	struct jaListItem* item = NULL;
 	struct Entity* entity = NULL;
 
-	if ((item = ListAdd(list, NULL, sizeof(struct Entity))) == NULL)
+	if ((item = jaListAdd(list, NULL, sizeof(struct Entity))) == NULL)
 		return NULL;
 
 	item->callback_delete = sFreeEntityFromList;
@@ -144,19 +145,19 @@ inline void EntityDelete(struct Entity* entity)
 
  EntitiesUpdate()
 -----------------------------*/
-void EntitiesUpdate(struct List* list, struct EntityInput input)
+void EntitiesUpdate(struct jaList* list, struct EntityInput input)
 {
-	struct ListItem* item = NULL;
+	struct jaListItem* item = NULL;
 	struct Entity* entity = NULL;
 
 	struct Entity* last_special_case = NULL;
 
-	struct ListState s = {0};
+	struct jaListState s = {0};
 	s.start = list->first;
 	s.reverse = false;
 
 	// 'func_think' callbacks
-	while ((item = ListIterate(&s)) != NULL)
+	while ((item = jaListIterate(&s)) != NULL)
 	{
 		entity = item->data;
 
@@ -177,7 +178,7 @@ void EntitiesUpdate(struct List* list, struct EntityInput input)
 	s.start = last_special_case->item;
 	s.reverse = true;
 
-	while ((item = ListIterate(&s)) != NULL)
+	while ((item = jaListIterate(&s)) != NULL)
 	{
 		entity = item->data;
 
@@ -194,7 +195,7 @@ void EntitiesUpdate(struct List* list, struct EntityInput input)
 			sFreeEntityFromList(entity);
 
 			entity->item->callback_delete = NULL;
-			ListRemove(entity->item);
+			jaListRemove(entity->item);
 		}
 	}
 }

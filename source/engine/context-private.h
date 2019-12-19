@@ -11,8 +11,9 @@
 	#include <stdlib.h>
 	#include <string.h>
 
+	#include "japan-utilities.h"
+
 	#include "context.h"
-	#include "utilities.h"
 	#include "glad.h" // Before GLFW
 
 	#define GLFW_INCLUDE_ES2
@@ -34,13 +35,13 @@
 			bool wireframe;
 		} cfg;
 
-		struct Vector2i window_size; // sResizeCallback()
+		struct jaVector2i window_size; // sResizeCallback()
 		bool window_resized;         // sResizeCallback()
 
 		// Draw routines
-		struct Matrix4 projection;
-		struct Matrix4 camera;
-		struct Vector3 camera_origin;
+		struct jaMatrix4 projection;
+		struct jaMatrix4 camera;
+		struct jaVector3 camera_origin;
 
 		const struct Program* current_program;
 		const struct Vertices* current_vertices;

@@ -35,16 +35,15 @@ SOFTWARE.
 #include <string.h>
 #include <time.h>
 
+#include "japan-utilities.h"
+
 #include "../engine/context.h"
 #include "../engine/entity.h"
 #include "../engine/mixer.h"
 #include "../engine/nterrain.h"
-#include "../engine/options.h"
 #include "../engine/timer.h"
 
 #include "game.h"
-#include "utilities.h"
-
 
 #define NAME "Nara v0.2-alpha"
 #define NAME_SHORT "Nara"
@@ -68,51 +67,51 @@ static struct Texture s_cliff2 = {0};
 static struct Texture s_grass = {0};
 static struct Texture s_dirt = {0};
 
-static struct Dictionary* s_classes = NULL;
-static struct List s_entities = {0};
+static struct jaDictionary* s_classes = NULL;
+static struct jaList s_entities = {0};
 
-static struct Options* s_options = NULL;
+static struct jaOptions* s_options = NULL;
 
 
 /*-----------------------------
 
  sInitializeOptions()
 -----------------------------*/
-static struct Options* sInitializeOptions(int argc, const char* argv[])
+static struct jaOptions* sInitializeOptions(int argc, const char* argv[])
 {
 	// TODO, check errors
-	struct Options* options = OptionsCreate();
+	struct jaOptions* options = jaOptionsCreate();
 
 	if (options != NULL)
 	{
-		OptionsRegisterInt(options, "r_width", 1200, 320, INT_MAX, NULL); // Ok
-		OptionsRegisterInt(options, "r_height", 600, 240, INT_MAX, NULL); // Ok
-		OptionsRegisterBool(options, "r_fullscreen", false, NULL);        // Ok
-		OptionsRegisterBool(options, "r_vsync", true, NULL);              // Ok
-		OptionsRegisterInt(options, "r_samples", 2, 0, 16, NULL);         // Ok
-		OptionsRegisterBool(options, "r_wireframe", false, NULL);         // Ok
+		jaOptionsRegisterInt(options, "r_width", 1200, 320, INT_MAX, NULL); // Ok
+		jaOptionsRegisterInt(options, "r_height", 600, 240, INT_MAX, NULL); // Ok
+		jaOptionsRegisterBool(options, "r_fullscreen", false, NULL);        // Ok
+		jaOptionsRegisterBool(options, "r_vsync", true, NULL);              // Ok
+		jaOptionsRegisterInt(options, "r_samples", 2, 0, 16, NULL);         // Ok
+		jaOptionsRegisterBool(options, "r_wireframe", false, NULL);         // Ok
 
-		OptionsRegisterFloat(options, "r_max_distance", 1024.0f, 100.0f, 4096.0f, NULL);
-		OptionsRegisterString(options, "r_filter", "trilinear",
-		                      "pixel, bilinear, trilinear, pixel_bilinear, pixel_trilinear", NULL);
+		jaOptionsRegisterFloat(options, "r_max_distance", 1024.0f, 100.0f, 4096.0f, NULL);
+		jaOptionsRegisterString(options, "r_filter", "trilinear",
+		                        "pixel, bilinear, trilinear, pixel_bilinear, pixel_trilinear", NULL);
 
-		OptionsRegisterFloat(options, "s_volume", 0.8f, 0.0f, 1.0f, NULL); // Ok, TODO: 0.0f didn't disable the mixer
-		OptionsRegisterInt(options, "s_frequency", 48000, 8000, 48000, NULL); // Ok, TODO: low frequencies = white spaces in resamples
-		OptionsRegisterInt(options, "s_channels", 2, 1, 2, NULL); // Ok, TODO: zero channels = crash
+		jaOptionsRegisterFloat(options, "s_volume", 0.8f, 0.0f, 1.0f, NULL); // Ok, TODO: 0.0f didn't disable the mixer
+		jaOptionsRegisterInt(options, "s_frequency", 48000, 8000, 48000, NULL); // Ok, TODO: low frequencies = white spaces in resamples
+		jaOptionsRegisterInt(options, "s_channels", 2, 1, 2, NULL); // Ok, TODO: zero channels = crash
 
-		OptionsRegisterInt(options, "s_max_sounds", 32, 0, 64, NULL);
-		OptionsRegisterString(options, "s_sampling", "sinc_medium",
-		                      "linear, zero_order, sinc_low, sinc_medium, sinc_high", NULL);
+		jaOptionsRegisterInt(options, "s_max_sounds", 32, 0, 64, NULL);
+		jaOptionsRegisterString(options, "s_sampling", "sinc_medium",
+		                        "linear, zero_order, sinc_low, sinc_medium, sinc_high", NULL);
 
-		OptionsRegisterInt(options, "terrain_subvidisions", 3, 0, 6, NULL);
-		OptionsRegisterInt(options, "terrain_lod_factor", 0, 0, 6, NULL);
+		jaOptionsRegisterInt(options, "terrain_subvidisions", 3, 0, 6, NULL);
+		jaOptionsRegisterInt(options, "terrain_lod_factor", 0, 0, 6, NULL);
 
-		OptionsRegisterFloat(options, "sensitivity", 1.0f, 0.0f, 10.0f, NULL);
-		OptionsRegisterFloat(options, "fov", 90.0f, 10.0f, 90.0f, NULL);
+		jaOptionsRegisterFloat(options, "sensitivity", 1.0f, 0.0f, 10.0f, NULL);
+		jaOptionsRegisterFloat(options, "fov", 90.0f, 10.0f, 90.0f, NULL);
 	}
 
-	// OptionsReadFile(options, "user.cfg", NULL);
-	OptionsReadArguments(options, argc, argv);
+	// jaOptionsReadFile(options, "user.cfg", NULL);
+	jaOptionsReadArguments(options, argc, argv);
 
 	return options;
 }
@@ -122,10 +121,10 @@ static struct Options* sInitializeOptions(int argc, const char* argv[])
 
  sInitializeClasses()
 -----------------------------*/
-static struct Dictionary* sInitializeClasses()
+static struct jaDictionary* sInitializeClasses()
 {
 	// TODO, check errors
-	struct Dictionary* classes = DictionaryCreate(NULL);
+	struct jaDictionary* classes = jaDictionaryCreate(NULL);
 	struct Class* class = NULL;
 
 	if (classes != NULL)
@@ -151,10 +150,10 @@ static struct Dictionary* sInitializeClasses()
 -----------------------------*/
 static void sSetProjection(struct Context* context)
 {
-	struct Vector2i window_size = GetWindowSize(context);
-	struct Matrix4 projection;
+	struct jaVector2i window_size = GetWindowSize(context);
+	struct jaMatrix4 projection;
 
-	projection = Matrix4Perspective(DegToRad(FOV), (float)window_size.x / (float)window_size.y, 0.1f, 1024.0f);
+	projection = jaMatrix4Perspective(jaDegToRad(FOV), (float)window_size.x / (float)window_size.y, 0.1f, 1024.0f);
 	SetProjection(context, projection);
 }
 
@@ -211,14 +210,14 @@ static void sScreenshot(const struct Context* context, const struct ContextEvent
 
 int main(int argc, const char* argv[])
 {
-	struct Status st = {0};
+	struct jaStatus st = {0};
 	struct Entity* camera = NULL;
 
 	printf("%s\n", NAME);
 
 	if ((s_options = sInitializeOptions(argc, argv)) == NULL)
 	{
-		StatusSet(&st, "sInitializeOptions", STATUS_MEMORY_ERROR, NULL);
+		jaStatusSet(&st, "sInitializeOptions", STATUS_MEMORY_ERROR, NULL);
 		goto return_failure;
 	}
 
@@ -273,8 +272,8 @@ int main(int argc, const char* argv[])
 
 		EntityCreate(&s_entities, ClassGet(s_classes, "Point"));
 		camera = EntityCreate(&s_entities, ClassGet(s_classes, "Camera"));
-		camera->co.position = (struct Vector3){700.0f, 700.0f, 256.0f};
-		camera->co.angle = (struct Vector3){-50.0f, 0.0f, 45.0f};
+		camera->co.position = (struct jaVector3){700.0f, 700.0f, 256.0f};
+		camera->co.angle = (struct jaVector3){-50.0f, 0.0f, 45.0f};
 
 		sSetProjection(s_context);
 	}
@@ -283,7 +282,7 @@ int main(int argc, const char* argv[])
 	{
 		struct ContextEvents events = {0};
 		struct EntityInput entities_input = {0};
-		struct Matrix4 matrix = {0};
+		struct jaMatrix4 matrix = {0};
 
 		int draw_calls = 0;
 		char title[128] = {0};
@@ -306,7 +305,7 @@ int main(int argc, const char* argv[])
 
 		s_terrain_view.aspect = (float)GetWindowSize(s_context).x / (float)GetWindowSize(s_context).y;
 		s_terrain_view.max_distance = 1024.0f;
-		s_terrain_view.fov = DegToRad(FOV);
+		s_terrain_view.fov = jaDegToRad(FOV);
 
 		while (1)
 		{
@@ -346,13 +345,13 @@ int main(int argc, const char* argv[])
 			EntitiesUpdate(&s_entities, entities_input);
 
 			// Update view
-			if (Vector3Equals(camera->co.position, camera->old_co.position) == false ||
-			    Vector3Equals(camera->co.angle, camera->old_co.angle) == false)
+			if (jaVector3Equals(camera->co.position, camera->old_co.position) == false ||
+			    jaVector3Equals(camera->co.angle, camera->old_co.angle) == false)
 			{
-				matrix = Matrix4Identity();
-				matrix = Matrix4RotateX(matrix, DegToRad(camera->co.angle.x));
-				matrix = Matrix4RotateZ(matrix, DegToRad(camera->co.angle.z));
-				matrix = Matrix4Multiply(matrix, Matrix4Translate(Vector3Invert(camera->co.position)));
+				matrix = jaMatrix4Identity();
+				matrix = jaMatrix4RotateX(matrix, jaDegToRad(camera->co.angle.x));
+				matrix = jaMatrix4RotateZ(matrix, jaDegToRad(camera->co.angle.z));
+				matrix = jaMatrix4Multiply(matrix, jaMatrix4Translate(jaVector3Invert(camera->co.position)));
 
 				SetCamera(s_context, matrix, camera->co.position);
 
@@ -397,9 +396,9 @@ int main(int argc, const char* argv[])
 	}
 
 	// Bye!
-	OptionsDelete(s_options);
-	DictionaryDelete(s_classes);
-	ListClean(&s_entities);
+	jaOptionsDelete(s_options);
+	jaDictionaryDelete(s_classes);
+	jaListClean(&s_entities);
 
 	ProgramFree(&s_terrain_program);
 	TextureFree(&s_terrain_normalmap);
@@ -416,6 +415,6 @@ int main(int argc, const char* argv[])
 
 return_failure:
 	// TODO, clean... :(
-	StatusPrint(NAME_SHORT, st);
+	jaStatusPrint(NAME_SHORT, st);
 	return EXIT_FAILURE;
 }

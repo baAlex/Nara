@@ -9,10 +9,11 @@
 
 	#include <stdint.h>
 
-	#include "buffer.h"
-	#include "vector.h"
-	#include "aabounding.h"
-	#include "status.h"
+	#include "japan-buffer.h"
+	#include "japan-vector.h"
+	#include "japan-aabounding.h"
+	#include "japan-status.h"
+
 	#include "context.h"
 
 	enum NVerticesType
@@ -35,12 +36,12 @@
 		size_t nodes_no;
 		size_t vertices_buffers_no;
 
-		struct Buffer buffer;
+		struct jaBuffer buffer;
 	};
 
 	struct NTerrainNode
 	{
-		struct AabBox bbox;
+		struct jaAABBox bbox;
 
 		float pattern_dimension;
 
@@ -55,8 +56,8 @@
 
 	struct NTerrainView
 	{
-		struct Vector3 position;
-		struct Vector3 angle;
+		struct jaVector3 position;
+		struct jaVector3 angle;
 		float max_distance;
 		float aspect;
 		float fov;
@@ -74,18 +75,18 @@
 
 		struct NTerrainNode* last_with_vertices;
 
-		struct Vector3 frustum_position[5];
-		struct Vector3 frustum_normal[5];
+		struct jaVector3 frustum_position[5];
+		struct jaVector3 frustum_normal[5];
 
-		struct AabRectangle view_rectangle;
+		struct jaAARectangle view_rectangle;
 		bool in_border;
 	};
 
 	struct NTerrain* NTerrainCreate(const char* heightmap, float elevation, float dimension, float minimum_node_dimension,
-	                                int pattern_subdivisions, struct Status* st);
+	                                int pattern_subdivisions, struct jaStatus* st);
 	void NTerrainDelete(struct NTerrain* terrain);
 
-	struct NTerrainNode* NTerrainIterate(struct NTerrainState* state, struct Buffer* buffer, struct NTerrainView*);
+	struct NTerrainNode* NTerrainIterate(struct NTerrainState* state, struct jaBuffer* buffer, struct NTerrainView*);
 
 	int NTerrainDraw(struct Context*, struct NTerrain* terrain, struct NTerrainView*);
 	void NTerrainPrintInfo(struct NTerrain* terrain);

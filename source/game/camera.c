@@ -38,8 +38,8 @@ SOFTWARE.
 
 struct Camera
 {
-	struct Vector3 position;
-	struct Vector3 angle;
+	struct jaVector3 position;
+	struct jaVector3 angle;
 
 	float acceleration; // Placeholder
 	float inertia;      // "
@@ -82,40 +82,40 @@ void GameCameraDelete(void* blob)
 int GameCameraThink(void* blob, const struct EntityInput* input, struct EntityCommon* out_state)
 {
 	struct Camera* camera = blob;
-	struct Vector3 temp;
+	struct jaVector3 temp;
 
-	struct Vector3 forward;
-	struct Vector3 left;
-	struct Vector3 up;
+	struct jaVector3 forward;
+	struct jaVector3 left;
+	struct jaVector3 up;
 
 	VectorAxes(camera->angle, &forward, &left, &up);
 
 	// Forward, backward
 	if (fabs(input->left_analog.v) > ANALOG_DEAD_ZONE)
 	{
-		temp = Vector3Scale(forward, (-1.0f) * input->left_analog.v * MOVEMENT_SPEED * input->delta);
-		camera->position = Vector3Add(camera->position, temp);
+		temp = jaVector3Scale(forward, (-1.0f) * input->left_analog.v * MOVEMENT_SPEED * input->delta);
+		camera->position = jaVector3Add(camera->position, temp);
 	}
 
 	// Stride left, right
 	if (fabs(input->left_analog.h) > ANALOG_DEAD_ZONE)
 	{
-		temp = Vector3Scale(left, input->left_analog.h * MOVEMENT_SPEED * input->delta);
-		camera->position = Vector3Add(camera->position, temp);
+		temp = jaVector3Scale(left, input->left_analog.h * MOVEMENT_SPEED * input->delta);
+		camera->position = jaVector3Add(camera->position, temp);
 	}
 
 	// Up
 	if (fabs(input->right_analog.t) > ANALOG_DEAD_ZONE)
 	{
-		temp = Vector3Scale(up, input->right_analog.t * MOVEMENT_SPEED * input->delta);
-		camera->position = Vector3Add(camera->position, temp);
+		temp = jaVector3Scale(up, input->right_analog.t * MOVEMENT_SPEED * input->delta);
+		camera->position = jaVector3Add(camera->position, temp);
 	}
 
 	// Down
 	if (fabs(input->left_analog.t) > ANALOG_DEAD_ZONE)
 	{
-		temp = Vector3Scale(up, (-1.0f) * input->left_analog.t * MOVEMENT_SPEED * input->delta);
-		camera->position = Vector3Add(camera->position, temp);
+		temp = jaVector3Scale(up, (-1.0f) * input->left_analog.t * MOVEMENT_SPEED * input->delta);
+		camera->position = jaVector3Add(camera->position, temp);
 	}
 
 	// Look up, down

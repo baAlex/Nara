@@ -7,10 +7,10 @@
 #ifndef MIXER_H
 #define MIXER_H
 
-	#include "vector.h"
-	#include "status.h"
-	#include "sound.h"
-	#include "options.h"
+	#include "japan-vector.h"
+	#include "japan-status.h"
+	#include "japan-sound.h"
+	#include "japan-options.h"
 
 	enum PlayOptions
 	{
@@ -18,13 +18,13 @@
 		PLAY_LOOP = 2
 	};
 
-	struct Mixer* MixerCreate(const struct Options* options, struct Status* st);
+	struct Mixer* MixerCreate(const struct jaOptions* options, struct jaStatus* st);
 	void MixerDelete(struct Mixer* mixer);
 
-	int MixerStart(struct Mixer* mixer, struct Status* st);
+	int MixerStart(struct Mixer* mixer, struct jaStatus* st);
 	void MixerStop(struct Mixer* mixer); // TODO
 
-	struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct Status* st);
+	struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct jaStatus* st);
 	void SampleDelete(struct Sample*);
 
 	void Play2dSample(struct Mixer*, float volume, enum PlayOptions, struct Sample*);

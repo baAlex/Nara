@@ -12,9 +12,9 @@
 	#include <stdbool.h>
 	#include <math.h>
 
-	#include "vector.h"
-	#include "matrix.h"
-	#include "utilities.h"
+	#include "japan-vector.h"
+	#include "japan-matrix.h"
+	#include "japan-utilities.h"
 
 	#include "../engine/misc.h"
 
@@ -35,8 +35,8 @@
 
 		struct EntityCommon // Copy from 'entity.h'
 		{
-			struct Vector3 position;
-			struct Vector3 angle;
+			struct jaVector3 position;
+			struct jaVector3 angle;
 		};
 	#endif
 

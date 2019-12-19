@@ -30,17 +30,20 @@ SOFTWARE.
  Based on: https://github.com/henrikglass/erodr
 -----------------------------*/
 
-#include "erosion.h"
-#include "utilities.h"
-#include "vector.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "japan-utilities.h"
+#include "japan-vector.h"
+
+#include "erosion.h"
+
+
 struct Particle
 {
-	struct Vector2 pos;
-	struct Vector2 dir;
+	struct jaVector2 pos;
+	struct jaVector2 dir;
 	float vel;
 	float sediment;
 	float water;
@@ -48,12 +51,12 @@ struct Particle
 
 struct HgTuple
 {
-	struct Vector2 gradient;
+	struct jaVector2 gradient;
 	float height;
 };
 
 
-static float sBilinearInterpolation(int width, int height, const float* hmap, struct Vector2 pos)
+static float sBilinearInterpolation(int width, int height, const float* hmap, struct jaVector2 pos)
 {
 	if (pos.x != pos.x || pos.y != pos.y)
 		return 0.0f;
@@ -80,7 +83,7 @@ static float sBilinearInterpolation(int width, int height, const float* hmap, st
 }
 
 
-static void sDeposit(int width, int height, float* hmap, struct Vector2 pos, float amount)
+static void sDeposit(int width, int height, float* hmap, struct jaVector2 pos, float amount)
 {
 	(void)height;
 
@@ -100,7 +103,7 @@ static void sDeposit(int width, int height, float* hmap, struct Vector2 pos, flo
 }
 
 
-static void sErode(int width, int height, float* hmap, struct Vector2 pos, float amount, int radius)
+static void sErode(int width, int height, float* hmap, struct jaVector2 pos, float amount, int radius)
 {
 	// - Erodes heighmap `hmap` at position `pos` by amount `amount`
 	// - Erosion is distributed over an area defined through p_radius
@@ -113,10 +116,10 @@ static void sErode(int width, int height, float* hmap, struct Vector2 pos, float
 
 	int x0 = (int)floorf(pos.x) - radius;
 	int y0 = (int)floorf(pos.y) - radius;
-	int x_start = Max(0, x0);
-	int y_start = Max(0, y0);
-	int x_end = Min(width, x0 + 2 * radius + 1);
-	int y_end = Min(height, y0 + 2 * radius + 1);
+	int x_start = jaMax(0, x0);
+	int y_start = jaMax(0, y0);
+	int x_end = jaMin(width, x0 + 2 * radius + 1);
+	int y_end = jaMin(height, y0 + 2 * radius + 1);
 
 	// Construct erosion/deposition kernel
 	float kernel[2 * radius + 1][2 * radius + 1];
@@ -147,7 +150,7 @@ static void sErode(int width, int height, float* hmap, struct Vector2 pos, float
 }
 
 
-static struct Vector2 sGradientAt(int width, int height, const float* hmap, int x, int y)
+static struct jaVector2 sGradientAt(int width, int height, const float* hmap, int x, int y)
 {
 	x = x % width;
 	y = y % height;
@@ -158,7 +161,7 @@ static struct Vector2 sGradientAt(int width, int height, const float* hmap, int 
 	int right = idx + ((x > width - 2) ? 0 : 1);
 	int below = idx + ((y > height - 2) ? 0 : width);
 
-	struct Vector2 g;
+	struct jaVector2 g;
 	g.x = hmap[right] - hmap[idx];
 	g.y = hmap[below] - hmap[idx];
 
@@ -166,10 +169,10 @@ static struct Vector2 sGradientAt(int width, int height, const float* hmap, int 
 }
 
 
-static struct HgTuple sHeightGradientAt(int width, int height, const float* hmap, struct Vector2 pos)
+static struct HgTuple sHeightGradientAt(int width, int height, const float* hmap, struct jaVector2 pos)
 {
 	struct HgTuple ret;
-	struct Vector2 ul, ur, ll, lr, ipl_l, ipl_r;
+	struct jaVector2 ul, ur, ll, lr, ipl_l, ipl_r;
 	int x_i = (int)lround(pos.x);
 	int y_i = (int)lround(pos.y);
 	float u = pos.x - floorf(pos.x);
@@ -179,9 +182,9 @@ static struct HgTuple sHeightGradientAt(int width, int height, const float* hmap
 	ur = sGradientAt(width, height, hmap, x_i + 1, y_i);
 	ll = sGradientAt(width, height, hmap, x_i, y_i + 1);
 	lr = sGradientAt(width, height, hmap, x_i + 1, y_i + 1);
-	ipl_l = Vector2Add(Vector2Scale(ul, 1.0f - v), Vector2Scale(ll, v));
-	ipl_r = Vector2Add(Vector2Scale(ur, 1.0f - v), Vector2Scale(lr, v));
-	ret.gradient = Vector2Add(Vector2Scale(ipl_l, 1.0f - u), Vector2Scale(ipl_r, u));
+	ipl_l = jaVector2Add(jaVector2Scale(ul, 1.0f - v), jaVector2Scale(ll, v));
+	ipl_r = jaVector2Add(jaVector2Scale(ur, 1.0f - v), jaVector2Scale(lr, v));
+	ret.gradient = jaVector2Add(jaVector2Scale(ipl_l, 1.0f - u), jaVector2Scale(ipl_r, u));
 	ret.height = sBilinearInterpolation(width, height, hmap, pos);
 
 	return ret;
@@ -204,8 +207,8 @@ void HydraulicErosion(int width, int height, float* hmap, struct ErodeOptions* o
 		struct Particle p;
 		float denom = ((float)RAND_MAX / ((float)width - 1.0f));
 
-		p.pos = (struct Vector2){(float)rand() / denom, (float)rand() / denom};
-		p.dir = (struct Vector2){0.0f, 0.0f};
+		p.pos = (struct jaVector2){(float)rand() / denom, (float)rand() / denom};
+		p.dir = (struct jaVector2){0.0f, 0.0f};
 		p.vel = 0.0f;
 		p.sediment = 0.0f;
 		p.water = 1.0f;
@@ -213,20 +216,21 @@ void HydraulicErosion(int width, int height, float* hmap, struct ErodeOptions* o
 		for (int j = 0; j < options->ttl; j++)
 		{
 			// Interpolate gradient g and height h_old at p's position
-			struct Vector2 pos_old = p.pos;
+			struct jaVector2 pos_old = p.pos;
 			struct HgTuple hg = sHeightGradientAt(width, height, hmap, pos_old);
-			struct Vector2 g = hg.gradient;
+			struct jaVector2 g = hg.gradient;
 			float h_old = hg.height;
 
 			// Calculate new dir vector
-			p.dir = Vector2Subtract(Vector2Scale(p.dir, options->p_enertia), Vector2Scale(g, 1 - options->p_enertia));
-			p.dir = Vector2Normalize(p.dir);
+			p.dir =
+			    jaVector2Subtract(jaVector2Scale(p.dir, options->p_enertia), jaVector2Scale(g, 1 - options->p_enertia));
+			p.dir = jaVector2Normalize(p.dir);
 
 			// Calculate new pos
-			p.pos = Vector2Add(p.pos, p.dir);
+			p.pos = jaVector2Add(p.pos, p.dir);
 
 			// Check bounds
-			struct Vector2 pos_new = p.pos;
+			struct jaVector2 pos_new = p.pos;
 			if (pos_new.x > (float)(width - 1) || pos_new.x < 0.0f || pos_new.y > (float)(height - 1) ||
 			    pos_new.y < 0.0f)
 				break;

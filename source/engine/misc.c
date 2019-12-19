@@ -29,13 +29,11 @@ SOFTWARE.
 -----------------------------*/
 
 #include "misc.h"
-#include "math.h"
-
-#include <stddef.h> // FIXME, "utilities.h" in libJapan requires it!
-#include "utilities.h"
+#include "japan-utilities.h"
+#include <math.h>
 
 
-void VectorAxes(struct Vector3 angle, struct Vector3* forward, struct Vector3* left, struct Vector3* up)
+void VectorAxes(struct jaVector3 angle, struct jaVector3* forward, struct jaVector3* left, struct jaVector3* up)
 {
 	// http://www.songho.ca/opengl/gl_anglestoaxes.html#anglestoaxes
 	// Saving all diferences on axis disposition
@@ -44,12 +42,12 @@ void VectorAxes(struct Vector3 angle, struct Vector3* forward, struct Vector3* l
 	// y = Roll
 	// z = Yaw
 
-	float cx = cosf(DegToRad(angle.x));
-	float sx = sinf(DegToRad(angle.x));
-	float cy = cosf(DegToRad(angle.y)); // TODO: broken... maybe
-	float sy = sinf(DegToRad(angle.y)); // "
-	float cz = cosf(DegToRad(angle.z));
-	float sz = sinf(DegToRad(angle.z));
+	float cx = cosf(jaDegToRad(angle.x));
+	float sx = sinf(jaDegToRad(angle.x));
+	float cy = cosf(jaDegToRad(angle.y)); // TODO: broken... maybe
+	float sy = sinf(jaDegToRad(angle.y)); // "
+	float cz = cosf(jaDegToRad(angle.z));
+	float sz = sinf(jaDegToRad(angle.z));
 
 	forward->x = sz * -sx;
 	forward->y = cz * -sx;

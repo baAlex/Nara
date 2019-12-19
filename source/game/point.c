@@ -33,8 +33,8 @@ SOFTWARE.
 
 struct Point
 {
-	struct Vector3 position;
-	struct Vector3 angle;
+	struct jaVector3 position;
+	struct jaVector3 angle;
 };
 
 

@@ -8,7 +8,7 @@
 #define CANVAS_H
 
 	#include <stdlib.h>
-	#include "vector.h"
+	#include "japan-vector.h"
 
 	struct Canvas;
 
@@ -16,11 +16,11 @@
 	void CanvasDelete(struct Canvas* canvas);
 	void CanvasSave(const struct Canvas* canvas, const char* filename);
 
-	void CanvasSetOffset(struct Canvas* canvas, struct Vector2 offset);
-	void CanvasSetColor(struct Canvas* canvas, struct Vector3 color);
-	void CanvasDrawLine(struct Canvas* canvas, struct Vector2 a, struct Vector2 b);
+	void CanvasSetOffset(struct Canvas* canvas, struct jaVector2 offset);
+	void CanvasSetColor(struct Canvas* canvas, struct jaVector3 color);
+	void CanvasDrawLine(struct Canvas* canvas, struct jaVector2 a, struct jaVector2 b);
 
-	struct Vector2 CanvasGetOffset(const struct Canvas* canvas);
-	struct Vector3 CanvasGetColor(const struct Canvas* canvas);
+	struct jaVector2 CanvasGetOffset(const struct Canvas* canvas);
+	struct jaVector3 CanvasGetColor(const struct Canvas* canvas);
 
 #endif

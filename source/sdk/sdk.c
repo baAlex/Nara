@@ -33,11 +33,12 @@ SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 
+#include "japan-image.h"
+#include "japan-utilities.h"
+#include "japan-vector.h"
+
 #include "erosion.h"
-#include "image.h"
 #include "simplex.h"
-#include "utilities.h"
-#include "vector.h"
 
 #define SEED 666
 #define WIDTH 1024
@@ -56,15 +57,15 @@ static struct Permutations s_perm_e;
 
  sProcessHeightmap()
 -----------------------------*/
-static float* sProcessHeightmap(int width, int height, const char* filename, struct Status* st)
+static float* sProcessHeightmap(int width, int height, const char* filename, struct jaStatus* st)
 {
 	float* buffer = NULL;
-	struct Image* image = NULL;
+	struct jaImage* image = NULL;
 
-	if ((image = ImageCreate(IMAGE_GRAY16, (size_t)width, (size_t)height)) == NULL ||
+	if ((image = jaImageCreate(IMAGE_GRAY16, (size_t)width, (size_t)height)) == NULL ||
 	    (buffer = malloc((sizeof(float)) * (size_t)width * (size_t)height)) == NULL)
 	{
-		StatusSet(st, NULL, STATUS_MEMORY_ERROR, NULL);
+		jaStatusSet(st, NULL, STATUS_MEMORY_ERROR, NULL);
 		goto return_failure;
 	}
 
@@ -73,7 +74,7 @@ static float* sProcessHeightmap(int width, int height, const char* filename, str
 	float max = 0.0f;
 
 	float scale = 1000.0f / (float)SCALE;
-	float min_dimension = (float)Min(width, height);
+	float min_dimension = (float)jaMin(width, height);
 
 	printf("Generating heightmap...\n");
 
@@ -107,7 +108,7 @@ static float* sProcessHeightmap(int width, int height, const char* filename, str
 	for (int i = 0; i < (width * height); i++)
 	{
 		buffer[i] = buffer[i] * (1.0f / max);
-		buffer[i] = Clamp(buffer[i], -1.0f, 1.0f);
+		buffer[i] = jaClamp(buffer[i], -1.0f, 1.0f);
 	}
 
 	// Simulate hydraulic erosion
@@ -137,19 +138,19 @@ static float* sProcessHeightmap(int width, int height, const char* filename, str
 		for (int i = 0; i < (width * height); i++)
 			pixel[i] = (uint16_t)((buffer[i] + 1.0f) * 32767.5f);
 
-		if(ImageSaveSgi(image, filename, st) != 0)
+		if (jaImageSaveSgi(image, filename, st) != 0)
 			goto return_failure;
 	}
 
 	// Bye!
-	ImageDelete(image);
+	jaImageDelete(image);
 	return buffer;
 
 return_failure:
 	if (buffer != NULL)
 		free(buffer);
 	if (image != NULL)
-		ImageDelete(image);
+		jaImageDelete(image);
 	return NULL;
 }
 
@@ -160,26 +161,26 @@ return_failure:
 -----------------------------*/
 static inline float sHeightAt(const float* hmap, int width, int height, int x, int y)
 {
-	x = Clamp(x, 0, width - 1);
-	y = Clamp(y, 0, height - 1);
+	x = jaClamp(x, 0, width - 1);
+	y = jaClamp(y, 0, height - 1);
 
 	return hmap[x + width * y];
 }
 
-static struct Vector3* sProcessNormalmap(int width, int height, const float* hmap, const char* filename,
-                                         struct Status* st)
+static struct jaVector3* sProcessNormalmap(int width, int height, const float* hmap, const char* filename,
+                                           struct jaStatus* st)
 {
 	// https://en.wikipedia.org/wiki/Sobel_operator
 	// https://en.wikipedia.org/wiki/Image_derivatives
 	// https://en.wikipedia.org/wiki/Kernel_(image_processing)#Convolution
 
-	struct Vector3* buffer = NULL;
-	struct Image* image = NULL;
+	struct jaVector3* buffer = NULL;
+	struct jaImage* image = NULL;
 
-	if ((image = ImageCreate(IMAGE_RGB8, (size_t)width, (size_t)height)) == NULL ||
-	    (buffer = malloc((sizeof(struct Vector3)) * (size_t)width * (size_t)height)) == NULL)
+	if ((image = jaImageCreate(IMAGE_RGB8, (size_t)width, (size_t)height)) == NULL ||
+	    (buffer = malloc((sizeof(struct jaVector3)) * (size_t)width * (size_t)height)) == NULL)
 	{
-		StatusSet(st, NULL, STATUS_MEMORY_ERROR, NULL);
+		jaStatusSet(st, NULL, STATUS_MEMORY_ERROR, NULL);
 		goto return_failure;
 	}
 
@@ -203,10 +204,11 @@ static struct Vector3* sProcessNormalmap(int width, int height, const float* hma
 			buffer[col + width * row].y *= NORMAL_SCALE;
 			buffer[col + width * row].z = 1.0f;
 
-			buffer[col + width * row] = Vector3Normalize(buffer[col + width * row]);
+			buffer[col + width * row] = jaVector3Normalize(buffer[col + width * row]);
 
 			// Slope
-			buffer[col + width * row].z = sqrtf(powf(buffer[col + width * row].x, 2.0f) + powf(buffer[col + width * row].y, 2.0));
+			buffer[col + width * row].z =
+			    sqrtf(powf(buffer[col + width * row].x, 2.0f) + powf(buffer[col + width * row].y, 2.0));
 		}
 	}
 
@@ -226,19 +228,19 @@ static struct Vector3* sProcessNormalmap(int width, int height, const float* hma
 			pixel[i].b = (uint8_t)floorf((buffer[i].z + 1.0f) * 128.0f);
 		}
 
-		if(ImageSaveSgi(image, filename, st) != 0)
+		if (jaImageSaveSgi(image, filename, st) != 0)
 			goto return_failure;
 	}
 
 	// Bye!
-	ImageDelete(image);
+	jaImageDelete(image);
 	return buffer;
 
 return_failure:
 	if (buffer != NULL)
 		free(buffer);
 	if (image != NULL)
-		ImageDelete(image);
+		jaImageDelete(image);
 	return NULL;
 }
 
@@ -249,13 +251,13 @@ return_failure:
 -----------------------------*/
 int main(int argc, const char* argv[])
 {
-	struct Status st = {0};
+	struct jaStatus st = {0};
 
 	float* heightmap = NULL;
 	int heightmap_width = 0;
 	int heightmap_height = 0;
 
-	struct Vector3* normalmap = NULL;
+	struct jaVector3* normalmap = NULL;
 
 	if (argc <= 1)
 	{
@@ -273,15 +275,15 @@ int main(int argc, const char* argv[])
 	}
 	else
 	{
-		struct Image* image = NULL;
+		struct jaImage* image = NULL;
 		printf("Loading heightmap '%s'...\n", argv[1]);
 
-		if ((image = ImageLoad(argv[1], &st)) == NULL)
+		if ((image = jaImageLoad(argv[1], &st)) == NULL)
 			goto return_failure;
 
 		if ((heightmap = malloc(image->width * image->height * sizeof(float))) == NULL)
 		{
-			StatusSet(&st, "main", STATUS_MEMORY_ERROR, NULL);
+			jaStatusSet(&st, "main", STATUS_MEMORY_ERROR, NULL);
 			goto return_failure;
 		}
 
@@ -293,18 +295,18 @@ int main(int argc, const char* argv[])
 		else if (image->format == IMAGE_GRAY8)
 		{
 			for (size_t i = 0; i < (image->width * image->height); i++)
-				heightmap[i] = (float)(((uint16_t*)image->data)[i]) / 255.0f;
+				heightmap[i] = (float)(((uint8_t*)image->data)[i]) / 255.0f;
 		}
 		else
 		{
-			StatusSet(&st, "main", STATUS_UNKNOWN_FILE_FORMAT, "Only grayscale images supported as heightmaps");
+			jaStatusSet(&st, "main", STATUS_UNKNOWN_FILE_FORMAT, "Only grayscale images supported as heightmaps");
 			goto return_failure;
 		}
 
 		heightmap_width = (int)image->width;
 		heightmap_height = (int)image->height;
 
-		ImageDelete(image);
+		jaImageDelete(image);
 	}
 
 	if ((normalmap = sProcessNormalmap(heightmap_width, heightmap_height, heightmap, "normalmap.sgi", &st)) == NULL)
@@ -316,7 +318,7 @@ int main(int argc, const char* argv[])
 	return EXIT_SUCCESS;
 
 return_failure:
-	StatusPrint("Nara Sdk", st);
+	jaStatusPrint("Nara Sdk", st);
 
 	if (heightmap != NULL)
 		free(heightmap);

@@ -16,16 +16,16 @@
 #include "canvas.h"
 #include <cmocka.h>
 
-#include "../engine/nterrain.h"
 #include "../engine/context.h" // Mocked
+#include "../engine/nterrain.h"
 
 
-int VerticesInit(struct Vertices* out, const struct Vertex* data, uint16_t length, struct Status* st)
+int VerticesInit(struct Vertices* out, const struct Vertex* data, uint16_t length, struct jaStatus* st)
 {
 	(void)data;
 	out->glptr = 0;
 	out->length = length;
-	StatusSet(st, "VerticesInit", STATUS_SUCCESS, NULL);
+	jaStatusSet(st, "VerticesInit", STATUS_SUCCESS, NULL);
 	return 0;
 }
 
@@ -34,12 +34,12 @@ void VerticesFree(struct Vertices* vertices)
 	(void)vertices;
 }
 
-int IndexInit(struct Index* out, const uint16_t* data, size_t length, struct Status* st)
+int IndexInit(struct Index* out, const uint16_t* data, size_t length, struct jaStatus* st)
 {
 	(void)data;
 	out->glptr = 0;
 	out->length = length;
-	StatusSet(st, "VerticesInit", STATUS_SUCCESS, NULL);
+	jaStatusSet(st, "VerticesInit", STATUS_SUCCESS, NULL);
 	return 0;
 }
 
@@ -70,9 +70,9 @@ static void sDrawNode(struct Canvas* canvas, const struct NTerrainNode* node, co
 
 	switch (node->vertices_type)
 	{
-	case OWN_VERTICES: CanvasSetColor(canvas, (struct Vector3){0.5, 0.0, 0.0}); break;
-	case INHERITED_FROM_PARENT: CanvasSetColor(canvas, (struct Vector3){0.5, 0.5, 0.5}); break;
-	case SHARED_WITH_CHILDRENS: CanvasSetColor(canvas, (struct Vector3){0.0, 0.5, 0.0}); break;
+	case OWN_VERTICES: CanvasSetColor(canvas, (struct jaVector3){0.5, 0.0, 0.0}); break;
+	case INHERITED_FROM_PARENT: CanvasSetColor(canvas, (struct jaVector3){0.5, 0.5, 0.5}); break;
+	case SHARED_WITH_CHILDRENS: CanvasSetColor(canvas, (struct jaVector3){0.0, 0.5, 0.0}); break;
 	}
 
 	// Inner triangles
@@ -81,11 +81,15 @@ static void sDrawNode(struct Canvas* canvas, const struct NTerrainNode* node, co
 	}
 
 	// Outside box
-	CanvasSetColor(canvas, Vector3Scale(CanvasGetColor(canvas), 2));
-	CanvasDrawLine(canvas, (struct Vector2){node->bbox.min.x, node->bbox.min.y}, (struct Vector2){node->bbox.min.x, node->bbox.max.y});
-	CanvasDrawLine(canvas, (struct Vector2){node->bbox.min.x, node->bbox.max.y}, (struct Vector2){node->bbox.max.x, node->bbox.max.y});
-	CanvasDrawLine(canvas, (struct Vector2){node->bbox.max.x, node->bbox.max.y}, (struct Vector2){node->bbox.max.x, node->bbox.min.y});
-	CanvasDrawLine(canvas, (struct Vector2){node->bbox.max.x, node->bbox.min.y}, (struct Vector2){node->bbox.min.x, node->bbox.min.y});
+	CanvasSetColor(canvas, jaVector3Scale(CanvasGetColor(canvas), 2));
+	CanvasDrawLine(canvas, (struct jaVector2){node->bbox.min.x, node->bbox.min.y},
+	               (struct jaVector2){node->bbox.min.x, node->bbox.max.y});
+	CanvasDrawLine(canvas, (struct jaVector2){node->bbox.min.x, node->bbox.max.y},
+	               (struct jaVector2){node->bbox.max.x, node->bbox.max.y});
+	CanvasDrawLine(canvas, (struct jaVector2){node->bbox.max.x, node->bbox.max.y},
+	               (struct jaVector2){node->bbox.max.x, node->bbox.min.y});
+	CanvasDrawLine(canvas, (struct jaVector2){node->bbox.max.x, node->bbox.min.y},
+	               (struct jaVector2){node->bbox.min.x, node->bbox.min.y});
 }
 
 
@@ -108,7 +112,7 @@ void sDrawTerrainLayers(struct NTerrain* terrain, const char* filename)
 	{
 		while ((node = NTerrainIterate(&state, &terrain->buffer, NULL)) != NULL)
 		{
-			CanvasSetOffset(canvas, (struct Vector2){BORDER, BORDER + (BORDER + terrain->dimension) * (float)state.depth});
+			CanvasSetOffset(canvas, (struct jaVector2){BORDER, BORDER + (BORDER + terrain->dimension) * (float)state.depth});
 			sDrawNode(canvas, node, state.last_with_vertices);
 		}
 
@@ -126,7 +130,7 @@ void TestMesures1(void** cmocka_state)
 {
 	(void)cmocka_state;
 	struct NTerrain* terrain = NULL;
-	struct Status st = {0};
+	struct jaStatus st = {0};
 
 	float const ELEVATION = 100.0f;
 	float const DIMENSION = 1024.0f;
@@ -137,7 +141,7 @@ void TestMesures1(void** cmocka_state)
 
 	if (terrain == NULL)
 	{
-		StatusPrint("TestMesures1", st);
+		jaStatusPrint("TestMesures1", st);
 		assert_int_equal(st.code, STATUS_SUCCESS);
 	}
 
@@ -191,7 +195,7 @@ void TestMesures2(void** cmocka_state)
 {
 	(void)cmocka_state;
 	struct NTerrain* terrain = NULL;
-	struct Status st = {0};
+	struct jaStatus st = {0};
 
 	float const ELEVATION = 100.0f;
 	float const DIMENSION = 972.0f;
@@ -202,7 +206,7 @@ void TestMesures2(void** cmocka_state)
 
 	if (terrain == NULL)
 	{
-		StatusPrint("TestMesures2", st);
+		jaStatusPrint("TestMesures2", st);
 		assert_int_equal(st.code, STATUS_SUCCESS);
 	}
 
@@ -210,8 +214,7 @@ void TestMesures2(void** cmocka_state)
 
 	// Take a calculator
 	{
-		assert_true((terrain->min_node_dimension > MIN_NODE_DIMENSION) ||
-		            sFloatEquals(terrain->min_node_dimension, MIN_NODE_DIMENSION));
+		assert_true((terrain->min_node_dimension > MIN_NODE_DIMENSION) || sFloatEquals(terrain->min_node_dimension, MIN_NODE_DIMENSION));
 
 		// Value before (or equal) 12, dividing 972 by three
 		assert_true(sFloatEquals(terrain->min_node_dimension, 12.0f));

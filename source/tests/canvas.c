@@ -29,7 +29,7 @@ SOFTWARE.
 -----------------------------*/
 
 #include "canvas.h"
-#include "buffer.h"
+#include "japan-buffer.h"
 #include <stdio.h>
 
 
@@ -45,14 +45,14 @@ struct CanvasInstruction
 	enum CanvasInstructionType type;
 
 	union {
-		struct Vector3 color;
-		struct Vector2 offset;
+		struct jaVector3 color;
+		struct jaVector2 offset;
 
 		// DRAW_LINE
 		struct
 		{
-			struct Vector2 a;
-			struct Vector2 b;
+			struct jaVector2 a;
+			struct jaVector2 b;
 		};
 	};
 };
@@ -62,20 +62,20 @@ struct Canvas
 	size_t width;
 	size_t height;
 
-	struct Vector2 state_offset;
-	struct Vector3 state_color;
+	struct jaVector2 state_offset;
+	struct jaVector3 state_color;
 
-	struct Buffer instructions;
+	struct jaBuffer instructions;
 	size_t instructions_no;
 };
 
 
-inline struct Vector2 CanvasGetOffset(const struct Canvas* canvas)
+inline struct jaVector2 CanvasGetOffset(const struct Canvas* canvas)
 {
 	return canvas->state_offset;
 }
 
-inline struct Vector3 CanvasGetColor(const struct Canvas* canvas)
+inline struct jaVector3 CanvasGetColor(const struct Canvas* canvas)
 {
 	return canvas->state_color;
 }
@@ -105,7 +105,7 @@ inline struct Canvas* CanvasCreate(size_t width, size_t height)
 -----------------------------*/
 inline void CanvasDelete(struct Canvas* canvas)
 {
-	BufferClean(&canvas->instructions);
+	jaBufferClean(&canvas->instructions);
 	free(canvas);
 }
 
@@ -121,8 +121,8 @@ void CanvasSave(const struct Canvas* canvas, const char* filename)
 	FILE* fp = fopen(filename, "w");
 	struct CanvasInstruction* instruction = canvas->instructions.data;
 
-	struct Vector2 state_offset = {0};
-	struct Vector3i state_color = {0};
+	struct jaVector2 state_offset = {0};
+	struct jaVector3i state_color = {0};
 
 	if (fp != NULL)
 	{
@@ -166,9 +166,9 @@ void CanvasSave(const struct Canvas* canvas, const char* filename)
 
  CanvasSetOffset()
 -----------------------------*/
-void CanvasSetOffset(struct Canvas* canvas, struct Vector2 offset)
+void CanvasSetOffset(struct Canvas* canvas, struct jaVector2 offset)
 {
-	if (BufferResize(&canvas->instructions, (canvas->instructions_no + 1) * sizeof(struct CanvasInstruction)) != NULL)
+	if (jaBufferResize(&canvas->instructions, (canvas->instructions_no + 1) * sizeof(struct CanvasInstruction)) != NULL)
 	{
 		canvas->instructions_no++;
 		canvas->state_offset = offset;
@@ -186,9 +186,9 @@ void CanvasSetOffset(struct Canvas* canvas, struct Vector2 offset)
 
  CanvasSetColor()
 -----------------------------*/
-void CanvasSetColor(struct Canvas* canvas, struct Vector3 color)
+void CanvasSetColor(struct Canvas* canvas, struct jaVector3 color)
 {
-	if (BufferResize(&canvas->instructions, (canvas->instructions_no + 1) * sizeof(struct CanvasInstruction)) != NULL)
+	if (jaBufferResize(&canvas->instructions, (canvas->instructions_no + 1) * sizeof(struct CanvasInstruction)) != NULL)
 	{
 		canvas->instructions_no++;
 		canvas->state_color = color;
@@ -205,9 +205,9 @@ void CanvasSetColor(struct Canvas* canvas, struct Vector3 color)
 
  CanvasDrawLine()
 -----------------------------*/
-void CanvasDrawLine(struct Canvas* canvas, struct Vector2 a, struct Vector2 b)
+void CanvasDrawLine(struct Canvas* canvas, struct jaVector2 a, struct jaVector2 b)
 {
-	if (BufferResize(&canvas->instructions, (canvas->instructions_no + 1) * sizeof(struct CanvasInstruction)) != NULL)
+	if (jaBufferResize(&canvas->instructions, (canvas->instructions_no + 1) * sizeof(struct CanvasInstruction)) != NULL)
 	{
 		canvas->instructions_no++;
 

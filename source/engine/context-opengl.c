@@ -38,7 +38,7 @@ SOFTWARE.
 
  ProgramInit()
 -----------------------------*/
-static inline int sCompileShader(GLuint shader, struct Status* st)
+static inline int sCompileShader(GLuint shader, struct jaStatus* st)
 {
 	GLint success = GL_FALSE;
 
@@ -47,26 +47,26 @@ static inline int sCompileShader(GLuint shader, struct Status* st)
 
 	if (success == GL_FALSE)
 	{
-		StatusSet(st, "ProgramInit", STATUS_ERROR, NULL);
-		glGetShaderInfoLog(shader, STATUS_EXPLANATION_LENGTH, NULL, st->explanation);
+		jaStatusSet(st, "ProgramInit", STATUS_ERROR, NULL);
+		glGetShaderInfoLog(shader, JA_STATUS_EXPL_LEN, NULL, st->explanation);
 		return 1;
 	}
 
 	return 0;
 }
 
-int ProgramInit(struct Program* out, const char* vertex_code, const char* fragment_code, struct Status* st)
+int ProgramInit(struct Program* out, const char* vertex_code, const char* fragment_code, struct jaStatus* st)
 {
 	GLint success = GL_FALSE;
 	GLuint vertex = 0;
 	GLuint fragment = 0;
 
-	StatusSet(st, "ProgramInit", STATUS_SUCCESS, NULL);
+	jaStatusSet(st, "ProgramInit", STATUS_SUCCESS, NULL);
 
 	// Compile shaders
 	if ((vertex = glCreateShader(GL_VERTEX_SHADER)) == 0 || (fragment = glCreateShader(GL_FRAGMENT_SHADER)) == 0)
 	{
-		StatusSet(st, "ProgramInit", STATUS_ERROR, "Creating GL shader\n");
+		jaStatusSet(st, "ProgramInit", STATUS_ERROR, "Creating GL shader\n");
 		goto return_failure;
 	}
 
@@ -79,7 +79,7 @@ int ProgramInit(struct Program* out, const char* vertex_code, const char* fragme
 	// Create program
 	if ((out->glptr = glCreateProgram()) == 0)
 	{
-		StatusSet(st, "ProgramInit", STATUS_ERROR, "Creating GL program\n");
+		jaStatusSet(st, "ProgramInit", STATUS_ERROR, "Creating GL program\n");
 		goto return_failure;
 	}
 
@@ -95,8 +95,8 @@ int ProgramInit(struct Program* out, const char* vertex_code, const char* fragme
 
 	if (success == GL_FALSE)
 	{
-		StatusSet(st, "ProgramInit", STATUS_ERROR, NULL);
-		glGetProgramInfoLog(out->glptr, STATUS_EXPLANATION_LENGTH, NULL, st->explanation);
+		jaStatusSet(st, "ProgramInit", STATUS_ERROR, NULL);
+		glGetProgramInfoLog(out->glptr, JA_STATUS_EXPL_LEN, NULL, st->explanation);
 		goto return_failure;
 	}
 
@@ -132,12 +132,12 @@ inline void ProgramFree(struct Program* program)
 
  VerticesInit()
 -----------------------------*/
-int VerticesInit(struct Vertices* out, const struct Vertex* data, uint16_t length, struct Status* st)
+int VerticesInit(struct Vertices* out, const struct Vertex* data, uint16_t length, struct jaStatus* st)
 {
 	GLint reported_size = 0;
 	GLint old_bind = 0;
 
-	StatusSet(st, "VerticesInit", STATUS_SUCCESS, NULL);
+	jaStatusSet(st, "VerticesInit", STATUS_SUCCESS, NULL);
 
 	glGenBuffers(1, &out->glptr);
 
@@ -146,7 +146,7 @@ int VerticesInit(struct Vertices* out, const struct Vertex* data, uint16_t lengt
 
 	if (glIsBuffer(out->glptr) == GL_FALSE)
 	{
-		StatusSet(st, "VerticesInit", STATUS_ERROR, "Creating GL buffer");
+		jaStatusSet(st, "VerticesInit", STATUS_ERROR, "Creating GL buffer");
 		goto return_failure;
 	}
 
@@ -155,7 +155,7 @@ int VerticesInit(struct Vertices* out, const struct Vertex* data, uint16_t lengt
 
 	if ((size_t)reported_size != (sizeof(struct Vertex) * length))
 	{
-		StatusSet(st, "VerticesInit", STATUS_ERROR, "Attaching data");
+		jaStatusSet(st, "VerticesInit", STATUS_ERROR, "Attaching data");
 		goto return_failure;
 	}
 
@@ -190,12 +190,12 @@ inline void VerticesFree(struct Vertices* vertices)
 
  IndexInit()
 -----------------------------*/
-int IndexInit(struct Index* out, const uint16_t* data, size_t length, struct Status* st)
+int IndexInit(struct Index* out, const uint16_t* data, size_t length, struct jaStatus* st)
 {
 	GLint reported_size = 0;
 	GLint old_bind = 0;
 
-	StatusSet(st, "IndexInit", STATUS_SUCCESS, NULL);
+	jaStatusSet(st, "IndexInit", STATUS_SUCCESS, NULL);
 
 	glGenBuffers(1, &out->glptr);
 
@@ -204,7 +204,7 @@ int IndexInit(struct Index* out, const uint16_t* data, size_t length, struct Sta
 
 	if (glIsBuffer(out->glptr) == GL_FALSE)
 	{
-		StatusSet(st, "IndexInit", STATUS_ERROR, "Creating GL buffer");
+		jaStatusSet(st, "IndexInit", STATUS_ERROR, "Creating GL buffer");
 		goto return_failure;
 	}
 
@@ -213,7 +213,7 @@ int IndexInit(struct Index* out, const uint16_t* data, size_t length, struct Sta
 
 	if ((size_t)reported_size != (sizeof(uint16_t) * length))
 	{
-		StatusSet(st, "IndexInit", STATUS_ERROR, "Attaching data");
+		jaStatusSet(st, "IndexInit", STATUS_ERROR, "Attaching data");
 		goto return_failure;
 	}
 
@@ -248,16 +248,16 @@ inline void IndexFree(struct Index* index)
 
  TextureInit()
 -----------------------------*/
-int TextureInitImage(struct Texture* out, const struct Image* image, enum Filter filter, struct Status* st)
+int TextureInitImage(struct Texture* out, const struct jaImage* image, enum Filter filter, struct jaStatus* st)
 {
 	GLint old_bind = 0;
 
-	StatusSet(st, "TextureInitImage", STATUS_SUCCESS, NULL);
+	jaStatusSet(st, "TextureInitImage", STATUS_SUCCESS, NULL);
 
 	if (image->format != IMAGE_RGB8 && image->format != IMAGE_RGBA8 && image->format != IMAGE_GRAY8 &&
 	    image->format != IMAGE_GRAYA8)
 	{
-		StatusSet(st, "TextureInitImage", STATUS_UNEXPECTED_DATA, "Only 8 bits per component images supported");
+		jaStatusSet(st, "TextureInitImage", STATUS_UNEXPECTED_DATA, "Only 8 bits per component images supported");
 		return 1;
 	}
 
@@ -268,7 +268,7 @@ int TextureInitImage(struct Texture* out, const struct Image* image, enum Filter
 
 	if (glIsTexture(out->glptr) == GL_FALSE)
 	{
-		StatusSet(st, "TextureInitImage", STATUS_ERROR, "Creating GL texture");
+		jaStatusSet(st, "TextureInitImage", STATUS_ERROR, "Creating GL texture");
 		return 1;
 	}
 
@@ -324,21 +324,21 @@ int TextureInitImage(struct Texture* out, const struct Image* image, enum Filter
 	return 0;
 }
 
-int TextureInitFilename(struct Texture* out, const char* image_filename, enum Filter filter, struct Status* st)
+int TextureInitFilename(struct Texture* out, const char* image_filename, enum Filter filter, struct jaStatus* st)
 {
-	struct Image* image = NULL;
-	StatusSet(st, "TextureInitFilename", STATUS_SUCCESS, NULL);
+	struct jaImage* image = NULL;
+	jaStatusSet(st, "TextureInitFilename", STATUS_SUCCESS, NULL);
 
-	if ((image = ImageLoad(image_filename, st)) == NULL)
+	if ((image = jaImageLoad(image_filename, st)) == NULL)
 		return 1;
 
 	if (TextureInitImage(out, image, filter, st) != 0)
 	{
-		ImageDelete(image);
+		jaImageDelete(image);
 		return 1;
 	}
 
-	ImageDelete(image);
+	jaImageDelete(image);
 	return 0;
 }
 

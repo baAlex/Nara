@@ -28,13 +28,15 @@ SOFTWARE.
  - Alexander Brandt 2019
 -----------------------------*/
 
-#include "nterrain.h"
-#include "misc.h"
-#include "utilities.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "japan-utilities.h"
+
+#include "misc.h"
+#include "nterrain.h"
 
 
 static inline float sNodeDimension(const struct NTerrainNode* node)
@@ -81,7 +83,7 @@ static struct NTerrainNode* sNodeCreate(struct NTerrainNode* parent)
 
  sHeightmapElevation()
 -----------------------------*/
-static float sHeightmapElevation(const struct Image* hmap, struct Vector2 cords)
+static float sHeightmapElevation(const struct jaImage* hmap, struct jaVector2 cords)
 {
 	// https://en.wikipedia.org/wiki/Bilinear_filtering
 	union {
@@ -91,8 +93,8 @@ static float sHeightmapElevation(const struct Image* hmap, struct Vector2 cords)
 
 	} data = {.raw = hmap->data};
 
-	cords.x = Clamp(cords.x, -1.0f, 1.0f);
-	cords.y = Clamp(cords.y, -1.0f, 1.0f);
+	cords.x = jaClamp(cords.x, -1.0f, 1.0f);
+	cords.y = jaClamp(cords.y, -1.0f, 1.0f);
 
 	// TODO, think a better replacement for the -1
 	float u = cords.x * (float)(hmap->width - 1);
@@ -136,7 +138,7 @@ static float sHeightmapElevation(const struct Image* hmap, struct Vector2 cords)
 
  sGenerateIndex()
 -----------------------------*/
-static struct Index sGenerateIndex(struct Buffer* buffer, const struct NTerrainNode* node, struct AabBox org,
+static struct Index sGenerateIndex(struct jaBuffer* buffer, const struct NTerrainNode* node, struct jaAABBox org,
                                    float org_pattern_dimension)
 {
 	// Generation on a temporary buffer
@@ -145,7 +147,7 @@ static struct Index sGenerateIndex(struct Buffer* buffer, const struct NTerrainN
 	size_t col = 0;
 
 	if (buffer->size < sizeof(uint16_t) * length)
-		BufferResize(buffer, sizeof(uint16_t) * length); // TODO, check failure
+		jaBufferResize(buffer, sizeof(uint16_t) * length); // TODO, check failure
 
 	uint16_t* temp_data = buffer->data;
 
@@ -217,20 +219,20 @@ static struct Index sGenerateIndex(struct Buffer* buffer, const struct NTerrainN
 
  sGenerateVertices()
 -----------------------------*/
-static struct Vertices sGenerateVertices(struct Buffer* buffer, const struct NTerrainNode* node,
-                                         float pattern_dimension, float terrain_dimension, const struct Image* hmap,
+static struct Vertices sGenerateVertices(struct jaBuffer* buffer, const struct NTerrainNode* node,
+                                         float pattern_dimension, float terrain_dimension, const struct jaImage* hmap,
                                          float elevation)
 {
 	// Generation on a temporary buffer
 	size_t const patterns_no = sPatternsInARow(sNodeDimension(node), pattern_dimension);
 
 	if (buffer->size < sizeof(struct Vertex) * (patterns_no + 1) * (patterns_no + 1))
-		BufferResize(buffer, sizeof(struct Vertex) * (patterns_no + 1) * (patterns_no + 1));
+		jaBufferResize(buffer, sizeof(struct Vertex) * (patterns_no + 1) * (patterns_no + 1));
 
 	struct Vertex* temp_data = buffer->data;
 
 	{
-		struct Vector2 texture_step = {node->bbox.min.x / terrain_dimension, node->bbox.min.y / terrain_dimension};
+		struct jaVector2 texture_step = {node->bbox.min.x / terrain_dimension, node->bbox.min.y / terrain_dimension};
 
 		for (size_t row = 0; row < (patterns_no + 1); row++)
 		{
@@ -350,28 +352,28 @@ static void sSubdivideNode(struct NTerrainNode* node, float min_node_dimension)
  NTerrainCreate()
 -----------------------------*/
 struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation, float dimension,
-                                float min_node_dimension, int pattern_subdivisions, struct Status* st)
+                                float min_node_dimension, int pattern_subdivisions, struct jaStatus* st)
 {
 	struct NTerrain* terrain = NULL;
 	struct NTerrainNode* node = NULL;
 
-	struct Image* heightmap = NULL;
+	struct jaImage* heightmap = NULL;
 
 	struct NTerrainState state = {0};
 	struct NTerrainNode* last_parent = NULL;
 	size_t parent_depth = 0;
 
-	StatusSet(st, "NTerraiNCreate", STATUS_SUCCESS, NULL);
+	jaStatusSet(st, "NTerraiNCreate", STATUS_SUCCESS, NULL);
 
 	if (heightmap_filename != NULL)
 	{
-		if ((heightmap = ImageLoad(heightmap_filename, st)) == NULL)
+		if ((heightmap = jaImageLoad(heightmap_filename, st)) == NULL)
 			goto return_failure;
 	}
 
 	if ((terrain = calloc(1, sizeof(struct NTerrain))) == NULL || (terrain->root = sNodeCreate(NULL)) == NULL)
 	{
-		StatusSet(st, "NTerraiNCreate", STATUS_MEMORY_ERROR, NULL);
+		jaStatusSet(st, "NTerraiNCreate", STATUS_MEMORY_ERROR, NULL);
 		goto return_failure;
 	}
 
@@ -391,14 +393,14 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 
 	// Node subdivision
 	node = terrain->root;
-	node->bbox.min = (struct Vector3){0.0f, 0.0f, 0.0f};
-	node->bbox.max = (struct Vector3){dimension, dimension, elevation};
+	node->bbox.min = (struct jaVector3){0.0f, 0.0f, 0.0f};
+	node->bbox.max = (struct jaVector3){dimension, dimension, elevation};
 
 	sSubdivideNode(terrain->root, min_node_dimension);
 
 	// Pattern subdivision (the following big loop)
 	// generating vertices and indexes
-	struct Buffer aux_buffer = {0};
+	struct jaBuffer aux_buffer = {0};
 	state.start = terrain->root;
 
 	while ((node = NTerrainIterate(&state, &aux_buffer, NULL)) != NULL)
@@ -447,7 +449,7 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 	}
 
 	// Bye!
-	BufferClean(&aux_buffer);
+	jaBufferClean(&aux_buffer);
 	return terrain;
 
 return_failure:
@@ -476,7 +478,7 @@ void NTerrainDelete(struct NTerrain* terrain)
 		}
 	}
 
-	BufferClean(&terrain->buffer);
+	jaBufferClean(&terrain->buffer);
 	free(terrain);
 }
 
@@ -485,26 +487,26 @@ void NTerrainDelete(struct NTerrain* terrain)
 
  NTerrainIterate()
 -----------------------------*/
-static inline bool sCheckPlane(const struct AabBox bbox, struct Vector3 pos, struct Vector3 nor)
+static inline bool sCheckPlane(const struct jaAABBox bbox, struct jaVector3 pos, struct jaVector3 nor)
 {
-	struct Vector3 angle = {0};
+	struct jaVector3 angle = {0};
 
 	for (int i = 0; i < 8; i++)
 	{
 		switch (i)
 		{
-		case 0: angle = Vector3Subtract((struct Vector3){bbox.min.x, bbox.min.y, bbox.min.z}, pos); break;
-		case 1: angle = Vector3Subtract((struct Vector3){bbox.max.x, bbox.min.y, bbox.min.z}, pos); break;
-		case 2: angle = Vector3Subtract((struct Vector3){bbox.max.x, bbox.max.y, bbox.min.z}, pos); break;
-		case 3: angle = Vector3Subtract((struct Vector3){bbox.min.x, bbox.max.y, bbox.min.z}, pos); break;
+		case 0: angle = jaVector3Subtract((struct jaVector3){bbox.min.x, bbox.min.y, bbox.min.z}, pos); break;
+		case 1: angle = jaVector3Subtract((struct jaVector3){bbox.max.x, bbox.min.y, bbox.min.z}, pos); break;
+		case 2: angle = jaVector3Subtract((struct jaVector3){bbox.max.x, bbox.max.y, bbox.min.z}, pos); break;
+		case 3: angle = jaVector3Subtract((struct jaVector3){bbox.min.x, bbox.max.y, bbox.min.z}, pos); break;
 
-		case 4: angle = Vector3Subtract((struct Vector3){bbox.min.x, bbox.min.y, bbox.max.z}, pos); break;
-		case 5: angle = Vector3Subtract((struct Vector3){bbox.max.x, bbox.min.y, bbox.max.z}, pos); break;
-		case 6: angle = Vector3Subtract((struct Vector3){bbox.max.x, bbox.max.y, bbox.max.z}, pos); break;
-		case 7: angle = Vector3Subtract((struct Vector3){bbox.min.x, bbox.max.y, bbox.max.z}, pos); break;
+		case 4: angle = jaVector3Subtract((struct jaVector3){bbox.min.x, bbox.min.y, bbox.max.z}, pos); break;
+		case 5: angle = jaVector3Subtract((struct jaVector3){bbox.max.x, bbox.min.y, bbox.max.z}, pos); break;
+		case 6: angle = jaVector3Subtract((struct jaVector3){bbox.max.x, bbox.max.y, bbox.max.z}, pos); break;
+		case 7: angle = jaVector3Subtract((struct jaVector3){bbox.min.x, bbox.max.y, bbox.max.z}, pos); break;
 		}
 
-		if (Vector3Dot(nor, Vector3Normalize(angle)) >= 0.f)
+		if (jaVector3Dot(nor, jaVector3Normalize(angle)) >= 0.f)
 			return true;
 	}
 
@@ -520,49 +522,46 @@ static void sBuildFrustumPlanes(struct NTerrainState* state, const struct NTerra
 	// TODO: Dear future Alex, please study about the cross operation and why
 	// the right frustum plane require an inverted up vector. :)
 
-	struct Vector3 forward;
-	struct Vector3 left;
-	struct Vector3 up;
+	struct jaVector3 forward;
+	struct jaVector3 left;
+	struct jaVector3 up;
 
 	VectorAxes(view->angle, &forward, &left, &up);
 
 	// Front frustum
-	state->frustum_position[0] = Vector3Add(view->position, Vector3Scale(forward, view->max_distance));
-	state->frustum_normal[0] = Vector3Invert(forward);
+	state->frustum_position[0] = jaVector3Add(view->position, jaVector3Scale(forward, view->max_distance));
+	state->frustum_normal[0] = jaVector3Invert(forward);
 
 	// Left frustum
-	state->frustum_position[2] = Vector3Add(view->position, Vector3Scale(forward, 1.0f));
-	state->frustum_position[2] =
-	    Vector3Subtract(state->frustum_position[2], Vector3Scale(left, (RadToDeg(view->fov) / 90.0f) * view->aspect));
+	state->frustum_position[2] = jaVector3Add(view->position, jaVector3Scale(forward, 1.0f));
+	state->frustum_position[2] = jaVector3Subtract(state->frustum_position[2], jaVector3Scale(left, (jaRadToDeg(view->fov) / 90.0f) * view->aspect));
 
-	state->frustum_normal[2] = Vector3Subtract(state->frustum_position[2], view->position);
-	state->frustum_normal[2] = Vector3Cross(Vector3Normalize(state->frustum_normal[2]), up);
+	state->frustum_normal[2] = jaVector3Subtract(state->frustum_position[2], view->position);
+	state->frustum_normal[2] = jaVector3Cross(jaVector3Normalize(state->frustum_normal[2]), up);
 
 	// Right frustum
-	state->frustum_position[1] = Vector3Add(view->position, Vector3Scale(forward, 1.0f));
-	state->frustum_position[1] =
-	    Vector3Add(state->frustum_position[1], Vector3Scale(left, (RadToDeg(view->fov) / 90.0f) * view->aspect));
+	state->frustum_position[1] = jaVector3Add(view->position, jaVector3Scale(forward, 1.0f));
+	state->frustum_position[1] = jaVector3Add(state->frustum_position[1], jaVector3Scale(left, (jaRadToDeg(view->fov) / 90.0f) * view->aspect));
 
-	state->frustum_normal[1] = Vector3Subtract(state->frustum_position[1], view->position);
-	state->frustum_normal[1] = Vector3Cross(Vector3Normalize(state->frustum_normal[1]), Vector3Invert(up));
+	state->frustum_normal[1] = jaVector3Subtract(state->frustum_position[1], view->position);
+	state->frustum_normal[1] = jaVector3Cross(jaVector3Normalize(state->frustum_normal[1]), jaVector3Invert(up));
 
 	// Top frustum
-	state->frustum_position[3] = Vector3Add(view->position, Vector3Scale(forward, 1.0f));
-	state->frustum_position[3] = Vector3Add(state->frustum_position[3], Vector3Scale(up, RadToDeg(view->fov) / 90.0f));
+	state->frustum_position[3] = jaVector3Add(view->position, jaVector3Scale(forward, 1.0f));
+	state->frustum_position[3] = jaVector3Add(state->frustum_position[3], jaVector3Scale(up, jaRadToDeg(view->fov) / 90.0f));
 
-	state->frustum_normal[3] = Vector3Subtract(state->frustum_position[3], view->position);
-	state->frustum_normal[3] = Vector3Cross(Vector3Normalize(state->frustum_normal[3]), left);
+	state->frustum_normal[3] = jaVector3Subtract(state->frustum_position[3], view->position);
+	state->frustum_normal[3] = jaVector3Cross(jaVector3Normalize(state->frustum_normal[3]), left);
 
 	// Bottom frustum
-	state->frustum_position[4] = Vector3Add(view->position, Vector3Scale(forward, 1.0f));
-	state->frustum_position[4] =
-	    Vector3Subtract(state->frustum_position[4], Vector3Scale(up, RadToDeg(view->fov) / 90.0f));
+	state->frustum_position[4] = jaVector3Add(view->position, jaVector3Scale(forward, 1.0f));
+	state->frustum_position[4] = jaVector3Subtract(state->frustum_position[4], jaVector3Scale(up, jaRadToDeg(view->fov) / 90.0f));
 
-	state->frustum_normal[4] = Vector3Subtract(state->frustum_position[4], view->position);
-	state->frustum_normal[4] = Vector3Cross(Vector3Normalize(state->frustum_normal[4]), Vector3Invert(left));
+	state->frustum_normal[4] = jaVector3Subtract(state->frustum_position[4], view->position);
+	state->frustum_normal[4] = jaVector3Cross(jaVector3Normalize(state->frustum_normal[4]), jaVector3Invert(left));
 }
 
-struct NTerrainNode* NTerrainIterate(struct NTerrainState* state, struct Buffer* buffer, struct NTerrainView* view)
+struct NTerrainNode* NTerrainIterate(struct NTerrainState* state, struct jaBuffer* buffer, struct NTerrainView* view)
 {
 	struct NTerrainNode** future_parent_heap = NULL;
 
@@ -597,15 +596,17 @@ again:
 
 		if (state->actual->children != NULL &&
 		    (view == NULL ||
-		     AabCollisionBoxBox(
-		         ((struct AabBox){
-		             Vector3Subtract(view->position, (struct Vector3){factor / 2.0f, factor / 2.0f, factor / 2.0f}),
-		             Vector3Add(view->position, (struct Vector3){factor / 2.0f, factor / 2.0f, factor / 2.0f})}),
+		     jaAABCollisionBoxBox(
+		         ((struct jaAABBox){
+		             jaVector3Subtract(view->position, (struct jaVector3){factor / 2.0f, factor / 2.0f, factor / 2.0f}),
+		             jaVector3Add(view->position, (struct jaVector3){factor / 2.0f, factor / 2.0f, factor / 2.0f})}),
 		         state->actual->bbox) == true))
 		{
 			if (buffer->size < (state->depth + 1) * sizeof(void*))
-				if (BufferResize(buffer, (state->depth + 1) * sizeof(void*)) == NULL) // FIXME, Bug in LibJapan, the +1
+			{
+				if (jaBufferResize(buffer, (state->depth + 1) * sizeof(void*)) == NULL)
 					return NULL;
+			}
 
 			future_parent_heap = buffer->data;
 			future_parent_heap[state->depth] = state->actual->next;
@@ -663,16 +664,16 @@ again:
 
 			float factor = sNodeDimension(state->actual->parent) * 1.0f; // Configurable quality, IN STEPS OF 3.0!
 
-			struct Vector2 align = {view->position.x, view->position.y};
-			align = Vector2Scale(align, 1.0f / (sNodeDimension(state->actual->parent)));
+			struct jaVector2 align = {view->position.x, view->position.y};
+			align = jaVector2Scale(align, 1.0f / (sNodeDimension(state->actual->parent)));
 			align.x = roundf(align.x);
 			align.y = roundf(align.y);
-			align = Vector2Scale(align, (sNodeDimension(state->actual->parent)));
+			align = jaVector2Scale(align, (sNodeDimension(state->actual->parent)));
 
-			state->view_rectangle = (struct AabRectangle){{align.x - factor / 2.0f, align.y - factor / 2.0f},
-			                                              {align.x + factor / 2.0f, align.y + factor / 2.0f}};
+			state->view_rectangle = (struct jaAARectangle){{align.x - factor / 2.0f, align.y - factor / 2.0f},
+			                                               {align.x + factor / 2.0f, align.y + factor / 2.0f}};
 
-			if (AabCollisionRectRect(state->view_rectangle, AabToRectangle(state->actual->bbox)) == true)
+			if (jaAABCollisionRectRect(state->view_rectangle, jaAABToRectangle(state->actual->bbox)) == true)
 				state->in_border = false;
 		}
 	}
@@ -695,7 +696,7 @@ int NTerrainDraw(struct Context* context, struct NTerrain* terrain, struct NTerr
 	int dcalls = 0;
 
 #ifndef TEST
-	SetHighlight(context, (struct Vector3){0.0f, 0.0f, 0.0f});
+	SetHighlight(context, (struct jaVector3){0.0f, 0.0f, 0.0f});
 
 	while ((node = NTerrainIterate(&state, &terrain->buffer, view)) != NULL)
 	{
@@ -716,17 +717,17 @@ int NTerrainDraw(struct Context* context, struct NTerrain* terrain, struct NTerr
 		{
 			/*switch (state.depth)
 			{
-			case 0: SetHighlight(context, (struct Vector3){0.0, 0.0, 1.0}); break;
-			case 1: SetHighlight(context, (struct Vector3){0.0, 1.0, 0.0}); break;
-			case 2: SetHighlight(context, (struct Vector3){1.0, 1.0, 0.0}); break;
-			case 3: SetHighlight(context, (struct Vector3){1.0, 0.25, 0.0}); break;
-			default: SetHighlight(context, (struct Vector3){1.0, 0.0, 0.0});
+			case 0: SetHighlight(context, (struct jaVector3){0.0, 0.0, 1.0}); break;
+			case 1: SetHighlight(context, (struct jaVector3){0.0, 1.0, 0.0}); break;
+			case 2: SetHighlight(context, (struct jaVector3){1.0, 1.0, 0.0}); break;
+			case 3: SetHighlight(context, (struct jaVector3){1.0, 0.25, 0.0}); break;
+			default: SetHighlight(context, (struct jaVector3){1.0, 0.0, 0.0});
 			}*/
 
 			Draw(context, &node->index);
 			dcalls += 1;
 
-			// SetHighlight(context, (struct Vector3){0.0f, 0.0f, 0.0f});
+			// SetHighlight(context, (struct jaVector3){0.0f, 0.0f, 0.0f});
 		}
 	}
 #endif
