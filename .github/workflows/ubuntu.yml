@@ -12,7 +12,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install libglfw3-dev portaudio19-dev python3
+        sudo apt install libglfw3-dev portaudio19-dev libgles2-mesa-dev python3
         git submodule init
         git submodule update
 

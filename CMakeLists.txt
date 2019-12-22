@@ -73,6 +73,11 @@ add_custom_command(
 	COMMAND python3 ${CMAKE_SOURCE_DIR}/source/c-ify.py ${CMAKE_SOURCE_DIR}/source/engine/terrain-vertex.glsl ./terrain-vertex.c
 )
 
+set(SDK_SOURCES
+	"./source/sdk/erosion.c"
+	"./source/sdk/sdk.c"
+	"./source/sdk/simplex.c")
+
 add_executable("nara"
 	${JAPAN_SOURCES}
 	${GLAD_SOURCES}
@@ -84,3 +89,6 @@ add_executable("nara"
 target_link_libraries("nara" "m")
 target_link_libraries("nara" "glfw")
 target_link_libraries("nara" "portaudio")
+
+add_executable("sdk" ${JAPAN_SOURCES} ${SDK_SOURCES})
+target_link_libraries("sdk" "m")

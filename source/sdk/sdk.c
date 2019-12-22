@@ -93,10 +93,10 @@ static float* sProcessHeightmap(int width, int height, const char* filename, str
 			value *= 1.0f / (1.0f + (1.0f / 2.0f) + (1.0f / 4.0f) + (1.0f / 8.0f) + (1.0f / 16.0f));
 
 			if (value > max)
-				max = value;
+				value = max;
 
 			if (value < min)
-				min = min;
+				value = min;
 
 			buffer[col + width * row] = value;
 		}
@@ -218,7 +218,7 @@ static struct jaVector3* sProcessNormalmap(int width, int height, const float* h
 
 		struct
 		{
-			uint8_t r, g, b
+			uint8_t r, g, b;
 		}* pixel = image->data;
 
 		for (int i = 0; i < (width * height); i++)
