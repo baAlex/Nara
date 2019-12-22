@@ -60,7 +60,7 @@ static void sErrorCallback(int code, const char* description)
 
  ContextCreate()
 -----------------------------*/
-struct Context* ContextCreate(const struct jaOptions* options, const char* caption, struct jaStatus* st)
+struct Context* ContextCreate(const struct jaConfig* config, const char* caption, struct jaStatus* st)
 {
 	struct Context* context = NULL;
 
@@ -71,12 +71,12 @@ struct Context* ContextCreate(const struct jaOptions* options, const char* capti
 	if ((context = calloc(1, sizeof(struct Context))) == NULL)
 		return NULL;
 
-	if (jaOptionsRetrieve(options, "r_width", &context->cfg.width, st) != 0 ||
-	    jaOptionsRetrieve(options, "r_height", &context->cfg.height, st) != 0 ||
-	    jaOptionsRetrieve(options, "r_samples", &context->cfg.samples, st) != 0 ||
-	    jaOptionsRetrieve(options, "r_fullscreen", &context->cfg.fullscreen, st) != 0 ||
-	    jaOptionsRetrieve(options, "r_wireframe", &context->cfg.wireframe, st) != 0 ||
-	    jaOptionsRetrieve(options, "r_vsync", &context->cfg.vsync, st) != 0)
+	if (jaConfigRetrieve(config, "r_width", &context->cfg.width, st) != 0 ||
+	    jaConfigRetrieve(config, "r_height", &context->cfg.height, st) != 0 ||
+	    jaConfigRetrieve(config, "r_samples", &context->cfg.samples, st) != 0 ||
+	    jaConfigRetrieve(config, "r_fullscreen", &context->cfg.fullscreen, st) != 0 ||
+	    jaConfigRetrieve(config, "r_wireframe", &context->cfg.wireframe, st) != 0 ||
+	    jaConfigRetrieve(config, "r_vsync", &context->cfg.vsync, st) != 0)
 		goto return_failure;
 
 	glfwSetErrorCallback(sErrorCallback);

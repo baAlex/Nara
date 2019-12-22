@@ -11,7 +11,7 @@
 	#include "japan-status.h"
 	#include "japan-vector.h"
 	#include "japan-matrix.h"
-	#include "japan-options.h"
+	#include "japan-config.h"
 
 	enum Filter
 	{
@@ -68,7 +68,7 @@
 		struct jaVector2i window_size;
 	};
 
-	struct Context* ContextCreate(const struct jaOptions* options, const char* caption, struct jaStatus* st);
+	struct Context* ContextCreate(const struct jaConfig* config, const char* caption, struct jaStatus* st);
 	void ContextDelete(struct Context* context);
 	void ContextUpdate(struct Context* context, struct ContextEvents* out_events);
 

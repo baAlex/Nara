@@ -78,7 +78,7 @@
 		struct jaVector3 frustum_position[5];
 		struct jaVector3 frustum_normal[5];
 
-		struct jaAARectangle view_rectangle;
+		struct jaAABRectangle view_rectangle;
 		bool in_border;
 	};
 

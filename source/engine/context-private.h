@@ -30,9 +30,9 @@
 			int width;
 			int height;
 			int samples;
-			bool fullscreen;
-			bool vsync;
-			bool wireframe;
+			int fullscreen;
+			int vsync;
+			int wireframe;
 		} cfg;
 
 		struct jaVector2i window_size; // sResizeCallback()

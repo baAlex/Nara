@@ -58,7 +58,7 @@ static struct Mixer* s_mixer = NULL;
 static struct Timer s_timer = {0};
 
 static struct NTerrain* s_terrain = NULL;
-static struct NTerrainView s_terrain_view = {0};
+static struct NTerrainView s_terrain_view;
 static struct Program s_terrain_program = {0};
 static struct Texture s_terrain_normalmap = {0};
 
@@ -70,50 +70,50 @@ static struct Texture s_dirt = {0};
 static struct jaDictionary* s_classes = NULL;
 static struct jaList s_entities = {0};
 
-static struct jaOptions* s_options = NULL;
+static struct jaConfig* s_config = NULL;
 
 
 /*-----------------------------
 
- sInitializeOptions()
+ sInitializeConfiguration()
 -----------------------------*/
-static struct jaOptions* sInitializeOptions(int argc, const char* argv[])
+static struct jaConfig* sInitializeConfiguration(int argc, const char* argv[])
 {
 	// TODO, check errors
-	struct jaOptions* options = jaOptionsCreate();
+	struct jaConfig* config = jaConfigCreate();
 
-	if (options != NULL)
+	if (config != NULL)
 	{
-		jaOptionsRegisterInt(options, "r_width", 1200, 320, INT_MAX, NULL); // Ok
-		jaOptionsRegisterInt(options, "r_height", 600, 240, INT_MAX, NULL); // Ok
-		jaOptionsRegisterBool(options, "r_fullscreen", false, NULL);        // Ok
-		jaOptionsRegisterBool(options, "r_vsync", true, NULL);              // Ok
-		jaOptionsRegisterInt(options, "r_samples", 2, 0, 16, NULL);         // Ok
-		jaOptionsRegisterBool(options, "r_wireframe", false, NULL);         // Ok
+		jaConfigRegister(config, "r_width", 1200, 320, INT_MAX, NULL); // Ok
+		jaConfigRegister(config, "r_height", 600, 240, INT_MAX, NULL); // Ok
+		jaConfigRegister(config, "r_fullscreen", 0, 0, 1, NULL);        // Ok
+		jaConfigRegister(config, "r_vsync", 1, 0, 1, NULL);              // Ok
+		jaConfigRegister(config, "r_samples", 2, 0, 16, NULL);         // Ok
+		jaConfigRegister(config, "r_wireframe", 0, 0, 1, NULL);         // Ok
 
-		jaOptionsRegisterFloat(options, "r_max_distance", 1024.0f, 100.0f, 4096.0f, NULL);
-		jaOptionsRegisterString(options, "r_filter", "trilinear",
-		                        "pixel, bilinear, trilinear, pixel_bilinear, pixel_trilinear", NULL);
+		jaConfigRegister(config, "r_max_distance", 1024.0f, 100.0f, 4096.0f, NULL);
+		jaConfigRegister(config, "r_filter", "trilinear",
+		                        "pixel, bilinear, trilinear, pixel_bilinear, pixel_trilinear", NULL, NULL);
 
-		jaOptionsRegisterFloat(options, "s_volume", 0.8f, 0.0f, 1.0f, NULL); // Ok, TODO: 0.0f didn't disable the mixer
-		jaOptionsRegisterInt(options, "s_frequency", 48000, 8000, 48000, NULL); // Ok, TODO: low frequencies = white spaces in resamples
-		jaOptionsRegisterInt(options, "s_channels", 2, 1, 2, NULL); // Ok, TODO: zero channels = crash
+		jaConfigRegister(config, "s_volume", 0.8f, 0.0f, 1.0f, NULL); // Ok, TODO: 0.0f didn't disable the mixer
+		jaConfigRegister(config, "s_frequency", 48000, 8000, 48000, NULL); // Ok, TODO: low frequencies = white spaces in resamples
+		jaConfigRegister(config, "s_channels", 2, 1, 2, NULL); // Ok, TODO: zero channels = crash
 
-		jaOptionsRegisterInt(options, "s_max_sounds", 32, 0, 64, NULL);
-		jaOptionsRegisterString(options, "s_sampling", "sinc_medium",
-		                        "linear, zero_order, sinc_low, sinc_medium, sinc_high", NULL);
+		jaConfigRegister(config, "s_max_sounds", 32, 0, 64, NULL);
+		jaConfigRegister(config, "s_sampling", "sinc_medium",
+		                        "linear, zero_order, sinc_low, sinc_medium, sinc_high", NULL, NULL);
 
-		jaOptionsRegisterInt(options, "terrain_subvidisions", 3, 0, 6, NULL);
-		jaOptionsRegisterInt(options, "terrain_lod_factor", 0, 0, 6, NULL);
+		jaConfigRegister(config, "terrain_subvidisions", 3, 0, 6, NULL);
+		jaConfigRegister(config, "terrain_lod_factor", 0, 0, 6, NULL);
 
-		jaOptionsRegisterFloat(options, "sensitivity", 1.0f, 0.0f, 10.0f, NULL);
-		jaOptionsRegisterFloat(options, "fov", 90.0f, 10.0f, 90.0f, NULL);
+		jaConfigRegister(config, "sensitivity", 1.0f, 0.0f, 10.0f, NULL);
+		jaConfigRegister(config, "fov", 90.0f, 10.0f, 90.0f, NULL);
 	}
 
-	// jaOptionsReadFile(options, "user.cfg", NULL);
-	jaOptionsReadArguments(options, argc, argv);
+	// jaConfigReadFile(config, "user.cfg", NULL);
+	jaConfigReadArguments(config, argc, argv, CONFIG_DEFAULT);
 
-	return options;
+	return config;
 }
 
 
@@ -215,17 +215,17 @@ int main(int argc, const char* argv[])
 
 	printf("%s\n", NAME);
 
-	if ((s_options = sInitializeOptions(argc, argv)) == NULL)
+	if ((s_config = sInitializeConfiguration(argc, argv)) == NULL)
 	{
-		jaStatusSet(&st, "sInitializeOptions", STATUS_MEMORY_ERROR, NULL);
+		jaStatusSet(&st, "sInitializeConfiguration", STATUS_MEMORY_ERROR, NULL);
 		goto return_failure;
 	}
 
 	// Engine initialization
-	if ((s_context = ContextCreate(s_options, NAME, &st)) == NULL)
+	if ((s_context = ContextCreate(s_config, NAME, &st)) == NULL)
 		goto return_failure;
 
-	if ((s_mixer = MixerCreate(s_options, &st)) == NULL)
+	if ((s_mixer = MixerCreate(s_config, &st)) == NULL)
 		goto return_failure;
 
 	TimerInit(&s_timer);
@@ -282,7 +282,7 @@ int main(int argc, const char* argv[])
 	{
 		struct ContextEvents events = {0};
 		struct EntityInput entities_input = {0};
-		struct jaMatrix4 matrix = {0};
+		struct jaMatrix4 matrix;
 
 		int draw_calls = 0;
 		char title[128] = {0};
@@ -396,7 +396,7 @@ int main(int argc, const char* argv[])
 	}
 
 	// Bye!
-	jaOptionsDelete(s_options);
+	jaConfigDelete(s_config);
 	jaDictionaryDelete(s_classes);
 	jaListClean(&s_entities);
 

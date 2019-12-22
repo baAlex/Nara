@@ -670,7 +670,7 @@ again:
 			align.y = roundf(align.y);
 			align = jaVector2Scale(align, (sNodeDimension(state->actual->parent)));
 
-			state->view_rectangle = (struct jaAARectangle){{align.x - factor / 2.0f, align.y - factor / 2.0f},
+			state->view_rectangle = (struct jaAABRectangle){{align.x - factor / 2.0f, align.y - factor / 2.0f},
 			                                               {align.x + factor / 2.0f, align.y + factor / 2.0f}};
 
 			if (jaAABCollisionRectRect(state->view_rectangle, jaAABToRectangle(state->actual->bbox)) == true)
