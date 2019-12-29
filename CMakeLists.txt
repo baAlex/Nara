@@ -34,7 +34,7 @@ set(JAPAN_SOURCES
 	"./source/lib-japan/source/vector.c"
 	"./source/lib-japan/source/config/arguments.c"
 	"./source/lib-japan/source/config/config.c"
-	"./source/lib-japan/source/config/file.c"
+	"./source/lib-japan/source/config/files.c"
 	"./source/lib-japan/source/image/format-sgi.c"
 	"./source/lib-japan/source/image/image.c"
 	"./source/lib-japan/source/sound/format-au.c"

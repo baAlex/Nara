@@ -84,34 +84,34 @@ static struct jaConfig* sInitializeConfiguration(int argc, const char* argv[])
 
 	if (config != NULL)
 	{
-		jaConfigRegister(config, "r_width", 1200, 320, INT_MAX, NULL); // Ok
-		jaConfigRegister(config, "r_height", 600, 240, INT_MAX, NULL); // Ok
-		jaConfigRegister(config, "r_fullscreen", 0, 0, 1, NULL);        // Ok
-		jaConfigRegister(config, "r_vsync", 1, 0, 1, NULL);              // Ok
-		jaConfigRegister(config, "r_samples", 2, 0, 16, NULL);         // Ok
-		jaConfigRegister(config, "r_wireframe", 0, 0, 1, NULL);         // Ok
+		jaConfigRegister(config, "render.width", 1200, 320, INT_MAX, NULL);
+		jaConfigRegister(config, "render.height", 600, 240, INT_MAX, NULL);
+		jaConfigRegister(config, "render.fullscreen", 0, 0, 1, NULL);
+		jaConfigRegister(config, "render.vsync", 1, 0, 1, NULL);
+		jaConfigRegister(config, "render.samples", 2, 0, 16, NULL);
+		jaConfigRegister(config, "render.wireframe", 0, 0, 1, NULL);
 
-		jaConfigRegister(config, "r_max_distance", 1024.0f, 100.0f, 4096.0f, NULL);
-		jaConfigRegister(config, "r_filter", "trilinear",
+		jaConfigRegister(config, "render.max_distance", 1024.0f, 100.0f, 4096.0f, NULL);
+		jaConfigRegister(config, "render.filter", "trilinear",
 		                        "pixel, bilinear, trilinear, pixel_bilinear, pixel_trilinear", NULL, NULL);
 
-		jaConfigRegister(config, "s_volume", 0.8f, 0.0f, 1.0f, NULL); // Ok, TODO: 0.0f didn't disable the mixer
-		jaConfigRegister(config, "s_frequency", 48000, 8000, 48000, NULL); // Ok, TODO: low frequencies = white spaces in resamples
-		jaConfigRegister(config, "s_channels", 2, 1, 2, NULL); // Ok, TODO: zero channels = crash
+		jaConfigRegister(config, "sound.volume", 0.8f, 0.0f, 1.0f, NULL); // TODO: 0.0f didn't disable the mixer
+		jaConfigRegister(config, "sound.frequency", 48000, 8000, 48000, NULL); // TODO: low frequencies = white spaces in resamples
+		jaConfigRegister(config, "sound.channels", 2, 1, 2, NULL); // Ok, TODO: zero channels = crash
 
-		jaConfigRegister(config, "s_max_sounds", 32, 0, 64, NULL);
-		jaConfigRegister(config, "s_sampling", "sinc_medium",
+		jaConfigRegister(config, "sound.max_sounds", 32, 0, 64, NULL);
+		jaConfigRegister(config, "sound.sampling", "sinc_medium",
 		                        "linear, zero_order, sinc_low, sinc_medium, sinc_high", NULL, NULL);
 
-		jaConfigRegister(config, "terrain_subvidisions", 3, 0, 6, NULL);
-		jaConfigRegister(config, "terrain_lod_factor", 0, 0, 6, NULL);
+		jaConfigRegister(config, "terrain.subdivisions", 3, 0, 6, NULL);
+		jaConfigRegister(config, "terrain.lod_factor", 0, 0, 6, NULL);
 
 		jaConfigRegister(config, "sensitivity", 1.0f, 0.0f, 10.0f, NULL);
 		jaConfigRegister(config, "fov", 90.0f, 10.0f, 90.0f, NULL);
 	}
 
-	// jaConfigReadFile(config, "user.cfg", NULL);
-	jaConfigReadArguments(config, argc, argv, CONFIG_DEFAULT);
+	jaConfigReadFile(config, "user.jcfg", NULL);
+	jaConfigReadArguments(config, argc, argv, NULL);
 
 	return config;
 }

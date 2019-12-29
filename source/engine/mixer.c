@@ -246,9 +246,9 @@ struct Mixer* MixerCreate(const struct jaConfig* config, struct jaStatus* st)
 		return NULL;
 	}
 
-	if (jaConfigRetrieve(config, "s_volume", &mixer->cfg.volume, st) != 0 ||
-	    jaConfigRetrieve(config, "s_frequency", &mixer->cfg.frequency, st) != 0 ||
-	    jaConfigRetrieve(config, "s_channels", &mixer->cfg.channels, st) != 0)
+	if (jaConfigRetrieve(config, "sound.volume", &mixer->cfg.volume, st) != 0 ||
+	    jaConfigRetrieve(config, "sound.frequency", &mixer->cfg.frequency, st) != 0 ||
+	    jaConfigRetrieve(config, "sound.channels", &mixer->cfg.channels, st) != 0)
 		goto return_failure;
 
 	if ((errcode = Pa_Initialize()) != paNoError)

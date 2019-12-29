@@ -71,12 +71,12 @@ struct Context* ContextCreate(const struct jaConfig* config, const char* caption
 	if ((context = calloc(1, sizeof(struct Context))) == NULL)
 		return NULL;
 
-	if (jaConfigRetrieve(config, "r_width", &context->cfg.width, st) != 0 ||
-	    jaConfigRetrieve(config, "r_height", &context->cfg.height, st) != 0 ||
-	    jaConfigRetrieve(config, "r_samples", &context->cfg.samples, st) != 0 ||
-	    jaConfigRetrieve(config, "r_fullscreen", &context->cfg.fullscreen, st) != 0 ||
-	    jaConfigRetrieve(config, "r_wireframe", &context->cfg.wireframe, st) != 0 ||
-	    jaConfigRetrieve(config, "r_vsync", &context->cfg.vsync, st) != 0)
+	if (jaConfigRetrieve(config, "render.width", &context->cfg.width, st) != 0 ||
+	    jaConfigRetrieve(config, "render.height", &context->cfg.height, st) != 0 ||
+	    jaConfigRetrieve(config, "render.samples", &context->cfg.samples, st) != 0 ||
+	    jaConfigRetrieve(config, "render.fullscreen", &context->cfg.fullscreen, st) != 0 ||
+	    jaConfigRetrieve(config, "render.wireframe", &context->cfg.wireframe, st) != 0 ||
+	    jaConfigRetrieve(config, "render.vsync", &context->cfg.vsync, st) != 0)
 		goto return_failure;
 
 	glfwSetErrorCallback(sErrorCallback);
