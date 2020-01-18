@@ -10,7 +10,7 @@
 	#include "japan-vector.h"
 	#include "japan-status.h"
 	#include "japan-sound.h"
-	#include "japan-config.h"
+	#include "japan-configuration.h"
 
 	enum PlayOptions
 	{
@@ -18,7 +18,7 @@
 		PLAY_LOOP = 2
 	};
 
-	struct Mixer* MixerCreate(const struct jaConfig* config, struct jaStatus* st);
+	struct Mixer* MixerCreate(const struct jaConfiguration*, struct jaStatus* st);
 	void MixerDelete(struct Mixer* mixer);
 
 	int MixerStart(struct Mixer* mixer, struct jaStatus* st);

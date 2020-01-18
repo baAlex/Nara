@@ -231,7 +231,7 @@ static void sToCommonFormat(const void* in, size_t in_size, size_t in_channels, 
 
  MixerCreate()
 -----------------------------*/
-struct Mixer* MixerCreate(const struct jaConfig* config, struct jaStatus* st)
+struct Mixer* MixerCreate(const struct jaConfiguration* config, struct jaStatus* st)
 {
 	struct Mixer* mixer = NULL;
 	PaError errcode = paNoError;
@@ -246,9 +246,9 @@ struct Mixer* MixerCreate(const struct jaConfig* config, struct jaStatus* st)
 		return NULL;
 	}
 
-	if (jaConfigRetrieve(config, "sound.volume", &mixer->cfg.volume, st) != 0 ||
-	    jaConfigRetrieve(config, "sound.frequency", &mixer->cfg.frequency, st) != 0 ||
-	    jaConfigRetrieve(config, "sound.channels", &mixer->cfg.channels, st) != 0)
+	if (jaCvarRetrieve(config, "sound.volume", &mixer->cfg.volume, st) != 0 ||
+	    jaCvarRetrieve(config, "sound.frequency", &mixer->cfg.frequency, st) != 0 ||
+	    jaCvarRetrieve(config, "sound.channels", &mixer->cfg.channels, st) != 0)
 		goto return_failure;
 
 	if ((errcode = Pa_Initialize()) != paNoError)

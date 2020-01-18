@@ -60,9 +60,10 @@ static void sErrorCallback(int code, const char* description)
 
  ContextCreate()
 -----------------------------*/
-struct Context* ContextCreate(const struct jaConfig* config, const char* caption, struct jaStatus* st)
+struct Context* ContextCreate(const struct jaConfiguration* config, const char* caption, struct jaStatus* st)
 {
 	struct Context* context = NULL;
+	const char** filter = NULL;
 
 	jaStatusSet(st, "ContextCreate", STATUS_SUCCESS, NULL);
 	printf("- Lib-GLFW: %s\n", glfwGetVersionString());
@@ -71,12 +72,12 @@ struct Context* ContextCreate(const struct jaConfig* config, const char* caption
 	if ((context = calloc(1, sizeof(struct Context))) == NULL)
 		return NULL;
 
-	if (jaConfigRetrieve(config, "render.width", &context->cfg.width, st) != 0 ||
-	    jaConfigRetrieve(config, "render.height", &context->cfg.height, st) != 0 ||
-	    jaConfigRetrieve(config, "render.samples", &context->cfg.samples, st) != 0 ||
-	    jaConfigRetrieve(config, "render.fullscreen", &context->cfg.fullscreen, st) != 0 ||
-	    jaConfigRetrieve(config, "render.wireframe", &context->cfg.wireframe, st) != 0 ||
-	    jaConfigRetrieve(config, "render.vsync", &context->cfg.vsync, st) != 0)
+	if (jaCvarRetrieve(config, "render.width", &context->cfg.width, st) != 0 ||
+	    jaCvarRetrieve(config, "render.height", &context->cfg.height, st) != 0 ||
+	    jaCvarRetrieve(config, "render.samples", &context->cfg.samples, st) != 0 ||
+	    jaCvarRetrieve(config, "render.fullscreen", &context->cfg.fullscreen, st) != 0 ||
+	    jaCvarRetrieve(config, "render.wireframe", &context->cfg.wireframe, st) != 0 ||
+	    jaCvarRetrieve(config, "render.vsync", &context->cfg.vsync, st) != 0)
 		goto return_failure;
 
 	glfwSetErrorCallback(sErrorCallback);

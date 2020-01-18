@@ -3,9 +3,9 @@
 /sdk
 /sdk-dbg
 /nterrain-tests
-/user.jcfg
 
-/Nara - *.sgi
+/user.jcfg
+/nara - *.sgi
 
 /build/
 /build-debug/

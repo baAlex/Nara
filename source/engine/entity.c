@@ -35,9 +35,9 @@ SOFTWARE.
 #include "entity.h"
 
 
-static void sFreeEntityFromList(void* data)
+static void sFreeEntityFromList(struct jaListItem* item)
 {
-	struct Entity* entity = data;
+	struct Entity* entity = item->data;
 	struct Class* class = entity->class;
 
 	if (entity->class->func_delete != NULL)
@@ -192,7 +192,7 @@ void EntitiesUpdate(struct jaList* list, struct EntityInput input)
 
 		if (entity->to_delete == true)
 		{
-			sFreeEntityFromList(entity);
+			sFreeEntityFromList(item);
 
 			entity->item->callback_delete = NULL;
 			jaListRemove(entity->item);

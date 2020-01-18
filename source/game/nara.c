@@ -47,6 +47,7 @@ SOFTWARE.
 
 #define NAME "Nara v0.2-alpha"
 #define NAME_SHORT "Nara"
+#define NAME_SIMPLE "nara"
 
 #define FOV 75.0f
 
@@ -70,48 +71,48 @@ static struct Texture s_dirt = {0};
 static struct jaDictionary* s_classes = NULL;
 static struct jaList s_entities = {0};
 
-static struct jaConfig* s_config = NULL;
+static struct jaConfiguration* s_config = NULL;
 
 
 /*-----------------------------
 
  sInitializeConfiguration()
 -----------------------------*/
-static struct jaConfig* sInitializeConfiguration(int argc, const char* argv[])
+static struct jaConfiguration* sInitializeConfiguration(int argc, const char* argv[])
 {
 	// TODO, check errors
-	struct jaConfig* config = jaConfigCreate();
+	struct jaConfiguration* config = jaConfigurationCreate();
 
 	if (config != NULL)
 	{
-		jaConfigRegister(config, "render.width", 1200, 320, INT_MAX, NULL);
-		jaConfigRegister(config, "render.height", 600, 240, INT_MAX, NULL);
-		jaConfigRegister(config, "render.fullscreen", 0, 0, 1, NULL);
-		jaConfigRegister(config, "render.vsync", 1, 0, 1, NULL);
-		jaConfigRegister(config, "render.samples", 2, 0, 16, NULL);
-		jaConfigRegister(config, "render.wireframe", 0, 0, 1, NULL);
+		jaCvarCreate(config, "render.width", 1200, 320, INT_MAX, NULL);
+		jaCvarCreate(config, "render.height", 600, 240, INT_MAX, NULL);
+		jaCvarCreate(config, "render.fullscreen", 0, 0, 1, NULL);
+		jaCvarCreate(config, "render.vsync", 1, 0, 1, NULL);
+		jaCvarCreate(config, "render.samples", 2, 0, 16, NULL);
+		jaCvarCreate(config, "render.wireframe", 0, 0, 1, NULL);
 
-		jaConfigRegister(config, "render.max_distance", 1024.0f, 100.0f, 4096.0f, NULL);
-		jaConfigRegister(config, "render.filter", "trilinear",
+		jaCvarCreate(config, "render.max_distance", 1024.0f, 100.0f, 4096.0f, NULL);
+		jaCvarCreate(config, "render.filter", "trilinear",
 		                        "pixel, bilinear, trilinear, pixel_bilinear, pixel_trilinear", NULL, NULL);
 
-		jaConfigRegister(config, "sound.volume", 0.8f, 0.0f, 1.0f, NULL); // TODO: 0.0f didn't disable the mixer
-		jaConfigRegister(config, "sound.frequency", 48000, 8000, 48000, NULL); // TODO: low frequencies = white spaces in resamples
-		jaConfigRegister(config, "sound.channels", 2, 1, 2, NULL); // Ok, TODO: zero channels = crash
+		jaCvarCreate(config, "sound.volume", 0.8f, 0.0f, 1.0f, NULL); // TODO: 0.0f didn't disable the mixer
+		jaCvarCreate(config, "sound.frequency", 48000, 8000, 48000, NULL); // TODO: low frequencies = white spaces in resamples
+		jaCvarCreate(config, "sound.channels", 2, 1, 2, NULL); // Ok, TODO: zero channels = crash
 
-		jaConfigRegister(config, "sound.max_sounds", 32, 0, 64, NULL);
-		jaConfigRegister(config, "sound.sampling", "sinc_medium",
+		jaCvarCreate(config, "sound.max_sounds", 32, 0, 64, NULL);
+		jaCvarCreate(config, "sound.sampling", "sinc_medium",
 		                        "linear, zero_order, sinc_low, sinc_medium, sinc_high", NULL, NULL);
 
-		jaConfigRegister(config, "terrain.subdivisions", 3, 0, 6, NULL);
-		jaConfigRegister(config, "terrain.lod_factor", 0, 0, 6, NULL);
+		jaCvarCreate(config, "terrain.subdivisions", 3, 0, 6, NULL);
+		jaCvarCreate(config, "terrain.lod_factor", 0, 0, 6, NULL);
 
-		jaConfigRegister(config, "sensitivity", 1.0f, 0.0f, 10.0f, NULL);
-		jaConfigRegister(config, "fov", 90.0f, 10.0f, 90.0f, NULL);
+		jaCvarCreate(config, "sensitivity", 1.0f, 0.0f, 10.0f, NULL);
+		jaCvarCreate(config, "fov", 90.0f, 10.0f, 90.0f, NULL);
 	}
 
-	jaConfigReadFile(config, "user.jcfg", NULL);
-	jaConfigReadArguments(config, argc, argv, NULL);
+	jaConfigurationFile(config, "user.jcfg", NULL);
+	jaConfigurationArguments(config, argc, argv, NULL);
 
 	return config;
 }
@@ -203,7 +204,7 @@ static void sScreenshot(const struct Context* context, const struct ContextEvent
 		time(&t);
 
 		strftime(timestr, 64, "%Y-%m-%e, %H:%M:%S", localtime(&t));
-		sprintf(filename, "%s - %s (%lX).sgi", NAME_SHORT, timestr, s_timer.frame_number);
+		sprintf(filename, "%s - %s (%lX).sgi", NAME_SIMPLE, timestr, s_timer.frame_number);
 		TakeScreenshot(context, filename, NULL);
 	}
 }
@@ -396,7 +397,7 @@ int main(int argc, const char* argv[])
 	}
 
 	// Bye!
-	jaConfigDelete(s_config);
+	jaConfigurationDelete(s_config);
 	jaDictionaryDelete(s_classes);
 	jaListClean(&s_entities);
 
