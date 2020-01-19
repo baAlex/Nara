@@ -61,12 +61,14 @@ static struct Timer s_timer = {0};
 static struct NTerrain* s_terrain = NULL;
 static struct NTerrainView s_terrain_view;
 static struct Program s_terrain_program = {0};
-static struct Texture s_terrain_normalmap = {0};
 
-static struct Texture s_cliff1 = {0};
-static struct Texture s_cliff2 = {0};
+static struct Texture s_terrain_lightmap = {0};
+static struct Texture s_terrain_masksmap = {0};
+
 static struct Texture s_grass = {0};
 static struct Texture s_dirt = {0};
+static struct Texture s_cliff1 = {0};
+static struct Texture s_cliff2 = {0};
 
 static struct jaDictionary* s_classes = NULL;
 static struct jaList s_entities = {0};
@@ -242,19 +244,22 @@ int main(int argc, const char* argv[])
 		if (ProgramInit(&s_terrain_program, (char*)g_terrain_vertex, (char*)g_terrain_fragment, &st) != 0)
 			goto return_failure;
 
-		if (TextureInit(&s_terrain_normalmap, "./assets/normalmap.sgi", FILTER_TRILINEAR, &st) != 0)
+		if (TextureInit(&s_terrain_lightmap, "./assets/lightmap.sgi", FILTER_TRILINEAR, &st) != 0)
 			goto return_failure;
 
-		if (TextureInit(&s_cliff1, "./assets/cliff1.sgi", FILTER_TRILINEAR, &st) != 0)
-			goto return_failure;
-
-		if (TextureInit(&s_cliff2, "./assets/cliff2.sgi", FILTER_TRILINEAR, &st) != 0)
+		if (TextureInit(&s_terrain_masksmap, "./assets/masksmap.sgi", FILTER_TRILINEAR, &st) != 0)
 			goto return_failure;
 
 		if (TextureInit(&s_grass, "./assets/grass.sgi", FILTER_TRILINEAR, &st) != 0)
 			goto return_failure;
 
 		if (TextureInit(&s_dirt, "./assets/dirt.sgi", FILTER_TRILINEAR, &st) != 0)
+			goto return_failure;
+
+		if (TextureInit(&s_cliff1, "./assets/cliff1.sgi", FILTER_TRILINEAR, &st) != 0)
+			goto return_failure;
+
+		if (TextureInit(&s_cliff2, "./assets/cliff2.sgi", FILTER_TRILINEAR, &st) != 0)
 			goto return_failure;
 
 		if (SampleCreate(s_mixer, "./assets/rz1-closed-hithat.wav", &st) == NULL)
@@ -295,11 +300,12 @@ int main(int argc, const char* argv[])
 
 		Play2d(s_mixer, 0.7f, PLAY_LOOP, "./assets/ambient01.au");
 		SetProgram(s_context, &s_terrain_program);
-		SetTexture(s_context, 0, &s_terrain_normalmap);
-		SetTexture(s_context, 1, &s_cliff1);
-		SetTexture(s_context, 2, &s_cliff2);
-		SetTexture(s_context, 3, &s_grass);
-		SetTexture(s_context, 4, &s_dirt);
+		SetTexture(s_context, 0, &s_terrain_lightmap);
+		SetTexture(s_context, 1, &s_terrain_masksmap);
+		SetTexture(s_context, 2, &s_grass);
+		SetTexture(s_context, 3, &s_dirt);
+		SetTexture(s_context, 4, &s_cliff1);
+		SetTexture(s_context, 5, &s_cliff2);
 
 		if (MixerStart(s_mixer, &st) != 0)
 			goto return_failure;
@@ -402,11 +408,12 @@ int main(int argc, const char* argv[])
 	jaListClean(&s_entities);
 
 	ProgramFree(&s_terrain_program);
-	TextureFree(&s_terrain_normalmap);
-	TextureFree(&s_cliff1);
-	TextureFree(&s_cliff2);
+	TextureFree(&s_terrain_lightmap);
+	TextureFree(&s_terrain_masksmap);
 	TextureFree(&s_grass);
 	TextureFree(&s_dirt);
+	TextureFree(&s_cliff1);
+	TextureFree(&s_cliff2);
 	NTerrainDelete(s_terrain);
 
 	MixerDelete(s_mixer);
