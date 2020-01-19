@@ -24,12 +24,17 @@ const lowp vec4 fog_color = vec4(0.82, 0.85, 0.87, 1.0);
 
 	return mix((1.0 - 2.0 * (1.0 - a) * (1.0 - b)), (2.0 * a * b),
 	           step(a, vec4(0.5)));
-}*/
+}
 
 lowp vec4 Hardlight(lowp vec4 a, lowp vec4 b)
 {
 	return mix((1.0 - 2.0 * (1.0 - a) * (1.0 - b)), (2.0 * a * b),
 	           step(b, vec4(0.5)));
+}*/
+
+lowp vec4 LazyMultiplication(lowp vec4 a, lowp vec4 b)
+{
+	return (1.0 + (a - 0.5) * 2.0) * b;
 }
 
 /*lowp float BrightnessContrast(lowp float value, lowp float brightness, lowp float contrast)
@@ -45,9 +50,6 @@ lowp vec3 BrightnessContrast(lowp vec3 value, lowp float brightness, lowp float 
 
 void main()
 {
-	// Hardlight never reach blacks or whites, but looks better
-	// than Overlay. The lightmap is the problem... I think...
-
 	// Lightmap
 	lowp vec4 lightmap = texture2D(texture0, uv);
 
@@ -66,6 +68,6 @@ void main()
 
 	// Combine everything
 	gl_FragColor = mix(plains, cliffs, texture2D(texture1, uv));
-	gl_FragColor = Hardlight(lightmap, gl_FragColor);
+	gl_FragColor = LazyMultiplication(lightmap, gl_FragColor);
 	gl_FragColor = mix(gl_FragColor, fog_color, fog_factor);
 }
