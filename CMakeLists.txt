@@ -51,12 +51,14 @@ set(SAMPLERATE_SOURCES
 	"./source/lib-samplerate/src/src_zoh.c")
 
 set(NARA_SOURCES
-	"./source/engine/context-input.c"
-	"./source/engine/context-opengl.c"
-	"./source/engine/context.c"
+	"./source/engine/context/context.c"
+	"./source/engine/context/input.c"
+	"./source/engine/context/objects.c"
+	"./source/engine/context/state.c"
+	"./source/engine/mixer/mixer.c"
+	"./source/engine/mixer/sample.c"
 	"./source/engine/entity.c"
 	"./source/engine/misc.c"
-	"./source/engine/mixer.c"
 	"./source/engine/nterrain.c"
 	"./source/engine/timer.c"
 	"./source/game/camera.c"

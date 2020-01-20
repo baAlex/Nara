@@ -24,188 +24,11 @@ SOFTWARE.
 
 -------------------------------
 
- [context.c]
- - Alexander Brandt 2019
+ [state.c]
+ - Alexander Brandt 2019-2020
 -----------------------------*/
 
-#include "context-private.h"
-#include <stdio.h>
-
-#define MIN_WIDTH 320
-#define MIN_HEIGHT 240
-
-#define CLEAN_R 0.82f // TODO, a skybox is needed
-#define CLEAN_G 0.85f
-#define CLEAN_B 0.87f
-
-
-static void sResizeCallback(GLFWwindow* window, int new_width, int new_height)
-{
-	struct Context* context = glfwGetWindowUserPointer(window);
-
-	glViewport(0, 0, (GLint)new_width, (GLint)new_height);
-
-	context->window_size.x = new_width;
-	context->window_size.y = new_height;
-	context->window_resized = true;
-}
-
-static void sErrorCallback(int code, const char* description)
-{
-	printf("[GLFW error] (%i) %s\n", code, description);
-}
-
-
-/*-----------------------------
-
- ContextCreate()
------------------------------*/
-struct Context* ContextCreate(const struct jaConfiguration* config, const char* caption, struct jaStatus* st)
-{
-	struct Context* context = NULL;
-	const char** filter = NULL;
-
-	jaStatusSet(st, "ContextCreate", STATUS_SUCCESS, NULL);
-	printf("- Lib-GLFW: %s\n", glfwGetVersionString());
-
-	// Initialization
-	if ((context = calloc(1, sizeof(struct Context))) == NULL)
-		return NULL;
-
-	if (jaCvarRetrieve(config, "render.width", &context->cfg.width, st) != 0 ||
-	    jaCvarRetrieve(config, "render.height", &context->cfg.height, st) != 0 ||
-	    jaCvarRetrieve(config, "render.samples", &context->cfg.samples, st) != 0 ||
-	    jaCvarRetrieve(config, "render.fullscreen", &context->cfg.fullscreen, st) != 0 ||
-	    jaCvarRetrieve(config, "render.wireframe", &context->cfg.wireframe, st) != 0 ||
-	    jaCvarRetrieve(config, "render.vsync", &context->cfg.vsync, st) != 0)
-		goto return_failure;
-
-	glfwSetErrorCallback(sErrorCallback);
-
-	if (glfwInit() != GLFW_TRUE)
-	{
-		jaStatusSet(st, "ContextCreate", STATUS_ERROR, "Initialiting GLFW");
-		goto return_failure;
-	}
-
-	// Create window-context
-	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-	glfwWindowHint(GLFW_SAMPLES, context->cfg.samples);
-
-	if ((context->window = glfwCreateWindow(context->cfg.width, context->cfg.height, caption, NULL, NULL)) == NULL)
-	{
-		jaStatusSet(st, "ContextCreate", STATUS_ERROR, "Creating GLFW window");
-		goto return_failure;
-	}
-
-	glfwMakeContextCurrent(context->window);
-
-	if (gladLoadGLES2Loader((GLADloadproc)glfwGetProcAddress) == 0) // After MakeContext()
-	{
-		jaStatusSet(st, "ContextCreate", STATUS_ERROR, "Initialiting GLAD");
-		goto return_failure;
-	}
-
-	if (context->cfg.vsync == false)
-		glfwSwapInterval(0);
-
-	// Callbacks and pretty things
-	glfwSetWindowSizeLimits(context->window, MIN_WIDTH, MIN_HEIGHT, GLFW_DONT_CARE, GLFW_DONT_CARE);
-
-	glfwSetWindowUserPointer(context->window, context);
-
-	glfwSetFramebufferSizeCallback(context->window, sResizeCallback);
-	glfwSetKeyCallback(context->window, KeyboardCallback);
-
-	if (context->cfg.fullscreen == true)
-	{
-		const GLFWvidmode* vid_mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-		glfwSetWindowMonitor(context->window, glfwGetPrimaryMonitor(), 0, 0, vid_mode->width, vid_mode->height,
-		                     GLFW_DONT_CARE);
-	}
-
-	// OpenGL initialization
-	glClearColor(CLEAN_R, CLEAN_G, CLEAN_B, 1.0);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-	glEnable(GL_BLEND);
-
-	glDisable(GL_DITHER);
-
-	glEnableVertexAttribArray(ATTRIBUTE_POSITION);
-	glEnableVertexAttribArray(ATTRIBUTE_UV);
-
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glBlendEquation(GL_FUNC_ADD);
-
-	// Last things to do
-	printf("%s\n", glGetString(GL_VENDOR));
-	printf("%s\n", glGetString(GL_RENDERER));
-	printf("%s\n", glGetString(GL_VERSION));
-	printf("%s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
-
-	context->active_gamepad = FindGamedpad();
-
-	context->window_size.x = context->cfg.width;
-	context->window_size.y = context->cfg.height;
-
-	sResizeCallback(context->window, context->window_size.x, context->window_size.y);
-
-	// Bye!
-	printf("\n");
-	return context;
-
-return_failure:
-	ContextDelete(context);
-	return NULL;
-}
-
-
-/*-----------------------------
-
- ContextDelete()
------------------------------*/
-inline void ContextDelete(struct Context* context)
-{
-	if (context->window != NULL)
-		glfwDestroyWindow(context->window);
-
-	glfwTerminate();
-	free(context);
-}
-
-
-/*-----------------------------
-
- ContextUpdate()
------------------------------*/
-void ContextUpdate(struct Context* context, struct ContextEvents* out_events)
-{
-	context->window_resized = false;
-	glfwPollEvents();
-
-	// Flip buffers *after* process the inputs callbacks, so
-	// if these takes time at least the screen didn't goes black
-	glfwSwapBuffers(context->window);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	if (out_events != NULL)
-	{
-		// Input
-		InputStep(context);
-		memcpy(out_events, &context->combined, sizeof(struct ContextEvents));
-
-		// Window
-		out_events->window_size = context->window_size;
-		out_events->resized = context->window_resized;
-		out_events->close = (glfwWindowShouldClose(context->window) == GLFW_TRUE) ? true : false;
-	}
-}
+#include "private.h"
 
 
 /*-----------------------------
@@ -358,6 +181,16 @@ inline void SetHighlight(struct Context* context, struct jaVector3 value)
 
 /*-----------------------------
 
+ GetWindowSize()
+-----------------------------*/
+inline struct jaVector2i GetWindowSize(const struct Context* context)
+{
+	return context->window_size;
+}
+
+
+/*-----------------------------
+
  Draw()
 -----------------------------*/
 inline void Draw(struct Context* context, const struct Index* index)
@@ -366,16 +199,6 @@ inline void Draw(struct Context* context, const struct Index* index)
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index->glptr);
 	glDrawElements((context->cfg.wireframe == false) ? GL_TRIANGLES : GL_LINES, (GLsizei)index->length,
 	               GL_UNSIGNED_SHORT, NULL);
-}
-
-
-/*-----------------------------
-
- GetWindowSize()
------------------------------*/
-inline struct jaVector2i GetWindowSize(const struct Context* context)
-{
-	return context->window_size;
 }
 
 

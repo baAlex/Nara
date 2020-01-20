@@ -24,11 +24,11 @@ SOFTWARE.
 
 -------------------------------
 
- [context-input.c]
- - Alexander Brandt 2019
+ [input.c]
+ - Alexander Brandt 2019-2020
 -----------------------------*/
 
-#include "context-private.h"
+#include "private.h"
 
 
 /*-----------------------------
@@ -257,8 +257,6 @@ void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 	context->keyboard.left_analog.v = sKeysToAxe(action, key, context->keyboard.left_analog.v, GLFW_KEY_S, GLFW_KEY_W);
 	context->keyboard.left_analog.h = sKeysToAxe(action, key, context->keyboard.left_analog.h, GLFW_KEY_D, GLFW_KEY_A);
 
-	context->keyboard.right_analog.v =
-	    sKeysToAxe(action, key, context->keyboard.right_analog.v, GLFW_KEY_DOWN, GLFW_KEY_UP);
-	context->keyboard.right_analog.h =
-	    sKeysToAxe(action, key, context->keyboard.right_analog.h, GLFW_KEY_RIGHT, GLFW_KEY_LEFT);
+	context->keyboard.right_analog.v = sKeysToAxe(action, key, context->keyboard.right_analog.v, GLFW_KEY_DOWN, GLFW_KEY_UP);
+	context->keyboard.right_analog.h = sKeysToAxe(action, key, context->keyboard.right_analog.h, GLFW_KEY_RIGHT, GLFW_KEY_LEFT);
 }

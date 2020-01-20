@@ -1,0 +1,158 @@
+
+cflags = `pkg-config --cflags glfw3 portaudio-2.0` -O0 -std=c11 -Wall -Wextra -pedantic -g -DDEBUG $
+-I./source/lib-glad -I./source/lib-japan/include -I./source/lib-samplerate/src
+
+cflags_strict = `pkg-config --cflags glfw3 portaudio-2.0` -O0 -std=c11 -Wall -Wextra -Wconversion -pedantic -g -DDEBUG $
+-I./source/lib-glad -I./source/lib-japan/include -I./source/lib-samplerate/src
+
+lflags = `pkg-config --libs glfw3 portaudio-2.0` -lm
+
+
+rule generate
+ command = python3 ./source/c-ify.py $in $out
+
+rule compile
+ command = cc $cflags -c $in -o $out
+
+rule compile_strict
+ command = cc $cflags_strict -c $in -o $out
+
+rule link
+ command = cc $in $lflags -o $out
+
+
+# Automatically generated files
+build ./build/engine/terrain-fragment.c: generate ./source/engine/terrain-fragment.glsl
+build ./build/engine/terrain-vertex.c:   generate ./source/engine/terrain-vertex.glsl
+
+# Engine
+build ./build/engine/context/context.o: compile_strict ./source/engine/context/context.c
+build ./build/engine/context/input.o:   compile_strict ./source/engine/context/input.c
+build ./build/engine/context/objects.o: compile_strict ./source/engine/context/objects.c
+build ./build/engine/context/state.o:   compile_strict ./source/engine/context/state.c
+
+build ./build/engine/mixer/mixer.o:  compile_strict ./source/engine/mixer/mixer.c
+build ./build/engine/mixer/sample.o: compile_strict ./source/engine/mixer/sample.c
+
+build ./build/engine/entity.o:           compile_strict ./source/engine/entity.c
+build ./build/engine/misc.o:             compile_strict ./source/engine/misc.c
+build ./build/engine/nterrain.o:         compile_strict ./source/engine/nterrain.c
+build ./build/engine/timer.o:            compile_strict ./source/engine/timer.c
+build ./build/engine/terrain-fragment.o: compile_strict ./build/engine/terrain-fragment.c
+build ./build/engine/terrain-vertex.o:   compile_strict ./build/engine/terrain-vertex.c
+
+# Game
+build ./build/game/camera.o: compile_strict ./source/game/camera.c
+build ./build/game/nara.o:   compile_strict ./source/game/nara.c
+build ./build/game/point.o:  compile_strict ./source/game/point.c
+
+# Lib Glad
+build ./build/lib-glad/glad.o: compile_strict ./source/lib-glad/glad.c
+
+# Lib Japan
+build ./build/lib-japan/aabounding.o: compile_strict ./source/lib-japan/source/aabounding.c
+build ./build/lib-japan/buffer.o:     compile_strict ./source/lib-japan/source/buffer.c
+build ./build/lib-japan/dictionary.o: compile_strict ./source/lib-japan/source/dictionary.c
+build ./build/lib-japan/endianness.o: compile_strict ./source/lib-japan/source/endianness.c
+build ./build/lib-japan/list.o:       compile_strict ./source/lib-japan/source/list.c
+build ./build/lib-japan/matrix.o:     compile_strict ./source/lib-japan/source/matrix.c
+build ./build/lib-japan/status.o:     compile_strict ./source/lib-japan/source/status.c
+build ./build/lib-japan/tree.o:       compile_strict ./source/lib-japan/source/tree.c
+build ./build/lib-japan/utilities.o:  compile_strict ./source/lib-japan/source/utilities.c
+build ./build/lib-japan/vector.o:     compile_strict ./source/lib-japan/source/vector.c
+
+build ./build/lib-japan/configuration/configuration.o: compile_strict ./source/lib-japan/source/configuration/configuration.c
+build ./build/lib-japan/configuration/arguments.o:     compile_strict ./source/lib-japan/source/configuration/arguments.c
+build ./build/lib-japan/configuration/files.o:         compile_strict ./source/lib-japan/source/configuration/files.c
+
+build ./build/lib-japan/image/format-sgi.o: compile_strict ./source/lib-japan/source/image/format-sgi.c
+build ./build/lib-japan/image/image.o:      compile_strict ./source/lib-japan/source/image/image.c
+
+build ./build/lib-japan/sound/format-au.o:  compile_strict ./source/lib-japan/source/sound/format-au.c
+build ./build/lib-japan/sound/format-wav.o: compile_strict ./source/lib-japan/source/sound/format-wav.c
+build ./build/lib-japan/sound/laws.o:       compile_strict ./source/lib-japan/source/sound/laws.c
+build ./build/lib-japan/sound/sound.o:      compile_strict ./source/lib-japan/source/sound/sound.c
+
+# Lib Samplerate
+# CPU_CLIPS_POSITIVE = 0 and CPU_CLIPS_NEGATIVE = 0; disables an branch optimization.
+# Nothing really important, but at the first issue I promise to replace this terrible hack.
+# (https://github.com/erikd/libsamplerate/pull/85#issuecomment-520136261)
+build ./build/lib-samplerate/samplerate.o: compile ./source/lib-samplerate/src/samplerate.c
+ cflags = -O3 -flto -mtune=generic $
+ '-DPACKAGE="NaraLibSamplerate"' '-DVERSION="NaraCustom"' $
+ '-DCPU_CLIPS_POSITIVE=0' '-DCPU_CLIPS_NEGATIVE=0'
+
+build ./build/lib-samplerate/src_linear.o: compile ./source/lib-samplerate/src/src_linear.c
+build ./build/lib-samplerate/src_sinc.o:   compile ./source/lib-samplerate/src/src_sinc.c
+build ./build/lib-samplerate/src_zoh.o:    compile ./source/lib-samplerate/src/src_zoh.c
+
+# Sdk
+build ./build/sdk/sdk.o:     compile_strict ./source/sdk/sdk.c
+build ./build/sdk/erosion.o: compile_strict ./source/sdk/erosion.c
+build ./build/sdk/simplex.o: compile_strict ./source/sdk/simplex.c
+
+# Link
+build nara: link $
+./build/engine/context/context.o $
+./build/engine/context/input.o $
+./build/engine/context/objects.o $
+./build/engine/context/state.o $
+./build/engine/mixer/mixer.o $
+./build/engine/mixer/sample.o $
+./build/engine/entity.o $
+./build/engine/misc.o $
+./build/engine/nterrain.o $
+./build/engine/timer.o $
+./build/engine/terrain-fragment.o $
+./build/engine/terrain-vertex.o $
+./build/game/camera.o $
+./build/game/nara.o $
+./build/game/point.o $
+./build/lib-glad/glad.o $
+./build/lib-japan/aabounding.o $
+./build/lib-japan/buffer.o $
+./build/lib-japan/dictionary.o $
+./build/lib-japan/endianness.o $
+./build/lib-japan/list.o $
+./build/lib-japan/matrix.o $
+./build/lib-japan/status.o $
+./build/lib-japan/tree.o $
+./build/lib-japan/utilities.o $
+./build/lib-japan/vector.o $
+./build/lib-japan/configuration/configuration.o $
+./build/lib-japan/configuration/arguments.o $
+./build/lib-japan/configuration/files.o $
+./build/lib-japan/image/format-sgi.o $
+./build/lib-japan/image/image.o $
+./build/lib-japan/sound/format-au.o $
+./build/lib-japan/sound/format-wav.o $
+./build/lib-japan/sound/laws.o $
+./build/lib-japan/sound/sound.o $
+./build/lib-samplerate/samplerate.o $
+./build/lib-samplerate/src_linear.o $
+./build/lib-samplerate/src_sinc.o $
+./build/lib-samplerate/src_zoh.o
+
+build sdk: link $
+./build/lib-japan/aabounding.o $
+./build/lib-japan/buffer.o $
+./build/lib-japan/dictionary.o $
+./build/lib-japan/endianness.o $
+./build/lib-japan/list.o $
+./build/lib-japan/matrix.o $
+./build/lib-japan/status.o $
+./build/lib-japan/tree.o $
+./build/lib-japan/utilities.o $
+./build/lib-japan/vector.o $
+./build/lib-japan/configuration/configuration.o $
+./build/lib-japan/configuration/arguments.o $
+./build/lib-japan/configuration/files.o $
+./build/lib-japan/image/format-sgi.o $
+./build/lib-japan/image/image.o $
+./build/lib-japan/sound/format-au.o $
+./build/lib-japan/sound/format-wav.o $
+./build/lib-japan/sound/laws.o $
+./build/lib-japan/sound/sound.o $
+./build/sdk/sdk.o $
+./build/sdk/erosion.o $
+./build/sdk/simplex.o

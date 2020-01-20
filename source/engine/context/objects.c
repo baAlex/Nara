@@ -24,12 +24,11 @@ SOFTWARE.
 
 -------------------------------
 
- [context-opengl.c]
- - Alexander Brandt 2019
+ [objects.c]
+ - Alexander Brandt 2019-2020
 -----------------------------*/
 
-#include "context-private.h"
-#include <math.h>
+#include "private.h"
 
 #ifndef TEST // All this need to be mocked
 

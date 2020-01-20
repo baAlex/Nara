@@ -1,7 +1,7 @@
 /*-----------------------------
 
  [nterrain.h]
- - Alexander Brandt 2019
+ - Alexander Brandt 2019-2020
 -----------------------------*/
 
 #ifndef NTERRAIN_H
@@ -14,7 +14,7 @@
 	#include "japan-aabounding.h"
 	#include "japan-status.h"
 
-	#include "context.h"
+	#include "context/context.h"
 
 	enum NVerticesType
 	{

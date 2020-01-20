@@ -1,7 +1,7 @@
 /*-----------------------------
 
- [context-private.h]
- - Alexander Brandt 2019
+ [context/private.h]
+ - Alexander Brandt 2019-2020
 -----------------------------*/
 
 #ifndef CONTEXT_PRIVATE_H
@@ -10,6 +10,7 @@
 	#include <math.h>
 	#include <stdlib.h>
 	#include <string.h>
+	#include <stdio.h>
 
 	#include "japan-utilities.h"
 
@@ -36,7 +37,7 @@
 		} cfg;
 
 		struct jaVector2i window_size; // sResizeCallback()
-		bool window_resized;         // sResizeCallback()
+		bool window_resized;           // sResizeCallback()
 
 		// Draw routines
 		struct jaMatrix4 projection;

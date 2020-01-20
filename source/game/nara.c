@@ -25,7 +25,7 @@ SOFTWARE.
 -------------------------------
 
  [nara.c]
- - Alexander Brandt 2019
+ - Alexander Brandt 2019-2020
 -----------------------------*/
 
 #include <limits.h>
@@ -37,9 +37,9 @@ SOFTWARE.
 
 #include "japan-utilities.h"
 
-#include "../engine/context.h"
+#include "../engine/context/context.h"
+#include "../engine/mixer/mixer.h"
 #include "../engine/entity.h"
-#include "../engine/mixer.h"
 #include "../engine/nterrain.h"
 #include "../engine/timer.h"
 

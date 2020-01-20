@@ -1,7 +1,7 @@
 /*-----------------------------
 
  [context.h]
- - Alexander Brandt 2019
+ - Alexander Brandt 2019-2020
 -----------------------------*/
 
 #ifndef CONTEXT_H
@@ -85,6 +85,7 @@
 
 	struct jaVector2i GetWindowSize(const struct Context* context);
 
+	int TakeScreenshot(const struct Context* context, const char* filename, struct jaStatus* st);
 	void Draw(struct Context* context, const struct Index* index);
 
 	#define SetCamera(context, val, origin) _Generic((val), \
@@ -92,8 +93,6 @@
 		struct jaMatrix4: SetCameraMatrix, \
 		default: SetCameraLookAt \
 	)(context, val, origin)
-
-	int TakeScreenshot(const struct Context* context, const char* filename, struct jaStatus* st);
 
 	int ProgramInit(struct Program* out, const char* vertex_code, const char* fragment_code, struct jaStatus* st);
 	void ProgramFree(struct Program* program);
