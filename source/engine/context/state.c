@@ -211,7 +211,7 @@ int TakeScreenshot(const struct Context* context, const char* filename, struct j
 	struct jaImage* image = NULL;
 	GLenum error;
 
-	if ((image = jaImageCreate(IMAGE_RGBA8, (size_t)context->window_size.x, (size_t)context->window_size.y)) == NULL)
+	if ((image = jaImageCreate(IMAGE_RGBA8, (size_t)context->window_size.x, (size_t)context->window_size.y + 1)) == NULL)
 	{
 		jaStatusSet(st, "TakeScreenshot", STATUS_MEMORY_ERROR, NULL);
 		goto return_failure;
@@ -225,6 +225,24 @@ int TakeScreenshot(const struct Context* context, const char* filename, struct j
 		jaStatusSet(st, "TakeScreenshot", STATUS_ERROR, NULL);
 		goto return_failure;
 	}
+
+	size_t bpp = (size_t)jaBytesPerPixel(image->format);
+
+	for (size_t i = 0;; i++)
+	{
+		if (i >= (image->height - 1) / 2)
+			break;
+
+		// The image has an extra row
+		memcpy((uint8_t*)image->data + (image->width * bpp) * (image->height - 1),
+		       (uint8_t*)image->data + (image->width * bpp) * i, (image->width * bpp));
+		memcpy((uint8_t*)image->data + (image->width * bpp) * i,
+		       (uint8_t*)image->data + (image->width * bpp) * (image->height - 2 - i), (image->width * bpp));
+		memcpy((uint8_t*)image->data + (image->width * bpp) * (image->height - 2 - i),
+		       (uint8_t*)image->data + (image->width * bpp) * (image->height - 1), (image->width * bpp));
+	}
+
+	image->height -= 1; // ;)
 
 	if ((jaImageSaveSgi(image, filename, st)) != 0)
 		goto return_failure;

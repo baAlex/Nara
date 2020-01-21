@@ -1,0 +1,11 @@
+
+# Default values
+
+render.width = 1200
+render.height = 600
+render.fullscreen = 0 # 0, 1
+render.vsync = 1      # 0, 1
+render.samples = 1    # 0-16
+render.wireframe = 0  # 0, 1
+render.filter = trilinear # pixel, bilinear, trilinear,
+                          # pixel_bilinear, pixel_trilinear

@@ -247,7 +247,7 @@ inline void IndexFree(struct Index* index)
 
  TextureInit()
 -----------------------------*/
-int TextureInitImage(struct Texture* out, const struct jaImage* image, enum Filter filter, struct jaStatus* st)
+int TextureInitImage(const struct Context* context, struct Texture* out, const struct jaImage* image, struct jaStatus* st)
 {
 	GLint old_bind = 0;
 
@@ -271,7 +271,7 @@ int TextureInitImage(struct Texture* out, const struct jaImage* image, enum Filt
 		return 1;
 	}
 
-	switch (filter)
+	switch (context->cfg.filter)
 	{
 	case FILTER_BILINEAR:
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
@@ -323,7 +323,7 @@ int TextureInitImage(struct Texture* out, const struct jaImage* image, enum Filt
 	return 0;
 }
 
-int TextureInitFilename(struct Texture* out, const char* image_filename, enum Filter filter, struct jaStatus* st)
+int TextureInitFilename(const struct Context* context, struct Texture* out, const char* image_filename, struct jaStatus* st)
 {
 	struct jaImage* image = NULL;
 	jaStatusSet(st, "TextureInitFilename", STATUS_SUCCESS, NULL);
@@ -331,7 +331,7 @@ int TextureInitFilename(struct Texture* out, const char* image_filename, enum Fi
 	if ((image = jaImageLoad(image_filename, st)) == NULL)
 		return 1;
 
-	if (TextureInitImage(out, image, filter, st) != 0)
+	if (TextureInitImage(context, out, image, st) != 0)
 	{
 		jaImageDelete(image);
 		return 1;

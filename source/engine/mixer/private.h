@@ -37,7 +37,7 @@
 	struct Mixer
 	{
 		PaStream* stream;
-		struct jaBuffer buffer;
+
 		struct
 		{
 			int frequency;
@@ -48,10 +48,11 @@
 		struct jaDictionary* samples;
 		size_t samples_no;
 
-		struct jaBuffer marked_samples; // To free them
+		struct jaBuffer buffer;         // SampleCreate()
+		struct jaBuffer marked_samples; // To free them, resized by SampleCreate()
 
 		struct ToPlay playlist[PLAY_LEN];
-		size_t last_index;
+		size_t last_index; // Play2dSample()
 	};
 
 	struct Sample

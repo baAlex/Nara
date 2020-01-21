@@ -62,23 +62,39 @@ static void sErrorCallback(int code, const char* description)
 struct Context* ContextCreate(const struct jaConfiguration* config, const char* caption, struct jaStatus* st)
 {
 	struct Context* context = NULL;
-	const char** filter = NULL;
 
 	jaStatusSet(st, "ContextCreate", STATUS_SUCCESS, NULL);
 	printf("- Lib-GLFW: %s\n", glfwGetVersionString());
 
 	// Initialization
-	if ((context = calloc(1, sizeof(struct Context))) == NULL)
-		return NULL;
+	{
+		const char* filter = NULL;
 
-	if (jaCvarRetrieve(config, "render.width", &context->cfg.width, st) != 0 ||
-	    jaCvarRetrieve(config, "render.height", &context->cfg.height, st) != 0 ||
-	    jaCvarRetrieve(config, "render.samples", &context->cfg.samples, st) != 0 ||
-	    jaCvarRetrieve(config, "render.fullscreen", &context->cfg.fullscreen, st) != 0 ||
-	    jaCvarRetrieve(config, "render.wireframe", &context->cfg.wireframe, st) != 0 ||
-	    jaCvarRetrieve(config, "render.vsync", &context->cfg.vsync, st) != 0)
-		goto return_failure;
+		if ((context = calloc(1, sizeof(struct Context))) == NULL)
+			return NULL;
 
+		if (jaCvarRetrieve(config, "render.width", &context->cfg.width, st) != 0 ||
+		    jaCvarRetrieve(config, "render.height", &context->cfg.height, st) != 0 ||
+		    jaCvarRetrieve(config, "render.samples", &context->cfg.samples, st) != 0 ||
+		    jaCvarRetrieve(config, "render.fullscreen", &context->cfg.fullscreen, st) != 0 ||
+		    jaCvarRetrieve(config, "render.wireframe", &context->cfg.wireframe, st) != 0 ||
+		    jaCvarRetrieve(config, "render.vsync", &context->cfg.vsync, st) != 0 ||
+		    jaCvarRetrieve(config, "render.filter", &filter, st) != 0)
+			goto return_failure;
+
+		if (strcmp(filter, "pixel") == 0)
+			context->cfg.filter = FILTER_NONE;
+		else if (strcmp(filter, "bilinear") == 0)
+			context->cfg.filter = FILTER_BILINEAR;
+		else if (strcmp(filter, "trilinear") == 0)
+			context->cfg.filter = FILTER_TRILINEAR;
+		else if (strcmp(filter, "pixel_bilinear") == 0)
+			context->cfg.filter = FILTER_PIXEL_BILINEAR;
+		else if (strcmp(filter, "pixel_trilinear") == 0)
+			context->cfg.filter = FILTER_PIXEL_TRILINEAR;
+	}
+
+	// GLFW context
 	glfwSetErrorCallback(sErrorCallback);
 
 	if (glfwInit() != GLFW_TRUE)
@@ -87,7 +103,6 @@ struct Context* ContextCreate(const struct jaConfiguration* config, const char* 
 		goto return_failure;
 	}
 
-	// Create window-context
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
@@ -100,25 +115,25 @@ struct Context* ContextCreate(const struct jaConfiguration* config, const char* 
 		goto return_failure;
 	}
 
-	glfwMakeContextCurrent(context->window);
+	glfwMakeContextCurrent(context->window); // As soon CreateWindow() is call
 
+	glfwSetWindowSizeLimits(context->window, MIN_WIDTH, MIN_HEIGHT, GLFW_DONT_CARE, GLFW_DONT_CARE);
+	glfwSetWindowUserPointer(context->window, context);
+
+	glfwSetFramebufferSizeCallback(context->window, sResizeCallback);
+	glfwSetKeyCallback(context->window, KeyboardCallback);
+
+	if (context->cfg.vsync == false)
+		glfwSwapInterval(0);
+
+	// GLAD loader
 	if (gladLoadGLES2Loader((GLADloadproc)glfwGetProcAddress) == 0) // After MakeContext()
 	{
 		jaStatusSet(st, "ContextCreate", STATUS_ERROR, "Initialiting GLAD");
 		goto return_failure;
 	}
 
-	if (context->cfg.vsync == false)
-		glfwSwapInterval(0);
-
-	// Callbacks and pretty things
-	glfwSetWindowSizeLimits(context->window, MIN_WIDTH, MIN_HEIGHT, GLFW_DONT_CARE, GLFW_DONT_CARE);
-
-	glfwSetWindowUserPointer(context->window, context);
-
-	glfwSetFramebufferSizeCallback(context->window, sResizeCallback);
-	glfwSetKeyCallback(context->window, KeyboardCallback);
-
+	// Fullscreen
 	if (context->cfg.fullscreen == true)
 	{
 		const GLFWvidmode* vid_mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
@@ -186,6 +201,7 @@ inline void ContextDelete(struct Context* context)
 void ContextUpdate(struct Context* context, struct ContextEvents* out_events)
 {
 	context->window_resized = false;
+
 	glfwPollEvents();
 
 	// Flip buffers *after* process the inputs callbacks, so

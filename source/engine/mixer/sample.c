@@ -63,6 +63,8 @@ static void sToCommonFormat(const void* in, size_t in_size, size_t in_channels, 
 
 			// Mix, this only works with stereo and mono.
 			// Different files can map channels in their own way.
+
+			// TODO: This map thing should be abstracted in LibJapan
 			out[c % out_channels] += mix;
 
 			if (c >= out_channels)

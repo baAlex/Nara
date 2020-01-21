@@ -91,12 +91,12 @@ static struct jaConfiguration* sInitializeConfiguration(int argc, const char* ar
 		jaCvarCreate(config, "render.height", 600, 240, INT_MAX, NULL);
 		jaCvarCreate(config, "render.fullscreen", 0, 0, 1, NULL);
 		jaCvarCreate(config, "render.vsync", 1, 0, 1, NULL);
-		jaCvarCreate(config, "render.samples", 2, 0, 16, NULL);
+		jaCvarCreate(config, "render.samples", 1, 0, 16, NULL);
 		jaCvarCreate(config, "render.wireframe", 0, 0, 1, NULL);
+		jaCvarCreate(config, "render.filter", "trilinear",
+		                     "pixel, bilinear, trilinear, pixel_bilinear, pixel_trilinear", NULL, NULL);
 
 		jaCvarCreate(config, "render.max_distance", 1024.0f, 100.0f, 4096.0f, NULL);
-		jaCvarCreate(config, "render.filter", "trilinear",
-		                        "pixel, bilinear, trilinear, pixel_bilinear, pixel_trilinear", NULL, NULL);
 
 		jaCvarCreate(config, "sound.volume", 0.8f, 0.0f, 1.0f, NULL); // TODO: 0.0f didn't disable the mixer
 		jaCvarCreate(config, "sound.frequency", 48000, 8000, 48000, NULL); // TODO: low frequencies = white spaces in resamples
@@ -244,22 +244,22 @@ int main(int argc, const char* argv[])
 		if (ProgramInit(&s_terrain_program, (char*)g_terrain_vertex, (char*)g_terrain_fragment, &st) != 0)
 			goto return_failure;
 
-		if (TextureInit(&s_terrain_lightmap, "./assets/lightmap.sgi", FILTER_TRILINEAR, &st) != 0)
+		if (TextureInit(s_context, &s_terrain_lightmap, "./assets/lightmap.sgi", &st) != 0)
 			goto return_failure;
 
-		if (TextureInit(&s_terrain_masksmap, "./assets/masksmap.sgi", FILTER_TRILINEAR, &st) != 0)
+		if (TextureInit(s_context, &s_terrain_masksmap, "./assets/masksmap.sgi", &st) != 0)
 			goto return_failure;
 
-		if (TextureInit(&s_grass, "./assets/grass.sgi", FILTER_TRILINEAR, &st) != 0)
+		if (TextureInit(s_context, &s_grass, "./assets/grass.sgi", &st) != 0)
 			goto return_failure;
 
-		if (TextureInit(&s_dirt, "./assets/dirt.sgi", FILTER_TRILINEAR, &st) != 0)
+		if (TextureInit(s_context, &s_dirt, "./assets/dirt.sgi", &st) != 0)
 			goto return_failure;
 
-		if (TextureInit(&s_cliff1, "./assets/cliff1.sgi", FILTER_TRILINEAR, &st) != 0)
+		if (TextureInit(s_context, &s_cliff1, "./assets/cliff1.sgi", &st) != 0)
 			goto return_failure;
 
-		if (TextureInit(&s_cliff2, "./assets/cliff2.sgi", FILTER_TRILINEAR, &st) != 0)
+		if (TextureInit(s_context, &s_cliff2, "./assets/cliff2.sgi", &st) != 0)
 			goto return_failure;
 
 		if (SampleCreate(s_mixer, "./assets/rz1-closed-hithat.wav", &st) == NULL)

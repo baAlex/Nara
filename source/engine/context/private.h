@@ -26,6 +26,7 @@
 	struct Context
 	{
 		GLFWwindow* window;
+
 		struct
 		{
 			int width;
@@ -34,6 +35,7 @@
 			int fullscreen;
 			int vsync;
 			int wireframe;
+			enum Filter filter;
 		} cfg;
 
 		struct jaVector2i window_size; // sResizeCallback()
@@ -57,7 +59,6 @@
 		// Input
 		int active_gamepad;            // -1 if none
 		struct ContextEvents keyboard; // KeyboardCallback()
-		struct ContextEvents mouse;    // MousePosCallback(), MouseClickCallback()
 		struct ContextEvents gamepad;  // InputStep()
 		struct ContextEvents combined; // InputStep()
 

@@ -103,16 +103,16 @@
 	int IndexInit(struct Index* out, const uint16_t* data, size_t length, struct jaStatus* st);
 	void IndexFree(struct Index* index);
 
-	int TextureInitImage(struct Texture* out, const struct jaImage* image, enum Filter filter, struct jaStatus* st);
-	int TextureInitFilename(struct Texture* out, const char* image_filename, enum Filter filter, struct jaStatus* st);
+	int TextureInitImage(const struct Context*, struct Texture* out, const struct jaImage* image, struct jaStatus* st);
+	int TextureInitFilename(const struct Context*, struct Texture* out, const char* image_filename, struct jaStatus* st);
 	void TextureFree(struct Texture* texture);
 
-	#define TextureInit(out, image, filter, st) _Generic((image), \
+	#define TextureInit(context, out, image, st) _Generic((image), \
 		const char*: TextureInitFilename, \
 		char*: TextureInitFilename, \
 		const struct jaImage*: TextureInitImage, \
 		struct jaImage*: TextureInitImage, \
 		default: TextureInitImage \
-	)(out, image, filter, st)
+	)(context, out, image, st)
 
 #endif
