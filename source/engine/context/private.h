@@ -41,7 +41,7 @@
 		struct jaVector2i window_size; // sResizeCallback()
 		bool window_resized;           // sResizeCallback()
 
-		// Draw routines
+		// State routines
 		struct jaMatrix4 projection;
 		struct jaMatrix4 camera;
 		struct jaVector3 camera_origin;

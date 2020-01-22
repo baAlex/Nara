@@ -38,8 +38,8 @@ SOFTWARE.
 #include "japan-utilities.h"
 
 #include "../engine/context/context.h"
-#include "../engine/mixer/mixer.h"
 #include "../engine/entity.h"
+#include "../engine/mixer/mixer.h"
 #include "../engine/nterrain.h"
 #include "../engine/timer.h"
 
@@ -93,24 +93,22 @@ static struct jaConfiguration* sInitializeConfiguration(int argc, const char* ar
 		jaCvarCreate(config, "render.vsync", 1, 0, 1, NULL);
 		jaCvarCreate(config, "render.samples", 1, 0, 16, NULL);
 		jaCvarCreate(config, "render.wireframe", 0, 0, 1, NULL);
-		jaCvarCreate(config, "render.filter", "trilinear",
-		                     "pixel, bilinear, trilinear, pixel_bilinear, pixel_trilinear", NULL, NULL);
+		jaCvarCreate(config, "render.filter", "trilinear", "pixel, bilinear, trilinear, pixel_bilinear, pixel_trilinear", NULL, NULL);
 
-		jaCvarCreate(config, "render.max_distance", 1024.0f, 100.0f, 4096.0f, NULL);
+		jaCvarCreate(config, "mixer.volume", 0.8f, 0.0f, 1.0f, NULL);
+		jaCvarCreate(config, "mixer.frequency", 48000, 8000, 48000, NULL);
+		jaCvarCreate(config, "mixer.channels", 2, 1, 2, NULL);
+		jaCvarCreate(config, "mixer.max_sounds", 32, 0, 64, NULL);
+		jaCvarCreate(config, "mixer.sampling", "sinc_low", "linear, zero_order, sinc_low, sinc_medium, sinc_high", NULL, NULL);
 
-		jaCvarCreate(config, "sound.volume", 0.8f, 0.0f, 1.0f, NULL); // TODO: 0.0f didn't disable the mixer
-		jaCvarCreate(config, "sound.frequency", 48000, 8000, 48000, NULL); // TODO: low frequencies = white spaces in resamples
-		jaCvarCreate(config, "sound.channels", 2, 1, 2, NULL); // Ok, TODO: zero channels = crash
-
-		jaCvarCreate(config, "sound.max_sounds", 32, 0, 64, NULL);
-		jaCvarCreate(config, "sound.sampling", "sinc_medium",
-		                        "linear, zero_order, sinc_low, sinc_medium, sinc_high", NULL, NULL);
+		// TODO
+		/*jaCvarCreate(config, "render.max_distance", 1024.0f, 100.0f, 4096.0f, NULL);
 
 		jaCvarCreate(config, "terrain.subdivisions", 3, 0, 6, NULL);
 		jaCvarCreate(config, "terrain.lod_factor", 0, 0, 6, NULL);
 
 		jaCvarCreate(config, "sensitivity", 1.0f, 0.0f, 10.0f, NULL);
-		jaCvarCreate(config, "fov", 90.0f, 10.0f, 90.0f, NULL);
+		jaCvarCreate(config, "fov", 90.0f, 10.0f, 90.0f, NULL);*/
 	}
 
 	jaConfigurationFile(config, "user.jcfg", NULL);
@@ -241,25 +239,25 @@ int main(int argc, const char* argv[])
 		if ((s_terrain = NTerrainCreate("./assets/heightmap.sgi", 150.0, 1944.0, 72.0, 3, &st)) == NULL)
 			goto return_failure;
 
-		if (ProgramInit(&s_terrain_program, (char*)g_terrain_vertex, (char*)g_terrain_fragment, &st) != 0)
+		if (ProgramInit((char*)g_terrain_vertex, (char*)g_terrain_fragment, &s_terrain_program, &st) != 0)
 			goto return_failure;
 
-		if (TextureInit(s_context, &s_terrain_lightmap, "./assets/lightmap.sgi", &st) != 0)
+		if (TextureInit(s_context, "./assets/lightmap.sgi", &s_terrain_lightmap, &st) != 0)
 			goto return_failure;
 
-		if (TextureInit(s_context, &s_terrain_masksmap, "./assets/masksmap.sgi", &st) != 0)
+		if (TextureInit(s_context, "./assets/masksmap.sgi", &s_terrain_masksmap, &st) != 0)
 			goto return_failure;
 
-		if (TextureInit(s_context, &s_grass, "./assets/grass.sgi", &st) != 0)
+		if (TextureInit(s_context, "./assets/grass.sgi", &s_grass, &st) != 0)
 			goto return_failure;
 
-		if (TextureInit(s_context, &s_dirt, "./assets/dirt.sgi", &st) != 0)
+		if (TextureInit(s_context, "./assets/dirt.sgi", &s_dirt, &st) != 0)
 			goto return_failure;
 
-		if (TextureInit(s_context, &s_cliff1, "./assets/cliff1.sgi", &st) != 0)
+		if (TextureInit(s_context, "./assets/cliff1.sgi", &s_cliff1, &st) != 0)
 			goto return_failure;
 
-		if (TextureInit(s_context, &s_cliff2, "./assets/cliff2.sgi", &st) != 0)
+		if (TextureInit(s_context, "./assets/cliff2.sgi", &s_cliff2, &st) != 0)
 			goto return_failure;
 
 		if (SampleCreate(s_mixer, "./assets/rz1-closed-hithat.wav", &st) == NULL)
@@ -306,9 +304,6 @@ int main(int argc, const char* argv[])
 		SetTexture(s_context, 3, &s_dirt);
 		SetTexture(s_context, 4, &s_cliff1);
 		SetTexture(s_context, 5, &s_cliff2);
-
-		if (MixerStart(s_mixer, &st) != 0)
-			goto return_failure;
 
 		s_terrain_view.aspect = (float)GetWindowSize(s_context).x / (float)GetWindowSize(s_context).y;
 		s_terrain_view.max_distance = 1024.0f;

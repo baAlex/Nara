@@ -31,8 +31,8 @@ SOFTWARE.
 #include "private.h"
 
 
-static void sToCommonFormat(const void* in, size_t in_size, size_t in_channels, enum jaSoundFormat in_format,
-                            float* out, size_t out_channels)
+static void sToCommonFormat(const void* in, size_t in_size, size_t in_channels, enum jaSoundFormat in_format, float* out,
+                            size_t out_channels)
 {
 	union {
 		const void* raw;
@@ -116,8 +116,7 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct ja
 
 	if (ex.uncompressed_size > (10 * 1024 * 1024))
 	{
-		jaStatusSet(st, "SampleCreate", STATUS_UNSUPPORTED_FEATURE,
-		            "Only files small than 10 Mb supported. File: \"%s\"", filename);
+		jaStatusSet(st, "SampleCreate", STATUS_UNSUPPORTED_FEATURE, "Only files small than 10 Mb supported. File: \"%s\"", filename);
 		goto return_failure;
 	}
 
@@ -176,8 +175,7 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct ja
 		                         .output_frames = (long)resampled_length,
 		                         .src_ratio = (double)mixer->cfg.frequency / (double)ex.frequency};
 
-		// TODO, hardcoded SRC_LINEAR
-		if (src_simple(&resample_cfg, SRC_LINEAR, jaMin((int)ex.channels, mixer->cfg.channels)) != 0)
+		if (src_simple(&resample_cfg, mixer->cfg.sampling, jaMin((int)ex.channels, mixer->cfg.channels)) != 0)
 		{
 			jaStatusSet(st, "SampleCreate", STATUS_ERROR, "src_simple() error. File: \"%s\"", filename);
 			goto return_failure;

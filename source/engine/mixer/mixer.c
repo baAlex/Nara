@@ -35,8 +35,8 @@ SOFTWARE.
 
  sCallback()
 -----------------------------*/
-static int sCallback(const void* raw_input, void* raw_output, unsigned long frames_no,
-                     const PaStreamCallbackTimeInfo* time, PaStreamCallbackFlags status, void* raw_mixer)
+static int sCallback(const void* raw_input, void* raw_output, unsigned long frames_no, const PaStreamCallbackTimeInfo* time,
+                     PaStreamCallbackFlags status, void* raw_mixer)
 {
 	(void)raw_input;
 	(void)time;
@@ -65,7 +65,10 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 			for (size_t ch = 0; ch < channels; ch++)
 				output[i + ch] += (data[ch % mixer->playlist[pl].sample->channels] * mixer->playlist[pl].volume);
 
-			if ((mixer->playlist[pl].cursor += 1) >= mixer->playlist[pl].sample->length)
+			mixer->playlist[pl].cursor += 1;
+
+			// End of sample
+			if (mixer->playlist[pl].cursor >= mixer->playlist[pl].sample->length)
 			{
 				if ((mixer->playlist[pl].options & PLAY_LOOP) == PLAY_LOOP)
 				{
@@ -120,29 +123,55 @@ struct Mixer* MixerCreate(const struct jaConfiguration* config, struct jaStatus*
 	printf("- Lib-Portaudio: %s\n", (Pa_GetVersionInfo() != NULL) ? Pa_GetVersionInfo()->versionText : "");
 
 	// Initialization
-	if ((mixer = calloc(1, sizeof(struct Mixer))) == NULL || (mixer->samples = jaDictionaryCreate(NULL)) == NULL)
 	{
-		jaStatusSet(st, "MixerCreate", STATUS_MEMORY_ERROR, NULL);
-		return NULL;
+		const char* sampling = NULL;
+
+		if ((mixer = calloc(1, sizeof(struct Mixer))) == NULL)
+		{
+			jaStatusSet(st, "MixerCreate", STATUS_MEMORY_ERROR, NULL);
+			return NULL;
+		}
+
+		if ((mixer->samples = jaDictionaryCreate(NULL)) == NULL)
+			goto return_failure;
+
+		if (jaCvarRetrieve(config, "mixer.volume", &mixer->cfg.volume, st) != 0 ||
+		    jaCvarRetrieve(config, "mixer.frequency", &mixer->cfg.frequency, st) != 0 ||
+		    jaCvarRetrieve(config, "mixer.channels", &mixer->cfg.channels, st) != 0 ||
+		    jaCvarRetrieve(config, "mixer.max_sounds", &mixer->cfg.max_sounds, st) != 0 ||
+		    jaCvarRetrieve(config, "mixer.sampling", &sampling, st) != 0)
+			goto return_failure;
+
+		if (strcmp(sampling, "linear") == 0)
+			mixer->cfg.sampling = SRC_LINEAR;
+		else if (strcmp(sampling, "zero_order") == 0)
+			mixer->cfg.sampling = SRC_ZERO_ORDER_HOLD;
+		else if (strcmp(sampling, "sinc_low") == 0)
+			mixer->cfg.sampling = SRC_SINC_FASTEST;
+		else if (strcmp(sampling, "sinc_medium") == 0)
+			mixer->cfg.sampling = SRC_SINC_MEDIUM_QUALITY;
+		else if (strcmp(sampling, "sinc_high") == 0)
+			mixer->cfg.sampling = SRC_SINC_BEST_QUALITY;
+
+		if (mixer->cfg.volume > 0.0 && mixer->cfg.max_sounds > 0)
+			mixer->valid = true;
 	}
 
-	if (jaCvarRetrieve(config, "sound.volume", &mixer->cfg.volume, st) != 0 ||
-	    jaCvarRetrieve(config, "sound.frequency", &mixer->cfg.frequency, st) != 0 ||
-	    jaCvarRetrieve(config, "sound.channels", &mixer->cfg.channels, st) != 0)
-		goto return_failure;
-
-	if ((errcode = Pa_Initialize()) != paNoError)
+	// PortAudio
+	if (mixer->valid == true)
 	{
-		jaStatusSet(st, "MixerCreate", STATUS_ERROR, "Initialiting Portaudio: \"%s\"", Pa_GetErrorText(errcode));
-		goto return_failure;
-	}
+		if ((errcode = Pa_Initialize()) != paNoError)
+		{
+			jaStatusSet(st, "MixerCreate", STATUS_ERROR, "Initialiting Portaudio: \"%s\"", Pa_GetErrorText(errcode));
+			goto return_failure;
+		}
 
-	// Create stream
-	if ((errcode = Pa_OpenDefaultStream(&mixer->stream, 0, mixer->cfg.channels, paFloat32, (double)mixer->cfg.frequency,
-	                                    paFramesPerBufferUnspecified, sCallback, mixer)) != paNoError)
-	{
-		jaStatusSet(st, "MixerCreate", STATUS_ERROR, "Opening stream: \"%s\"", Pa_GetErrorText(errcode));
-		goto return_failure;
+		if ((errcode = Pa_OpenDefaultStream(&mixer->stream, 0, mixer->cfg.channels, paFloat32, (double)mixer->cfg.frequency,
+		                                    paFramesPerBufferUnspecified, sCallback, mixer)) != paNoError)
+		{
+			jaStatusSet(st, "MixerCreate", STATUS_ERROR, "Opening stream: \"%s\"", Pa_GetErrorText(errcode));
+			goto return_failure;
+		}
 	}
 
 	// Bye!
@@ -161,46 +190,19 @@ return_failure:
 -----------------------------*/
 inline void MixerDelete(struct Mixer* mixer)
 {
-	if (mixer != NULL)
+	if (mixer->valid == true)
 	{
 		if (mixer->stream != NULL)
 			Pa_StopStream(mixer->stream);
 
 		Pa_Terminate();
 
-		jaDictionaryDelete(mixer->samples);
+		jaBufferClean(&mixer->marked_samples);
 		jaBufferClean(&mixer->buffer);
-		FreeMarkedSamples(mixer);
-		free(mixer);
-	}
-}
-
-
-/*-----------------------------
-
- MixerStart()
------------------------------*/
-int MixerStart(struct Mixer* mixer, struct jaStatus* st)
-{
-	PaError errcode = paNoError;
-
-	if ((errcode = Pa_StartStream(mixer->stream)) != paNoError)
-	{
-		jaStatusSet(st, "MixerCreate", STATUS_ERROR, "Starting stream: \"%s\"", Pa_GetErrorText(errcode));
-		return 1;
 	}
 
-	return 0;
-}
-
-
-/*-----------------------------
-
- MixerStop()
------------------------------*/
-void MixerStop(struct Mixer* mixer)
-{
-	(void)mixer;
+	jaDictionaryDelete(mixer->samples);
+	free(mixer);
 }
 
 
@@ -208,12 +210,17 @@ void MixerStop(struct Mixer* mixer)
 
  FreeMarkedSamples()
 -----------------------------*/
-void FreeMarkedSamples(struct Mixer* mixer)
+inline void FreeMarkedSamples(struct Mixer* mixer)
 {
+	struct jaDictionaryItem** marked = mixer->marked_samples.data;
+
 	for (size_t i = 0; i < mixer->samples_no; i++)
 	{
-		if (((struct jaDictionaryItem**)mixer->marked_samples.data)[i] != NULL)
-			jaDictionaryRemove(((struct jaDictionaryItem**)mixer->marked_samples.data)[i]);
+		if (marked[i] != NULL)
+		{
+			jaDictionaryRemove(marked[i]);
+			marked[i] = NULL;
+		}
 	}
 }
 
@@ -222,12 +229,29 @@ void FreeMarkedSamples(struct Mixer* mixer)
 
  Play2d
 -----------------------------*/
-inline void Play2dFile(struct Mixer* mixer, float volume, enum PlayOptions options, const char* filename)
+static void sMixerStart(struct Mixer* mixer, struct jaStatus* st)
 {
-	struct jaDictionaryItem* item = jaDictionaryGet(mixer->samples, filename);
+	PaError errcode = paNoError;
+
+	if ((errcode = Pa_StartStream(mixer->stream)) != paNoError)
+		jaStatusSet(st, "MixerStart", STATUS_ERROR, "Starting stream: \"%s\"", Pa_GetErrorText(errcode));
+}
+
+void Play2dFile(struct Mixer* mixer, float volume, enum PlayOptions options, const char* filename)
+{
+	struct jaDictionaryItem* item = NULL;
 	struct Sample* sample = NULL;
 
-	if (item != NULL)
+	if (mixer->valid == false)
+		return;
+
+	if (mixer->started == false)
+	{
+		sMixerStart(mixer, NULL); // TODO, handle error
+		mixer->started = true;
+	}
+
+	if ((item = jaDictionaryGet(mixer->samples, filename)) != NULL)
 		Play2dSample(mixer, volume, options, (struct Sample*)item->data);
 	else
 	{
@@ -241,6 +265,15 @@ inline void Play2dFile(struct Mixer* mixer, float volume, enum PlayOptions optio
 void Play2dSample(struct Mixer* mixer, float volume, enum PlayOptions options, struct Sample* sample)
 {
 	struct ToPlay* space = NULL;
+
+	if (mixer->valid == false)
+		return;
+
+	if (mixer->started == false)
+	{
+		sMixerStart(mixer, NULL); // TODO, handle error
+		mixer->started = true;
+	}
 
 	// Find an space in the playlist
 	{
@@ -258,20 +291,21 @@ void Play2dSample(struct Mixer* mixer, float volume, enum PlayOptions options, s
 			}
 		}
 
-		if (ref_i == PLAY_LEN) // Bad luck, lets recycle
+		// Bad luck, lets recycle
+		if (ref_i == PLAY_LEN)
 		{
 			i = (mixer->last_index + 1) % PLAY_LEN;
 			space = &mixer->playlist[i];
 		}
 
-		// printf("Play at %zu%s\n", i, (ref_i == PLAY_LEN) ? " (r)" : "");
+		// Save index for the next play
 		mixer->last_index = (i + 1);
 	}
 
 	// Yay
 	sample->references += 1;
 
-	space->active = false;
+	space->active = false; // FIXME, if is an recycled space is necessary to set "references" appropriately
 
 	space->cursor = 0;
 	space->options = options;

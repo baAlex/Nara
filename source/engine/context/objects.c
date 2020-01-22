@@ -54,7 +54,7 @@ static inline int sCompileShader(GLuint shader, struct jaStatus* st)
 	return 0;
 }
 
-int ProgramInit(struct Program* out, const char* vertex_code, const char* fragment_code, struct jaStatus* st)
+int ProgramInit(const char* vertex_code, const char* fragment_code, struct Program* out, struct jaStatus* st)
 {
 	GLint success = GL_FALSE;
 	GLuint vertex = 0;
@@ -131,7 +131,7 @@ inline void ProgramFree(struct Program* program)
 
  VerticesInit()
 -----------------------------*/
-int VerticesInit(struct Vertices* out, const struct Vertex* data, uint16_t length, struct jaStatus* st)
+int VerticesInit(const struct Vertex* data, uint16_t length, struct Vertices* out, struct jaStatus* st)
 {
 	GLint reported_size = 0;
 	GLint old_bind = 0;
@@ -189,7 +189,7 @@ inline void VerticesFree(struct Vertices* vertices)
 
  IndexInit()
 -----------------------------*/
-int IndexInit(struct Index* out, const uint16_t* data, size_t length, struct jaStatus* st)
+int IndexInit(const uint16_t* data, size_t length, struct Index* out, struct jaStatus* st)
 {
 	GLint reported_size = 0;
 	GLint old_bind = 0;
@@ -247,14 +247,13 @@ inline void IndexFree(struct Index* index)
 
  TextureInit()
 -----------------------------*/
-int TextureInitImage(const struct Context* context, struct Texture* out, const struct jaImage* image, struct jaStatus* st)
+int TextureInitImage(const struct Context* context, const struct jaImage* image, struct Texture* out, struct jaStatus* st)
 {
 	GLint old_bind = 0;
 
 	jaStatusSet(st, "TextureInitImage", STATUS_SUCCESS, NULL);
 
-	if (image->format != IMAGE_RGB8 && image->format != IMAGE_RGBA8 && image->format != IMAGE_GRAY8 &&
-	    image->format != IMAGE_GRAYA8)
+	if (image->format != IMAGE_RGB8 && image->format != IMAGE_RGBA8 && image->format != IMAGE_GRAY8 && image->format != IMAGE_GRAYA8)
 	{
 		jaStatusSet(st, "TextureInitImage", STATUS_UNEXPECTED_DATA, "Only 8 bits per component images supported");
 		return 1;
@@ -300,20 +299,18 @@ int TextureInitImage(const struct Context* context, struct Texture* out, const s
 	switch (image->format)
 	{
 	case IMAGE_RGB8:
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, (GLsizei)image->width, (GLsizei)image->height, 0, GL_RGB,
-		             GL_UNSIGNED_BYTE, image->data);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, (GLsizei)image->width, (GLsizei)image->height, 0, GL_RGB, GL_UNSIGNED_BYTE, image->data);
 		break;
 	case IMAGE_RGBA8:
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)image->width, (GLsizei)image->height, 0, GL_RGBA,
-		             GL_UNSIGNED_BYTE, image->data);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)image->width, (GLsizei)image->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->data);
 		break;
 	case IMAGE_GRAY8:
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, (GLsizei)image->width, (GLsizei)image->height, 0, GL_LUMINANCE,
-		             GL_UNSIGNED_BYTE, image->data);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, (GLsizei)image->width, (GLsizei)image->height, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
+		             image->data);
 		break;
 	case IMAGE_GRAYA8:
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE_ALPHA, (GLsizei)image->width, (GLsizei)image->height, 0,
-		             GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE, image->data);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE_ALPHA, (GLsizei)image->width, (GLsizei)image->height, 0, GL_LUMINANCE_ALPHA,
+		             GL_UNSIGNED_BYTE, image->data);
 		break;
 	default: break;
 	}
@@ -323,7 +320,7 @@ int TextureInitImage(const struct Context* context, struct Texture* out, const s
 	return 0;
 }
 
-int TextureInitFilename(const struct Context* context, struct Texture* out, const char* image_filename, struct jaStatus* st)
+int TextureInitFilename(const struct Context* context, const char* image_filename, struct Texture* out, struct jaStatus* st)
 {
 	struct jaImage* image = NULL;
 	jaStatusSet(st, "TextureInitFilename", STATUS_SUCCESS, NULL);
@@ -331,7 +328,7 @@ int TextureInitFilename(const struct Context* context, struct Texture* out, cons
 	if ((image = jaImageLoad(image_filename, st)) == NULL)
 		return 1;
 
-	if (TextureInitImage(context, out, image, st) != 0)
+	if (TextureInitImage(context, image, out, st) != 0)
 	{
 		jaImageDelete(image);
 		return 1;

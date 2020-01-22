@@ -115,7 +115,7 @@ struct Context* ContextCreate(const struct jaConfiguration* config, const char* 
 		goto return_failure;
 	}
 
-	glfwMakeContextCurrent(context->window); // As soon CreateWindow() is call
+	glfwMakeContextCurrent(context->window); // As soon CreateWindow() is called
 
 	glfwSetWindowSizeLimits(context->window, MIN_WIDTH, MIN_HEIGHT, GLFW_DONT_CARE, GLFW_DONT_CARE);
 	glfwSetWindowUserPointer(context->window, context);
@@ -137,8 +137,7 @@ struct Context* ContextCreate(const struct jaConfiguration* config, const char* 
 	if (context->cfg.fullscreen == true)
 	{
 		const GLFWvidmode* vid_mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-		glfwSetWindowMonitor(context->window, glfwGetPrimaryMonitor(), 0, 0, vid_mode->width, vid_mode->height,
-		                     GLFW_DONT_CARE);
+		glfwSetWindowMonitor(context->window, glfwGetPrimaryMonitor(), 0, 0, vid_mode->width, vid_mode->height, GLFW_DONT_CARE);
 	}
 
 	// OpenGL initialization

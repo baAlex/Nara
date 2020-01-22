@@ -117,7 +117,7 @@ inline void SetVertices(struct Context* context, const struct Vertices* vertices
 inline void SetTexture(struct Context* context, int unit, const struct Texture* texture)
 {
 	(void)context;
-	glActiveTexture(GL_TEXTURE0 + unit);
+	glActiveTexture((GLenum)(GL_TEXTURE0 + unit));
 	glBindTexture(GL_TEXTURE_2D, texture->glptr);
 }
 
@@ -197,8 +197,7 @@ inline void Draw(struct Context* context, const struct Index* index)
 {
 	(void)context;
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index->glptr);
-	glDrawElements((context->cfg.wireframe == false) ? GL_TRIANGLES : GL_LINES, (GLsizei)index->length,
-	               GL_UNSIGNED_SHORT, NULL);
+	glDrawElements((context->cfg.wireframe == false) ? GL_TRIANGLES : GL_LINES, (GLsizei)index->length, GL_UNSIGNED_SHORT, NULL);
 }
 
 
@@ -235,11 +234,14 @@ int TakeScreenshot(const struct Context* context, const char* filename, struct j
 
 		// The image has an extra row
 		memcpy((uint8_t*)image->data + (image->width * bpp) * (image->height - 1),
-		       (uint8_t*)image->data + (image->width * bpp) * i, (image->width * bpp));
+		       (uint8_t*)image->data + (image->width * bpp) * i,
+		       (image->width * bpp));
 		memcpy((uint8_t*)image->data + (image->width * bpp) * i,
-		       (uint8_t*)image->data + (image->width * bpp) * (image->height - 2 - i), (image->width * bpp));
+		       (uint8_t*)image->data + (image->width * bpp) * (image->height - 2 - i),
+		       (image->width * bpp));
 		memcpy((uint8_t*)image->data + (image->width * bpp) * (image->height - 2 - i),
-		       (uint8_t*)image->data + (image->width * bpp) * (image->height - 1), (image->width * bpp));
+		       (uint8_t*)image->data + (image->width * bpp) * (image->height - 1),
+		       (image->width * bpp));
 	}
 
 	image->height -= 1; // ;)

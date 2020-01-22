@@ -88,31 +88,33 @@
 	int TakeScreenshot(const struct Context* context, const char* filename, struct jaStatus* st);
 	void Draw(struct Context* context, const struct Index* index);
 
-	#define SetCamera(context, val, origin) _Generic((val), \
-		struct jaVector3: SetCameraLookAt, \
-		struct jaMatrix4: SetCameraMatrix, \
-		default: SetCameraLookAt \
-	)(context, val, origin)
+	#define SetCamera(context, val, origin) \
+		_Generic((val), \
+			struct jaVector3: SetCameraLookAt, \
+			struct jaMatrix4: SetCameraMatrix, \
+			default: SetCameraLookAt \
+		)(context, val, origin)
 
-	int ProgramInit(struct Program* out, const char* vertex_code, const char* fragment_code, struct jaStatus* st);
+	int ProgramInit(const char* vertex_code, const char* fragment_code, struct Program* out, struct jaStatus* st);
 	void ProgramFree(struct Program* program);
 
-	int VerticesInit(struct Vertices* out, const struct Vertex* data, uint16_t length, struct jaStatus* st);
+	int VerticesInit(const struct Vertex* data, uint16_t length, struct Vertices* out, struct jaStatus* st);
 	void VerticesFree(struct Vertices* vertices);
 
-	int IndexInit(struct Index* out, const uint16_t* data, size_t length, struct jaStatus* st);
+	int IndexInit(const uint16_t* data, size_t length, struct Index* out, struct jaStatus* st);
 	void IndexFree(struct Index* index);
 
-	int TextureInitImage(const struct Context*, struct Texture* out, const struct jaImage* image, struct jaStatus* st);
-	int TextureInitFilename(const struct Context*, struct Texture* out, const char* image_filename, struct jaStatus* st);
+	int TextureInitImage(const struct Context*, const struct jaImage* image, struct Texture* out, struct jaStatus* st);
+	int TextureInitFilename(const struct Context*, const char* image_filename, struct Texture* out, struct jaStatus* st);
 	void TextureFree(struct Texture* texture);
 
-	#define TextureInit(context, out, image, st) _Generic((image), \
-		const char*: TextureInitFilename, \
-		char*: TextureInitFilename, \
-		const struct jaImage*: TextureInitImage, \
-		struct jaImage*: TextureInitImage, \
-		default: TextureInitImage \
-	)(context, out, image, st)
+	#define TextureInit(context, src, out, st) \
+		_Generic((src), \
+			const char*: TextureInitFilename, \
+			char*: TextureInitFilename, \
+			const struct jaImage*: TextureInitImage, \
+			struct jaImage*: TextureInitImage, \
+			default: TextureInitImage \
+		)(context, src, out, st)
 
 #endif

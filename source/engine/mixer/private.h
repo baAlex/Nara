@@ -13,6 +13,7 @@
 	#include <stdlib.h>
 	#include <string.h>
 	#include <time.h>
+	#include <stdbool.h>
 
 	#include "japan-buffer.h"
 	#include "japan-dictionary.h"
@@ -36,20 +37,25 @@
 
 	struct Mixer
 	{
-		PaStream* stream;
-
 		struct
 		{
+			float volume;
 			int frequency;
 			int channels;
-			float volume;
+			int max_sounds;
+			int sampling;
 		} cfg;
 
+		bool valid;
+		bool started;
+
+		PaStream* stream;
+
 		struct jaDictionary* samples;
+		struct jaBuffer marked_samples; // To free them
 		size_t samples_no;
 
-		struct jaBuffer buffer;         // SampleCreate()
-		struct jaBuffer marked_samples; // To free them, resized by SampleCreate()
+		struct jaBuffer buffer; // SampleCreate()
 
 		struct ToPlay playlist[PLAY_LEN];
 		size_t last_index; // Play2dSample()

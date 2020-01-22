@@ -25,7 +25,7 @@ SOFTWARE.
 -------------------------------
 
  [nterrain.c]
- - Alexander Brandt 2019
+ - Alexander Brandt 2019-2020
 -----------------------------*/
 
 #include <math.h>
@@ -114,16 +114,13 @@ static float sHeightmapElevation(const struct jaImage* hmap, struct jaVector2 co
 	{
 	case IMAGE_GRAY8:
 		result = (data.u8[x + hmap->width * y] * u_opposite + data.u8[x + 1 + hmap->width * y] * u_ratio) * v_opposite +
-		         (data.u8[x + hmap->width * (y + 1)] * u_opposite + data.u8[x + 1 + hmap->width * (y + 1)] * u_ratio) *
-		             v_ratio;
+		         (data.u8[x + hmap->width * (y + 1)] * u_opposite + data.u8[x + 1 + hmap->width * (y + 1)] * u_ratio) * v_ratio;
 		result /= 255.0f;
 		break;
 
 	case IMAGE_GRAY16:
-		result =
-		    (data.u16[x + hmap->width * y] * u_opposite + data.u16[x + 1 + hmap->width * y] * u_ratio) * v_opposite +
-		    (data.u16[x + hmap->width * (y + 1)] * u_opposite + data.u16[x + 1 + hmap->width * (y + 1)] * u_ratio) *
-		        v_ratio;
+		result = (data.u16[x + hmap->width * y] * u_opposite + data.u16[x + 1 + hmap->width * y] * u_ratio) * v_opposite +
+		         (data.u16[x + hmap->width * (y + 1)] * u_opposite + data.u16[x + 1 + hmap->width * (y + 1)] * u_ratio) * v_ratio;
 		result /= 65535.0f;
 		break;
 
@@ -153,8 +150,7 @@ static struct Index sGenerateIndex(struct jaBuffer* buffer, const struct NTerrai
 
 	{
 		size_t const org_patterns_no = sPatternsInARow(org.max.x - org.min.x, org_pattern_dimension);
-		size_t const org_step =
-		    (org_patterns_no / patterns_no) / (size_t)lroundf((org.max.x - org.min.x) / sNodeDimension(node));
+		size_t const org_step = (org_patterns_no / patterns_no) / (size_t)lroundf((org.max.x - org.min.x) / sNodeDimension(node));
 
 		size_t const org_col_start = sPatternsInARow(node->bbox.min.x - org.min.x, org_pattern_dimension);
 		size_t org_row = sPatternsInARow(node->bbox.min.y - org.min.y, org_pattern_dimension);
@@ -209,7 +205,7 @@ static struct Index sGenerateIndex(struct jaBuffer* buffer, const struct NTerrai
 
 	// Copy to the final index
 	struct Index index = {0};
-	IndexInit(&index, temp_data, length, NULL); // TODO: Check error
+	IndexInit(temp_data, length, &index, NULL); // TODO: Check error
 
 	return index;
 }
@@ -219,9 +215,8 @@ static struct Index sGenerateIndex(struct jaBuffer* buffer, const struct NTerrai
 
  sGenerateVertices()
 -----------------------------*/
-static struct Vertices sGenerateVertices(struct jaBuffer* buffer, const struct NTerrainNode* node,
-                                         float pattern_dimension, float terrain_dimension, const struct jaImage* hmap,
-                                         float elevation)
+static struct Vertices sGenerateVertices(struct jaBuffer* buffer, const struct NTerrainNode* node, float pattern_dimension,
+                                         float terrain_dimension, const struct jaImage* hmap, float elevation)
 {
 	// Generation on a temporary buffer
 	size_t const patterns_no = sPatternsInARow(sNodeDimension(node), pattern_dimension);
@@ -245,8 +240,7 @@ static struct Vertices sGenerateVertices(struct jaBuffer* buffer, const struct N
 				temp_data[col + (patterns_no + 1) * row].pos.y = node->bbox.min.y + (float)row * pattern_dimension;
 
 				if (hmap != NULL)
-					temp_data[col + (patterns_no + 1) * row].pos.z =
-					    sHeightmapElevation(hmap, texture_step) * elevation;
+					temp_data[col + (patterns_no + 1) * row].pos.z = sHeightmapElevation(hmap, texture_step) * elevation;
 				else
 					temp_data[col + (patterns_no + 1) * row].pos.z = 0.0;
 
@@ -261,7 +255,7 @@ static struct Vertices sGenerateVertices(struct jaBuffer* buffer, const struct N
 
 	// Copy to the final index
 	struct Vertices vertices = {0};
-	VerticesInit(&vertices, temp_data, (uint16_t)((patterns_no + 1) * (patterns_no + 1)), NULL); // TODO: Check error
+	VerticesInit(temp_data, (uint16_t)((patterns_no + 1) * (patterns_no + 1)), &vertices, NULL); // TODO: Check error
 
 	return vertices;
 }
@@ -351,8 +345,8 @@ static void sSubdivideNode(struct NTerrainNode* node, float min_node_dimension)
 
  NTerrainCreate()
 -----------------------------*/
-struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation, float dimension,
-                                float min_node_dimension, int pattern_subdivisions, struct jaStatus* st)
+struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation, float dimension, float min_node_dimension,
+                                int pattern_subdivisions, struct jaStatus* st)
 {
 	struct NTerrain* terrain = NULL;
 	struct NTerrainNode* node = NULL;
@@ -428,8 +422,7 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 				terrain->vertices_buffers_no++;
 
 				node->vertices_type = SHARED_WITH_CHILDRENS;
-				node->vertices = sGenerateVertices(&terrain->buffer, node, terrain->min_pattern_dimension,
-				                                   terrain->dimension, heightmap, elevation);
+				node->vertices = sGenerateVertices(&terrain->buffer, node, terrain->min_pattern_dimension, terrain->dimension, heightmap, elevation);
 				node->index = sGenerateIndex(&terrain->buffer, node, node->bbox, terrain->min_pattern_dimension);
 			}
 
@@ -441,8 +434,8 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 				terrain->vertices_buffers_no++;
 
 				node->vertices_type = OWN_VERTICES;
-				node->vertices = sGenerateVertices(&terrain->buffer, node, node->pattern_dimension, terrain->dimension,
-				                                   heightmap, elevation);
+				node->vertices =
+				    sGenerateVertices(&terrain->buffer, node, node->pattern_dimension, terrain->dimension, heightmap, elevation);
 				node->index = sGenerateIndex(&terrain->buffer, node, node->bbox, node->pattern_dimension);
 			}
 		}
@@ -597,9 +590,8 @@ again:
 		if (state->actual->children != NULL &&
 		    (view == NULL ||
 		     jaAABCollisionBoxBox(
-		         ((struct jaAABBox){
-		             jaVector3Subtract(view->position, (struct jaVector3){factor / 2.0f, factor / 2.0f, factor / 2.0f}),
-		             jaVector3Add(view->position, (struct jaVector3){factor / 2.0f, factor / 2.0f, factor / 2.0f})}),
+		         ((struct jaAABBox){jaVector3Subtract(view->position, (struct jaVector3){factor / 2.0f, factor / 2.0f, factor / 2.0f}),
+		                            jaVector3Add(view->position, (struct jaVector3){factor / 2.0f, factor / 2.0f, factor / 2.0f})}),
 		         state->actual->bbox) == true))
 		{
 			if (buffer->size < (state->depth + 1) * sizeof(void*))
@@ -671,7 +663,7 @@ again:
 			align = jaVector2Scale(align, (sNodeDimension(state->actual->parent)));
 
 			state->view_rectangle = (struct jaAABRectangle){{align.x - factor / 2.0f, align.y - factor / 2.0f},
-			                                               {align.x + factor / 2.0f, align.y + factor / 2.0f}};
+			                                                {align.x + factor / 2.0f, align.y + factor / 2.0f}};
 
 			if (jaAABCollisionRectRect(state->view_rectangle, jaAABToRectangle(state->actual->bbox)) == true)
 				state->in_border = false;

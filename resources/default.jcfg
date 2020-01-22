@@ -3,9 +3,18 @@
 
 render.width = 1200
 render.height = 600
-render.fullscreen = 0 # 0, 1
-render.vsync = 1      # 0, 1
-render.samples = 1    # 0-16
-render.wireframe = 0  # 0, 1
+
+render.fullscreen = 0     # 0, 1
+render.vsync = 1          # 0, 1
+render.samples = 1        # 0 - 16
+render.wireframe = 0      # 0, 1
+
 render.filter = trilinear # pixel, bilinear, trilinear,
                           # pixel_bilinear, pixel_trilinear
+
+mixer.volume = 0.8        # 0.0 - 1.0
+mixer.frequency = 48000   # 8000 - 48000
+mixer.channels = 2        # 1, 2
+mixer.max_sounds = 32     # 0 - 64
+mixer.sampling = sinc_low # linear, zero_order,
+                          # sinc_low, sinc_medium, sinc_high

@@ -21,9 +21,6 @@
 	struct Mixer* MixerCreate(const struct jaConfiguration*, struct jaStatus* st);
 	void MixerDelete(struct Mixer* mixer);
 
-	int MixerStart(struct Mixer* mixer, struct jaStatus* st);
-	void MixerStop(struct Mixer* mixer); // TODO
-
 	struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct jaStatus* st);
 	void SampleDelete(struct Sample*);
 
