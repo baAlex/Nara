@@ -82,6 +82,23 @@ static void sToCommonFormat(const void* in, size_t in_size, size_t in_channels, 
 
  SampleCreate()
 -----------------------------*/
+struct IterationData
+{
+	size_t marked_no;
+	struct jaDictionaryItem** marked;
+};
+
+static void sIterateCallback(struct jaDictionaryItem* item, void* raw_data)
+{
+	struct IterationData* data = raw_data;
+
+	if (((struct Sample*)item->data)->references <= 0)
+	{
+		data->marked[data->marked_no] = item;
+		data->marked_no += 1;
+	}
+}
+
 struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct jaStatus* st)
 {
 	struct jaDictionaryItem* item = NULL;
@@ -90,7 +107,28 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct ja
 	FILE* file = NULL;
 
 	jaStatusSet(st, "SampleCreate", STATUS_SUCCESS, NULL);
-	FreeMarkedSamples(mixer);
+
+	// Free marked samples
+	{
+		// We can't delete an dictionary item in a iteration
+		// so first we move everything marked into a buffer :(
+
+		if (mixer->buffer.size < (sizeof(void*) * mixer->samples_no) &&
+		    jaBufferResize(&mixer->buffer, sizeof(void*) * mixer->samples_no) == NULL)
+		{
+			jaStatusSet(st, "SampleCreate", STATUS_MEMORY_ERROR, "File: \"%s\"", filename);
+			goto return_failure;
+		}
+
+		struct IterationData temp_data = {0};
+		temp_data.marked_no = 0;
+		temp_data.marked = mixer->buffer.data;
+
+		jaDictionaryIterate(mixer->samples, sIterateCallback, &temp_data);
+
+		for (size_t i = 0; i < temp_data.marked_no; i++)
+			jaDictionaryRemove(temp_data.marked[i]);
+	}
 
 	// Alredy exists?
 	item = jaDictionaryGet(mixer->samples, filename);
@@ -151,8 +189,8 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct ja
 
 	// Resample
 	{
-		size_t resampled_length = ex.length * (size_t)ceil((double)mixer->cfg.frequency / (double)ex.frequency);
-		size_t resampled_size = resampled_length * sizeof(float) * jaMin(ex.channels, (size_t)mixer->cfg.channels);
+		double resampled_length = (double)ex.length * ((double)mixer->cfg.frequency / (double)ex.frequency);
+		size_t resampled_size = (size_t)resampled_length * sizeof(float) * jaMin(ex.channels, (size_t)mixer->cfg.channels);
 
 		if ((item = jaDictionaryAdd(mixer->samples, filename, NULL, sizeof(struct Sample) + resampled_size)) == NULL)
 		{
@@ -162,10 +200,9 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct ja
 
 		sample = item->data;
 		sample->item = item;
-		sample->length = resampled_length;
+		sample->length = (size_t)resampled_length;
 		sample->channels = jaMin(ex.channels, (size_t)mixer->cfg.channels);
-		sample->references = 0;
-		sample->to_delete = false;
+		sample->references = 1;
 
 		memset(sample->data, 0, resampled_size);
 
@@ -180,15 +217,6 @@ struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct ja
 			jaStatusSet(st, "SampleCreate", STATUS_ERROR, "src_simple() error. File: \"%s\"", filename);
 			goto return_failure;
 		}
-	}
-
-	// Resize list to keep deleted samples
-	mixer->samples_no += 1;
-
-	if (jaBufferResizeZero(&mixer->marked_samples, sizeof(void*) * mixer->samples_no) == NULL)
-	{
-		jaStatusSet(st, "SampleCreate", STATUS_MEMORY_ERROR, "File: \"%s\"", filename);
-		goto return_failure;
 	}
 
 	// Bye!
@@ -211,5 +239,5 @@ return_failure:
 -----------------------------*/
 inline void SampleDelete(struct Sample* sample)
 {
-	sample->to_delete = true;
+	sample->references -= 1;
 }

@@ -22,9 +22,7 @@
 	#include "mixer.h"
 	#include "samplerate.h"
 
-	#define PLAY_LEN 8
-
-	struct ToPlay
+	struct PlayItem
 	{
 		bool active;
 		size_t cursor;
@@ -35,30 +33,32 @@
 		enum PlayOptions options;
 	};
 
+	struct Cfg
+	{
+		float volume;
+		int frequency;
+		int channels;
+		int sampling;
+		int max_sounds;
+	};
+
 	struct Mixer
 	{
-		struct
-		{
-			float volume;
-			int frequency;
-			int channels;
-			int max_sounds;
-			int sampling;
-		} cfg;
-
+		// Mixer
+		struct Cfg cfg;
 		bool valid;
 		bool started;
 
 		PaStream* stream;
 
+		// Samples
+		struct jaBuffer buffer;
 		struct jaDictionary* samples;
-		struct jaBuffer marked_samples; // To free them
 		size_t samples_no;
 
-		struct jaBuffer buffer; // SampleCreate()
-
-		struct ToPlay playlist[PLAY_LEN];
-		size_t last_index; // Play2dSample()
+		// Playlist
+		int last_index;
+		struct PlayItem playlist[];
 	};
 
 	struct Sample
@@ -66,13 +66,10 @@
 		struct jaDictionaryItem* item;
 
 		int references;
-		bool to_delete;
 
 		size_t length;
 		size_t channels;
 		float data[];
 	};
-
-	void FreeMarkedSamples(struct Mixer* mixer);
 
 #endif

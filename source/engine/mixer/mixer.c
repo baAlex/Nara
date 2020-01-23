@@ -43,63 +43,48 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 	(void)status;
 
 	struct Mixer* mixer = raw_mixer;
-	float* output = raw_output;
-	float* data = NULL;
+	const size_t channels_no = (size_t)mixer->cfg.channels;
 
-	const size_t channels = (size_t)mixer->cfg.channels;
+	float* temp_data = NULL;
 
-	for (unsigned long i = 0; i < (frames_no * channels); i += channels)
+	for (float* output = raw_output; output < (float*)raw_output + (frames_no * channels_no); output += channels_no)
 	{
-		for (size_t ch = 0; ch < channels; ch++)
-			output[i + ch] = 0.0f;
+		for (size_t ch = 0; ch < channels_no; ch++)
+			output[ch] = 0.0f;
 
 		// Sum all playlist
-		for (size_t pl = 0; pl < PLAY_LEN; pl++)
+		for (struct PlayItem* playitem = mixer->playlist; playitem < (mixer->playlist + mixer->cfg.max_sounds); playitem++)
 		{
-			if (mixer->playlist[pl].active == false)
+			if (playitem->active == false)
 				continue;
 
-			data = mixer->playlist[pl].sample->data;
-			data += (mixer->playlist[pl].cursor * mixer->playlist[pl].sample->channels);
+			temp_data = playitem->sample->data + (playitem->sample->channels * playitem->cursor);
 
-			for (size_t ch = 0; ch < channels; ch++)
-				output[i + ch] += (data[ch % mixer->playlist[pl].sample->channels] * mixer->playlist[pl].volume);
+			for (size_t ch = 0; ch < channels_no; ch++)
+				output[ch] += (temp_data[ch % playitem->sample->channels] * playitem->volume);
 
-			mixer->playlist[pl].cursor += 1;
+			playitem->cursor += 1;
 
 			// End of sample
-			if (mixer->playlist[pl].cursor >= mixer->playlist[pl].sample->length)
+			if (playitem->cursor >= playitem->sample->length)
 			{
-				if ((mixer->playlist[pl].options & PLAY_LOOP) == PLAY_LOOP)
+				if ((playitem->options & PLAY_LOOP) == PLAY_LOOP)
 				{
-					mixer->playlist[pl].cursor = 0;
+					playitem->cursor = 0;
 					continue;
 				}
 
-				mixer->playlist[pl].active = false;
-				mixer->playlist[pl].sample->references -= 1;
-
-				// Mark sample as deleted if there are no further use
-				if (mixer->playlist[pl].sample->to_delete == true && mixer->playlist[pl].sample->references <= 0)
-				{
-					struct jaDictionaryItem* item = mixer->playlist[pl].sample->item;
-					jaDictionaryDetach(item);
-
-					for (size_t z = 0; z < mixer->samples_no; z++)
-					{
-						if (((struct jaDictionaryItem**)mixer->marked_samples.data)[z] == NULL)
-							((struct jaDictionaryItem**)mixer->marked_samples.data)[z] = item;
-					}
-				}
+				playitem->active = false;
+				playitem->sample->references -= 1;
 			}
 		}
 
 		// Global volume
-		for (size_t ch = 0; ch < channels; ch++)
+		for (size_t ch = 0; ch < channels_no; ch++)
 		{
-			output[i + ch] *= mixer->cfg.volume;
+			output[ch] *= mixer->cfg.volume;
 
-			if (output[i + ch] > 1.0f)
+			if (output[ch] > 1.0f)
 			{
 				// TODO, peak limiter
 			}
@@ -124,9 +109,28 @@ struct Mixer* MixerCreate(const struct jaConfiguration* config, struct jaStatus*
 
 	// Initialization
 	{
+		struct Cfg temp_cfg = {0};
 		const char* sampling = NULL;
 
-		if ((mixer = calloc(1, sizeof(struct Mixer))) == NULL)
+		if (jaCvarRetrieve(config, "mixer.volume", &temp_cfg.volume, st) != 0 ||
+		    jaCvarRetrieve(config, "mixer.frequency", &temp_cfg.frequency, st) != 0 ||
+		    jaCvarRetrieve(config, "mixer.channels", &temp_cfg.channels, st) != 0 ||
+		    jaCvarRetrieve(config, "mixer.max_sounds", &temp_cfg.max_sounds, st) != 0 ||
+		    jaCvarRetrieve(config, "mixer.sampling", &sampling, st) != 0)
+			goto return_failure;
+
+		if (strcmp(sampling, "linear") == 0)
+			temp_cfg.sampling = SRC_LINEAR;
+		else if (strcmp(sampling, "zero_order") == 0)
+			temp_cfg.sampling = SRC_ZERO_ORDER_HOLD;
+		else if (strcmp(sampling, "sinc_low") == 0)
+			temp_cfg.sampling = SRC_SINC_FASTEST;
+		else if (strcmp(sampling, "sinc_medium") == 0)
+			temp_cfg.sampling = SRC_SINC_MEDIUM_QUALITY;
+		else if (strcmp(sampling, "sinc_high") == 0)
+			temp_cfg.sampling = SRC_SINC_BEST_QUALITY;
+
+		if ((mixer = calloc(1, sizeof(struct Mixer) + sizeof(struct PlayItem) * (size_t)temp_cfg.max_sounds)) == NULL)
 		{
 			jaStatusSet(st, "MixerCreate", STATUS_MEMORY_ERROR, NULL);
 			return NULL;
@@ -135,23 +139,7 @@ struct Mixer* MixerCreate(const struct jaConfiguration* config, struct jaStatus*
 		if ((mixer->samples = jaDictionaryCreate(NULL)) == NULL)
 			goto return_failure;
 
-		if (jaCvarRetrieve(config, "mixer.volume", &mixer->cfg.volume, st) != 0 ||
-		    jaCvarRetrieve(config, "mixer.frequency", &mixer->cfg.frequency, st) != 0 ||
-		    jaCvarRetrieve(config, "mixer.channels", &mixer->cfg.channels, st) != 0 ||
-		    jaCvarRetrieve(config, "mixer.max_sounds", &mixer->cfg.max_sounds, st) != 0 ||
-		    jaCvarRetrieve(config, "mixer.sampling", &sampling, st) != 0)
-			goto return_failure;
-
-		if (strcmp(sampling, "linear") == 0)
-			mixer->cfg.sampling = SRC_LINEAR;
-		else if (strcmp(sampling, "zero_order") == 0)
-			mixer->cfg.sampling = SRC_ZERO_ORDER_HOLD;
-		else if (strcmp(sampling, "sinc_low") == 0)
-			mixer->cfg.sampling = SRC_SINC_FASTEST;
-		else if (strcmp(sampling, "sinc_medium") == 0)
-			mixer->cfg.sampling = SRC_SINC_MEDIUM_QUALITY;
-		else if (strcmp(sampling, "sinc_high") == 0)
-			mixer->cfg.sampling = SRC_SINC_BEST_QUALITY;
+		mixer->cfg = temp_cfg;
 
 		if (mixer->cfg.volume > 0.0 && mixer->cfg.max_sounds > 0)
 			mixer->valid = true;
@@ -196,32 +184,11 @@ inline void MixerDelete(struct Mixer* mixer)
 			Pa_StopStream(mixer->stream);
 
 		Pa_Terminate();
-
-		jaBufferClean(&mixer->marked_samples);
 		jaBufferClean(&mixer->buffer);
 	}
 
 	jaDictionaryDelete(mixer->samples);
 	free(mixer);
-}
-
-
-/*-----------------------------
-
- FreeMarkedSamples()
------------------------------*/
-inline void FreeMarkedSamples(struct Mixer* mixer)
-{
-	struct jaDictionaryItem** marked = mixer->marked_samples.data;
-
-	for (size_t i = 0; i < mixer->samples_no; i++)
-	{
-		if (marked[i] != NULL)
-		{
-			jaDictionaryRemove(marked[i]);
-			marked[i] = NULL;
-		}
-	}
 }
 
 
@@ -264,7 +231,7 @@ void Play2dFile(struct Mixer* mixer, float volume, enum PlayOptions options, con
 
 void Play2dSample(struct Mixer* mixer, float volume, enum PlayOptions options, struct Sample* sample)
 {
-	struct ToPlay* space = NULL;
+	struct PlayItem* playitem = NULL;
 
 	if (mixer->valid == false)
 		return;
@@ -275,27 +242,27 @@ void Play2dSample(struct Mixer* mixer, float volume, enum PlayOptions options, s
 		mixer->started = true;
 	}
 
-	// Find an space in the playlist
+	// Find an item in the playlist
 	{
-		size_t ref_i = 0;
-		size_t i = 0;
+		int base_i = 0;
+		int i = 0;
 
-		for (ref_i = 0; ref_i < PLAY_LEN; ref_i++)
+		for (base_i = 0; base_i < mixer->cfg.max_sounds; base_i++)
 		{
-			i = (mixer->last_index + ref_i) % PLAY_LEN;
+			i = (mixer->last_index + base_i) % mixer->cfg.max_sounds;
 
 			if (mixer->playlist[i].active == false)
 			{
-				space = &mixer->playlist[i];
+				playitem = &mixer->playlist[i];
 				break;
 			}
 		}
 
 		// Bad luck, lets recycle
-		if (ref_i == PLAY_LEN)
+		if (base_i == mixer->cfg.max_sounds)
 		{
-			i = (mixer->last_index + 1) % PLAY_LEN;
-			space = &mixer->playlist[i];
+			i = (mixer->last_index + 1) % mixer->cfg.max_sounds;
+			playitem = &mixer->playlist[i];
 		}
 
 		// Save index for the next play
@@ -303,14 +270,18 @@ void Play2dSample(struct Mixer* mixer, float volume, enum PlayOptions options, s
 	}
 
 	// Yay
+	if (playitem->active == true)
+	{
+		playitem->active = false;
+		playitem->sample->references -= 1;
+	}
+
 	sample->references += 1;
 
-	space->active = false; // FIXME, if is an recycled space is necessary to set "references" appropriately
+	playitem->cursor = 0;
+	playitem->options = options;
+	playitem->sample = sample;
+	playitem->volume = volume;
 
-	space->cursor = 0;
-	space->options = options;
-	space->sample = sample;
-	space->volume = volume;
-
-	space->active = true;
+	playitem->active = true;
 }
