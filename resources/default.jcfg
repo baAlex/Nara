@@ -18,3 +18,5 @@ mixer.channels = 2        # 1, 2
 mixer.max_sounds = 32     # 0 - 64
 mixer.sampling = sinc_low # linear, zero_order,
                           # sinc_low, sinc_medium, sinc_high
+
+mixer.limiter.threshold = 0.7 # 0.0 - 1.0

@@ -217,18 +217,6 @@ void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 	// Two states old school buttons
 	switch (key)
 	{
-	case GLFW_KEY_F2: context->fcallback[1](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
-	case GLFW_KEY_F3: context->fcallback[2](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
-	case GLFW_KEY_F4: context->fcallback[3](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
-	case GLFW_KEY_F5: context->fcallback[4](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
-	case GLFW_KEY_F6: context->fcallback[5](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
-	case GLFW_KEY_F7: context->fcallback[6](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
-	case GLFW_KEY_F8: context->fcallback[7](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
-	case GLFW_KEY_F9: context->fcallback[8](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
-	case GLFW_KEY_F10: context->fcallback[9](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
-	case GLFW_KEY_F11: context->fcallback[10](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
-	case GLFW_KEY_F12: context->fcallback[11](context, &context->combined, (action == GLFW_PRESS) ? true : false); break;
-
 	case GLFW_KEY_1: context->keyboard.a = (action == GLFW_PRESS) ? true : false; break;
 	case GLFW_KEY_2: context->keyboard.b = (action == GLFW_PRESS) ? true : false; break;
 	case GLFW_KEY_3: context->keyboard.x = (action == GLFW_PRESS) ? true : false; break;
@@ -248,6 +236,12 @@ void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 	case GLFW_KEY_E: context->keyboard.right_analog.t = (action == GLFW_PRESS) ? 1.0f : 0.0f; break;
 
 	default: break;
+	}
+
+	if(key >= GLFW_KEY_F1 && key <= GLFW_KEY_F12)
+	{
+		if (context->fcallback[key - GLFW_KEY_F12 + 11] != NULL)
+			context->fcallback[key - GLFW_KEY_F12 + 11](context, &context->combined, (action == GLFW_PRESS) ? true : false);
 	}
 
 	// Hey kid, do you wanna emulate analog sticks?

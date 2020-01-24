@@ -101,6 +101,10 @@ static struct jaConfiguration* sInitializeConfiguration(int argc, const char* ar
 		jaCvarCreate(config, "mixer.max_sounds", 32, 0, 64, NULL);
 		jaCvarCreate(config, "mixer.sampling", "sinc_low", "linear, zero_order, sinc_low, sinc_medium, sinc_high", NULL, NULL);
 
+		jaCvarCreate(config, "mixer.limiter.threshold", 0.7f, 0.0f, 1.0f, NULL);
+		jaCvarCreate(config, "mixer.limiter.attack", 0.0f, 0.0f, 666.f, NULL);
+		jaCvarCreate(config, "mixer.limiter.release", 0.0f, 0.0, 666.f, NULL);
+
 		// TODO
 		/*jaCvarCreate(config, "render.max_distance", 1024.0f, 100.0f, 4096.0f, NULL);
 

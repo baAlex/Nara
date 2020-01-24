@@ -40,6 +40,10 @@
 		int channels;
 		int sampling;
 		int max_sounds;
+
+		float limiter_threshold;
+		float limiter_attack;
+		float limiter_release;
 	};
 
 	struct Mixer
@@ -50,6 +54,8 @@
 		bool started;
 
 		PaStream* stream;
+
+		float last_limiter_env[2];
 
 		// Samples
 		struct jaBuffer buffer;

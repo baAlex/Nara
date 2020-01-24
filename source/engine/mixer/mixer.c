@@ -26,9 +26,33 @@ SOFTWARE.
 
  [mixer.c]
  - Alexander Brandt 2019-2020
+
+
+References:
+
+Dimitrios Giannolis, et al. (2012), «Digital Dynamic Range Compressor Design—
+A Tutorial and Analysis», J. Audio Eng. Soc., Vol. 60, No. 6, Queen Mary
+University of London, London, UK.
+
+Hämäläinen Perttu (2002), «Smoothing Of The Control Signal Without Clipped
+Output In Digital Peak Limiters», Proc. of the 5th Int. Conference on
+Digital Audio Effects (DAFx-02), Hamburg, Germany.
+
+Roelandts (2016), «Low-Pass Single-Pole IIR Filter»:
+https://tomroelandts.com/articles/low-pass-single-pole-iir-filter
+
+Cavaliere (2017), «How to calculate a first order IIR filter in 5 minutes»:
+https://www.monocilindro.com/2017/04/08/how-to-implement-a-1st-order-iir-filter-in-5-minutes/
+
 -----------------------------*/
 
 #include "private.h"
+
+
+static inline float sFirstOrderIIRLowPass(float k, float input, float previous_sample)
+{
+	return (k * input + (1.0f - k) * previous_sample);
+}
 
 
 /*-----------------------------
@@ -79,15 +103,30 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 			}
 		}
 
-		// Global volume
 		for (size_t ch = 0; ch < channels_no; ch++)
 		{
-			output[ch] *= mixer->cfg.volume;
+#if 1
+			// TODO, hardcoded K values
+			float env = 0;
 
-			if (output[ch] > 1.0f)
-			{
-				// TODO, peak limiter
-			}
+			// Limiter attack/release
+			if (fabsf(output[ch]) > mixer->last_limiter_env[ch])
+				env = sFirstOrderIIRLowPass(0.9f, fabsf(output[ch]), fabsf(mixer->last_limiter_env[ch]));
+			else
+				env = sFirstOrderIIRLowPass(0.001f, fabsf(output[ch]), fabsf(mixer->last_limiter_env[ch]));
+
+			mixer->last_limiter_env[ch] = env;
+
+			// Limiter gain
+			output[ch] /= (env > mixer->cfg.limiter_threshold) ? env / mixer->cfg.limiter_threshold : 1.0f;
+#endif
+
+			// Clipping and finally, volume
+			// if (output[ch] < -1.0f || output[ch] > +1.0f)
+			// 	printf("Clipping! %i\n", rand());
+
+			output[ch] = jaClamp(output[ch], -1.0f, +1.0f);
+			output[ch] *= mixer->cfg.volume;
 		}
 	}
 
@@ -116,8 +155,14 @@ struct Mixer* MixerCreate(const struct jaConfiguration* config, struct jaStatus*
 		    jaCvarRetrieve(config, "mixer.frequency", &temp_cfg.frequency, st) != 0 ||
 		    jaCvarRetrieve(config, "mixer.channels", &temp_cfg.channels, st) != 0 ||
 		    jaCvarRetrieve(config, "mixer.max_sounds", &temp_cfg.max_sounds, st) != 0 ||
-		    jaCvarRetrieve(config, "mixer.sampling", &sampling, st) != 0)
+		    jaCvarRetrieve(config, "mixer.sampling", &sampling, st) != 0 ||
+		    jaCvarRetrieve(config, "mixer.limiter.threshold", &temp_cfg.limiter_threshold, st) != 0 ||
+		    jaCvarRetrieve(config, "mixer.limiter.attack", &temp_cfg.limiter_attack, st) != 0 ||
+		    jaCvarRetrieve(config, "mixer.limiter.release", &temp_cfg.limiter_release, st) != 0)
 			goto return_failure;
+
+		// temp_cfg.limiter_attack = ???;
+		// temp_cfg.limiter_release = ???;
 
 		if (strcmp(sampling, "linear") == 0)
 			temp_cfg.sampling = SRC_LINEAR;
@@ -129,6 +174,8 @@ struct Mixer* MixerCreate(const struct jaConfiguration* config, struct jaStatus*
 			temp_cfg.sampling = SRC_SINC_MEDIUM_QUALITY;
 		else if (strcmp(sampling, "sinc_high") == 0)
 			temp_cfg.sampling = SRC_SINC_BEST_QUALITY;
+		else
+			temp_cfg.sampling = SRC_SINC_FASTEST;
 
 		if ((mixer = calloc(1, sizeof(struct Mixer) + sizeof(struct PlayItem) * (size_t)temp_cfg.max_sounds)) == NULL)
 		{
