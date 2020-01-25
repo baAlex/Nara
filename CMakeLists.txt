@@ -55,6 +55,7 @@ set(NARA_SOURCES
 	"./source/engine/context/input.c"
 	"./source/engine/context/objects.c"
 	"./source/engine/context/state.c"
+	"./source/engine/mixer/dsp.c"
 	"./source/engine/mixer/mixer.c"
 	"./source/engine/mixer/sample.c"
 	"./source/engine/entity.c"

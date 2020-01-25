@@ -25,6 +25,7 @@ build ./build/release/engine/context/input.o:   compile ./source/engine/context/
 build ./build/release/engine/context/objects.o: compile ./source/engine/context/objects.c
 build ./build/release/engine/context/state.o:   compile ./source/engine/context/state.c
 
+build ./build/release/engine/mixer/dsp.o:    compile ./source/engine/mixer/dsp.c
 build ./build/release/engine/mixer/mixer.o:  compile ./source/engine/mixer/mixer.c
 build ./build/release/engine/mixer/sample.o: compile ./source/engine/mixer/sample.c
 
@@ -91,6 +92,7 @@ build nara: link $
 ./build/release/engine/context/input.o $
 ./build/release/engine/context/objects.o $
 ./build/release/engine/context/state.o $
+./build/release/engine/mixer/dsp.o $
 ./build/release/engine/mixer/mixer.o $
 ./build/release/engine/mixer/sample.o $
 ./build/release/engine/entity.o $

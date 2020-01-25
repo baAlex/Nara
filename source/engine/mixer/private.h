@@ -22,6 +22,26 @@
 	#include "mixer.h"
 	#include "samplerate.h"
 
+	struct DspLimiter
+	{
+		float threshold;
+		float attack;
+		float release;
+
+		float last_envelope_sample[2];
+	};
+
+	struct Sample
+	{
+		struct jaDictionaryItem* item;
+
+		int references;
+
+		size_t length;
+		size_t channels;
+		float data[];
+	};
+
 	struct PlayItem
 	{
 		bool active;
@@ -40,14 +60,18 @@
 		int channels;
 		int sampling;
 		int max_sounds;
-
-		float limiter_threshold;
-		float limiter_attack;
-		float limiter_release;
 	};
 
 	struct Mixer
 	{
+		// Dsp
+		struct DspLimiter limiter;
+
+		// Samples
+		struct jaBuffer buffer;
+		struct jaDictionary* samples;
+		size_t samples_no;
+
 		// Mixer
 		struct Cfg cfg;
 		bool valid;
@@ -55,27 +79,12 @@
 
 		PaStream* stream;
 
-		float last_limiter_env[2];
-
-		// Samples
-		struct jaBuffer buffer;
-		struct jaDictionary* samples;
-		size_t samples_no;
-
-		// Playlist
 		int last_index;
 		struct PlayItem playlist[];
 	};
 
-	struct Sample
-	{
-		struct jaDictionaryItem* item;
 
-		int references;
-
-		size_t length;
-		size_t channels;
-		float data[];
-	};
+	int DspLimiterInit(const struct jaConfiguration* config, struct DspLimiter* limiter, struct jaStatus* st);
+	float DspLimiterGain(struct DspLimiter* limiter, size_t ch, float input);
 
 #endif

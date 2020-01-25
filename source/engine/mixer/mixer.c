@@ -26,33 +26,9 @@ SOFTWARE.
 
  [mixer.c]
  - Alexander Brandt 2019-2020
-
-
-References:
-
-Dimitrios Giannolis, et al. (2012), «Digital Dynamic Range Compressor Design—
-A Tutorial and Analysis», J. Audio Eng. Soc., Vol. 60, No. 6, Queen Mary
-University of London, London, UK.
-
-Hämäläinen Perttu (2002), «Smoothing Of The Control Signal Without Clipped
-Output In Digital Peak Limiters», Proc. of the 5th Int. Conference on
-Digital Audio Effects (DAFx-02), Hamburg, Germany.
-
-Roelandts (2016), «Low-Pass Single-Pole IIR Filter»:
-https://tomroelandts.com/articles/low-pass-single-pole-iir-filter
-
-Cavaliere (2017), «How to calculate a first order IIR filter in 5 minutes»:
-https://www.monocilindro.com/2017/04/08/how-to-implement-a-1st-order-iir-filter-in-5-minutes/
-
 -----------------------------*/
 
 #include "private.h"
-
-
-static inline float sFirstOrderIIRLowPass(float k, float input, float previous_sample)
-{
-	return (k * input + (1.0f - k) * previous_sample);
-}
 
 
 /*-----------------------------
@@ -105,25 +81,7 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 
 		for (size_t ch = 0; ch < channels_no; ch++)
 		{
-#if 1
-			// TODO, hardcoded K values
-			float env = 0;
-
-			// Limiter attack/release
-			if (fabsf(output[ch]) > mixer->last_limiter_env[ch])
-				env = sFirstOrderIIRLowPass(0.9f, fabsf(output[ch]), fabsf(mixer->last_limiter_env[ch]));
-			else
-				env = sFirstOrderIIRLowPass(0.001f, fabsf(output[ch]), fabsf(mixer->last_limiter_env[ch]));
-
-			mixer->last_limiter_env[ch] = env;
-
-			// Limiter gain
-			output[ch] /= (env > mixer->cfg.limiter_threshold) ? env / mixer->cfg.limiter_threshold : 1.0f;
-#endif
-
-			// Clipping and finally, volume
-			// if (output[ch] < -1.0f || output[ch] > +1.0f)
-			// 	printf("Clipping! %i\n", rand());
+			output[ch] /= DspLimiterGain(&mixer->limiter, ch, output[ch]);
 
 			output[ch] = jaClamp(output[ch], -1.0f, +1.0f);
 			output[ch] *= mixer->cfg.volume;
@@ -146,7 +104,7 @@ struct Mixer* MixerCreate(const struct jaConfiguration* config, struct jaStatus*
 	jaStatusSet(st, "MixerCreate", STATUS_SUCCESS, NULL);
 	printf("- Lib-Portaudio: %s\n", (Pa_GetVersionInfo() != NULL) ? Pa_GetVersionInfo()->versionText : "");
 
-	// Initialization
+	// Mixer and sampling module initialization (both are tied)
 	{
 		struct Cfg temp_cfg = {0};
 		const char* sampling = NULL;
@@ -155,14 +113,8 @@ struct Mixer* MixerCreate(const struct jaConfiguration* config, struct jaStatus*
 		    jaCvarRetrieve(config, "mixer.frequency", &temp_cfg.frequency, st) != 0 ||
 		    jaCvarRetrieve(config, "mixer.channels", &temp_cfg.channels, st) != 0 ||
 		    jaCvarRetrieve(config, "mixer.max_sounds", &temp_cfg.max_sounds, st) != 0 ||
-		    jaCvarRetrieve(config, "mixer.sampling", &sampling, st) != 0 ||
-		    jaCvarRetrieve(config, "mixer.limiter.threshold", &temp_cfg.limiter_threshold, st) != 0 ||
-		    jaCvarRetrieve(config, "mixer.limiter.attack", &temp_cfg.limiter_attack, st) != 0 ||
-		    jaCvarRetrieve(config, "mixer.limiter.release", &temp_cfg.limiter_release, st) != 0)
+		    jaCvarRetrieve(config, "mixer.sampling", &sampling, st) != 0)
 			goto return_failure;
-
-		// temp_cfg.limiter_attack = ???;
-		// temp_cfg.limiter_release = ???;
 
 		if (strcmp(sampling, "linear") == 0)
 			temp_cfg.sampling = SRC_LINEAR;
@@ -191,6 +143,10 @@ struct Mixer* MixerCreate(const struct jaConfiguration* config, struct jaStatus*
 		if (mixer->cfg.volume > 0.0 && mixer->cfg.max_sounds > 0)
 			mixer->valid = true;
 	}
+
+	// Dsp modules
+	if (DspLimiterInit(config, &mixer->limiter, st) != 0)
+		goto return_failure;
 
 	// PortAudio
 	if (mixer->valid == true)

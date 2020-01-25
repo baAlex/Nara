@@ -31,6 +31,7 @@ build ./build/debug/engine/context/input.o:   compile_strict ./source/engine/con
 build ./build/debug/engine/context/objects.o: compile_strict ./source/engine/context/objects.c
 build ./build/debug/engine/context/state.o:   compile_strict ./source/engine/context/state.c
 
+build ./build/debug/engine/mixer/dsp.o:    compile_strict ./source/engine/mixer/dsp.c
 build ./build/debug/engine/mixer/mixer.o:  compile_strict ./source/engine/mixer/mixer.c
 build ./build/debug/engine/mixer/sample.o: compile_strict ./source/engine/mixer/sample.c
 
@@ -97,6 +98,7 @@ build nara-dbg: link $
 ./build/debug/engine/context/input.o $
 ./build/debug/engine/context/objects.o $
 ./build/debug/engine/context/state.o $
+./build/debug/engine/mixer/dsp.o $
 ./build/debug/engine/mixer/mixer.o $
 ./build/debug/engine/mixer/sample.o $
 ./build/debug/engine/entity.o $
