@@ -15,7 +15,8 @@
 	enum PlayOptions
 	{
 		PLAY_NORMAL = 0,
-		PLAY_LOOP = 2
+		PLAY_LOOP = 2,
+		PLAY_NO_3D = 4
 	};
 
 	struct Mixer* MixerCreate(const struct jaConfiguration*, struct jaStatus* st);
@@ -24,14 +25,16 @@
 	struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct jaStatus* st);
 	void SampleDelete(struct Sample*);
 
-	void Play2dSample(struct Mixer*, float volume, enum PlayOptions, struct Sample*);
-	void Play2dFile(struct Mixer*, float volume, enum PlayOptions, const char* filename);
+	void SetListener(struct Mixer* mixer, struct jaVector3 position);
 
-	#define Play2d(mixer, volume, options, obj) _Generic((obj), \
-		const char*: Play2dFile, \
-		char*: Play2dFile, \
-		const struct Sample*: Play2dSample, \
-		default: Play2dSample \
-	)(mixer, volume, options, obj)
+	void PlaySample(struct Mixer*, float volume, enum PlayOptions, struct jaVector3 position, struct Sample*);
+	void PlayFile(struct Mixer*, float volume, enum PlayOptions, struct jaVector3 position, const char* filename);
+
+	#define Play(mixer, volume, options, pos, obj) _Generic((obj), \
+		const char*: PlayFile, \
+		char*: PlayFile, \
+		const struct Sample*: PlaySample, \
+		default: PlaySample \
+	)(mixer, volume, options, pos, obj)
 
 #endif

@@ -62,7 +62,8 @@
 		struct ContextEvents gamepad;  // InputStep()
 		struct ContextEvents combined; // InputStep()
 
-		void (*fcallback[12])(const struct Context*, const struct ContextEvents*, bool);
+		void (*fcallback[12])(const struct Context*, const struct ContextEvents*, bool, void* data);
+		void* fcallback_data[12];
 	};
 
 	void InputStep(struct Context* context);

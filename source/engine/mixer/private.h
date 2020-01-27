@@ -50,6 +50,7 @@
 		struct Sample* sample;
 		float volume;
 
+		struct jaVector3 position;
 		enum PlayOptions options;
 	};
 
@@ -78,6 +79,8 @@
 		bool started;
 
 		PaStream* stream;
+
+		struct jaVector3 listener_pos;
 
 		int last_index;
 		struct PlayItem playlist[];

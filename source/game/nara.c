@@ -76,6 +76,13 @@ static struct jaList s_entities = {0};
 static struct jaConfiguration* s_config = NULL;
 
 
+static inline struct jaVector3 jaVector3Zero()
+{
+	// TODO, move to LibJapan
+	return (struct jaVector3){0.0, 0.0, 0.0};
+}
+
+
 /*-----------------------------
 
  sInitializeConfiguration()
@@ -185,7 +192,21 @@ static inline bool sSingleClick(bool evn, bool* state)
 
  main()
 -----------------------------*/
-static void sFullscreen(const struct Context* context, const struct ContextEvents* events, bool press)
+static void sDevDevDev(const struct Context* context, const struct ContextEvents* events, bool press, void* data)
+{
+	(void)context;
+	(void)events;
+
+	struct Entity* camera = data;
+
+	if (press == true)
+	{
+		printf("Fps: %i (~%.02f)\n", s_timer.frames_per_second, s_timer.miliseconds_betwen);
+		printf("Camera at [x: %.02f, y: %.02f, z: %.02f]\n", camera->co.position.x, camera->co.position.y, camera->co.position.z);
+	}
+}
+
+static void sFullscreen(const struct Context* context, const struct ContextEvents* events, bool press, void* data)
 {
 	(void)context;
 	(void)events;
@@ -194,7 +215,7 @@ static void sFullscreen(const struct Context* context, const struct ContextEvent
 		printf("Hai, hai...\n");
 }
 
-static void sScreenshot(const struct Context* context, const struct ContextEvents* events, bool press)
+static void sScreenshot(const struct Context* context, const struct ContextEvents* events, bool press, void* data)
 {
 	(void)context;
 	(void)events;
@@ -234,9 +255,6 @@ int main(int argc, const char* argv[])
 		goto return_failure;
 
 	TimerInit(&s_timer);
-
-	SetFunctionKeyCallback(s_context, 11, sFullscreen);
-	SetFunctionKeyCallback(s_context, 12, sScreenshot);
 
 	// Resources
 	{
@@ -286,6 +304,10 @@ int main(int argc, const char* argv[])
 		sSetProjection(s_context);
 	}
 
+	SetFunctionKeyCallback(s_context, 9, camera, sDevDevDev);
+	SetFunctionKeyCallback(s_context, 11, NULL, sFullscreen);
+	SetFunctionKeyCallback(s_context, 12, NULL, sScreenshot);
+
 	// Game loop
 	{
 		struct ContextEvents events = {0};
@@ -300,7 +322,9 @@ int main(int argc, const char* argv[])
 		bool x_release = false;
 		bool y_release = false;
 
-		Play2d(s_mixer, 0.7f, PLAY_LOOP, "./assets/ambient01.au");
+		Play(s_mixer, 0.7f, PLAY_LOOP | PLAY_NO_3D, jaVector3Zero(), "./assets/ambient01.au");
+		Play(s_mixer, 1.0f, PLAY_LOOP, ((struct jaVector3){1172.0f, 1655.0f, 127.0f}), "./assets/silly-loop.au");
+
 		SetProgram(s_context, &s_terrain_program);
 		SetTexture(s_context, 0, &s_terrain_lightmap);
 		SetTexture(s_context, 1, &s_terrain_masksmap);
@@ -360,6 +384,7 @@ int main(int argc, const char* argv[])
 				matrix = jaMatrix4Multiply(matrix, jaMatrix4Translate(jaVector3Invert(camera->co.position)));
 
 				SetCamera(s_context, matrix, camera->co.position);
+				SetListener(s_mixer, camera->co.position);
 
 				s_terrain_view.angle = camera->co.angle;
 				s_terrain_view.position = camera->co.position;
@@ -384,16 +409,16 @@ int main(int argc, const char* argv[])
 
 			// Testing, testing
 			if (sSingleClick(events.a, &a_release) == true)
-				Play2d(s_mixer, 1.0f, PLAY_NORMAL, "./assets/rz1-kick.wav");
+				Play(s_mixer, 1.0f, PLAY_NORMAL | PLAY_NO_3D, jaVector3Zero(), "./assets/rz1-kick.wav");
 
 			if (sSingleClick(events.b, &b_release) == true)
-				Play2d(s_mixer, 1.0f, PLAY_NORMAL, "./assets/rz1-snare.wav");
+				Play(s_mixer, 1.0f, PLAY_NORMAL | PLAY_NO_3D, jaVector3Zero(), "./assets/rz1-snare.wav");
 
 			if (sSingleClick(events.x, &x_release) == true)
-				Play2d(s_mixer, 1.0f, PLAY_NORMAL, "./assets/rz1-closed-hithat.wav");
+				Play(s_mixer, 1.0f, PLAY_NORMAL | PLAY_NO_3D, jaVector3Zero(), "./assets/rz1-closed-hithat.wav");
 
 			if (sSingleClick(events.y, &y_release) == true)
-				Play2d(s_mixer, 1.0f, PLAY_NORMAL, "./assets/rz1-clap.wav");
+				Play(s_mixer, 1.0f, PLAY_NORMAL | PLAY_NO_3D, jaVector3Zero(), "./assets/rz1-clap.wav");
 
 			// Exit?
 			if (events.close == true)

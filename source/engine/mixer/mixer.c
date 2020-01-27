@@ -31,6 +31,29 @@ SOFTWARE.
 #include "private.h"
 
 
+static inline float sCalculateSpatialization(struct jaVector3 sound_pos, struct jaVector3 listener_pos)
+{
+	// TODO, hardcoded values
+	const float max_distance = 500.0f;
+	const float min_distance = 50.0f;
+
+	const float distance = jaVector3Distance(sound_pos, listener_pos);
+
+	if (distance < max_distance)
+	{
+		if (distance < min_distance)
+			return 1.0f;
+		else
+		{
+			// printf("%.2f\n", (distance - max_distance) / (min_distance - max_distance));
+			return (distance - max_distance) / (min_distance - max_distance);
+		}
+	}
+
+	return 0.0f;
+}
+
+
 /*-----------------------------
 
  sCallback()
@@ -46,6 +69,7 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 	const size_t channels_no = (size_t)mixer->cfg.channels;
 
 	float* temp_data = NULL;
+	float spatialization = 0.0f;
 
 	for (float* output = raw_output; output < (float*)raw_output + (frames_no * channels_no); output += channels_no)
 	{
@@ -58,14 +82,24 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 			if (playitem->active == false)
 				continue;
 
-			temp_data = playitem->sample->data + (playitem->sample->channels * playitem->cursor);
+			// 3d Spatialization
+			if ((playitem->options & PLAY_NO_3D) != PLAY_NO_3D)
+				spatialization = sCalculateSpatialization(playitem->position, mixer->listener_pos);
+			else
+				spatialization = 1.0f;
 
-			for (size_t ch = 0; ch < channels_no; ch++)
-				output[ch] += (temp_data[ch % playitem->sample->channels] * playitem->volume);
+			// Copy samples
+			if (spatialization > 0.0f) // TODO, use epsilon?
+			{
+				temp_data = playitem->sample->data + (playitem->sample->channels * playitem->cursor);
+
+				for (size_t ch = 0; ch < channels_no; ch++)
+					output[ch] += (temp_data[ch % playitem->sample->channels] * playitem->volume * spatialization);
+			}
 
 			playitem->cursor += 1;
 
-			// End of sample
+			// End of sample?
 			if (playitem->cursor >= playitem->sample->length)
 			{
 				if ((playitem->options & PLAY_LOOP) == PLAY_LOOP)
@@ -197,7 +231,17 @@ inline void MixerDelete(struct Mixer* mixer)
 
 /*-----------------------------
 
- Play2d
+ SetListener()
+-----------------------------*/
+inline void SetListener(struct Mixer* mixer, struct jaVector3 position)
+{
+	mixer->listener_pos = position;
+}
+
+
+/*-----------------------------
+
+ Play
 -----------------------------*/
 static void sMixerStart(struct Mixer* mixer, struct jaStatus* st)
 {
@@ -207,7 +251,7 @@ static void sMixerStart(struct Mixer* mixer, struct jaStatus* st)
 		jaStatusSet(st, "MixerStart", STATUS_ERROR, "Starting stream: \"%s\"", Pa_GetErrorText(errcode));
 }
 
-void Play2dFile(struct Mixer* mixer, float volume, enum PlayOptions options, const char* filename)
+void PlayFile(struct Mixer* mixer, float volume, enum PlayOptions options, struct jaVector3 position, const char* filename)
 {
 	struct jaDictionaryItem* item = NULL;
 	struct Sample* sample = NULL;
@@ -222,17 +266,17 @@ void Play2dFile(struct Mixer* mixer, float volume, enum PlayOptions options, con
 	}
 
 	if ((item = jaDictionaryGet(mixer->samples, filename)) != NULL)
-		Play2dSample(mixer, volume, options, (struct Sample*)item->data);
+		PlaySample(mixer, volume, options, position, (struct Sample*)item->data);
 	else
 	{
 		printf("Creating sample for '%s'...\n", filename);
 
 		if ((sample = SampleCreate(mixer, filename, NULL)) != NULL)
-			Play2dSample(mixer, volume, options, sample);
+			PlaySample(mixer, volume, options, position, sample);
 	}
 }
 
-void Play2dSample(struct Mixer* mixer, float volume, enum PlayOptions options, struct Sample* sample)
+void PlaySample(struct Mixer* mixer, float volume, enum PlayOptions options, struct jaVector3 position, struct Sample* sample)
 {
 	struct PlayItem* playitem = NULL;
 
@@ -285,6 +329,7 @@ void Play2dSample(struct Mixer* mixer, float volume, enum PlayOptions options, s
 	playitem->options = options;
 	playitem->sample = sample;
 	playitem->volume = volume;
+	playitem->position = position;
 
 	playitem->active = true;
 }

@@ -35,10 +35,11 @@ SOFTWARE.
 
  SetFunctionKeyCallback()
 -----------------------------*/
-inline void SetFunctionKeyCallback(struct Context* context, int key,
-                                   void (*callback)(const struct Context*, const struct ContextEvents*, bool press))
+inline void SetFunctionKeyCallback(struct Context* context, int key, void* data,
+                                   void (*callback)(const struct Context*, const struct ContextEvents*, bool, void*))
 {
 	context->fcallback[key - 1] = callback;
+	context->fcallback_data[key - 1] = data;
 }
 
 

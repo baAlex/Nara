@@ -238,10 +238,11 @@ void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 	default: break;
 	}
 
-	if(key >= GLFW_KEY_F1 && key <= GLFW_KEY_F12)
+	if (key >= GLFW_KEY_F1 && key <= GLFW_KEY_F12)
 	{
 		if (context->fcallback[key - GLFW_KEY_F12 + 11] != NULL)
-			context->fcallback[key - GLFW_KEY_F12 + 11](context, &context->combined, (action == GLFW_PRESS) ? true : false);
+			context->fcallback[key - GLFW_KEY_F12 + 11](context, &context->combined, (action == GLFW_PRESS) ? true : false,
+			                                            context->fcallback_data[key - GLFW_KEY_F12 + 11]);
 	}
 
 	// Hey kid, do you wanna emulate analog sticks?

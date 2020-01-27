@@ -72,7 +72,8 @@
 	void ContextDelete(struct Context* context);
 	void ContextUpdate(struct Context* context, struct ContextEvents* out_events);
 
-	void SetFunctionKeyCallback(struct Context* context, int key, void (*)(const struct Context*, const struct ContextEvents*, bool press));
+	void SetFunctionKeyCallback(struct Context* context, int key, void* user_data,
+	                            void (*)(const struct Context*, const struct ContextEvents*, bool, void*));
 
 	void SetTitle(struct Context* context, const char* title);
 	void SetProgram(struct Context* context, const struct Program* program);
