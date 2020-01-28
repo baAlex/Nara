@@ -322,8 +322,9 @@ int main(int argc, const char* argv[])
 		bool x_release = false;
 		bool y_release = false;
 
-		Play(s_mixer, 0.7f, PLAY_LOOP | PLAY_NO_3D, jaVector3Zero(), "./assets/ambient01.au");
-		Play(s_mixer, 1.0f, PLAY_LOOP, ((struct jaVector3){1172.0f, 1655.0f, 127.0f}), "./assets/silly-loop.au");
+		PlayFile(s_mixer, PLAY_LOOP, 0.5f, "./assets/ambient01.au");
+		Play3dFile(s_mixer, PLAY_LOOP, 1.0f, (struct PlayRange){.min = 50.0f, .max = 700.0f},
+		           (struct jaVector3){.x = 1172.0f, .y = 1655.0f, .z = 127.0f}, "./assets/silly-loop.au");
 
 		SetProgram(s_context, &s_terrain_program);
 		SetTexture(s_context, 0, &s_terrain_lightmap);
@@ -409,16 +410,16 @@ int main(int argc, const char* argv[])
 
 			// Testing, testing
 			if (sSingleClick(events.a, &a_release) == true)
-				Play(s_mixer, 1.0f, PLAY_NORMAL | PLAY_NO_3D, jaVector3Zero(), "./assets/rz1-kick.wav");
+				PlayFile(s_mixer, PLAY_NORMAL, 1.0f, "./assets/rz1-kick.wav");
 
 			if (sSingleClick(events.b, &b_release) == true)
-				Play(s_mixer, 1.0f, PLAY_NORMAL | PLAY_NO_3D, jaVector3Zero(), "./assets/rz1-snare.wav");
+				PlayFile(s_mixer, PLAY_NORMAL, 1.0f, "./assets/rz1-snare.wav");
 
 			if (sSingleClick(events.x, &x_release) == true)
-				Play(s_mixer, 1.0f, PLAY_NORMAL | PLAY_NO_3D, jaVector3Zero(), "./assets/rz1-closed-hithat.wav");
+				PlayFile(s_mixer, PLAY_NORMAL, 1.0f, "./assets/rz1-closed-hithat.wav");
 
 			if (sSingleClick(events.y, &y_release) == true)
-				Play(s_mixer, 1.0f, PLAY_NORMAL | PLAY_NO_3D, jaVector3Zero(), "./assets/rz1-clap.wav");
+				PlayFile(s_mixer, PLAY_NORMAL, 1.0f, "./assets/rz1-clap.wav");
 
 			// Exit?
 			if (events.close == true)

@@ -2,13 +2,13 @@
 # Inverse square law
 # ------------------
 
-# Alexander Brand 2020. Under public domain (or the license that you prefer).
+# Alexander Brandt 2020. Under public domain (or the license that you prefer).
 
-# An apology in advance for what follows. Is my answer to the question: 'when
-# the inverse square law reaches zero?' (well, never) and to the problem of
-# have sounds with both minimum and maximum values in terms of distances.
-# Of course, I have no real knowledge, so the code is terrible and probably
-# I'm making the things worse rather than fixing them. But hey!, works!. :D
+# An apology in advance for what follows. This file is my answer to the question:
+# 'when the inverse square law reaches zero?' (well, never) and to the problem of
+# have sounds with audible ranges in terms of minimum and maximum distances.
+# Of course, I have no real knowledge, so the code is terrible and probably I'm
+# making things worse instead of fixing them.... but hey!, works!. :D
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -44,10 +44,21 @@ def InverseSquare(distances):
 
 	return out
 
+def LinearSquare(distances): # At my taste InverseSquare turns off sounds too quickly
+	out = []
+	for d in (distances):
+		if d <= min_distance: out.append(1)
+		elif d >= max_distance: out.append(0)
+		else:
+			out.append(np.power((d - max_distance) / (min_distance - max_distance), 2))
+
+	return out
+
 ##
 
 x = np.linspace(0, 600, num = 500)
 
 plt.plot(x, Linear(x))
 plt.plot(x, InverseSquare(x))
+plt.plot(x, LinearSquare(x))
 plt.show()

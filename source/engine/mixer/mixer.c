@@ -31,27 +31,23 @@ SOFTWARE.
 #include "private.h"
 
 
-static inline float sCalculateSpatialization(struct jaVector3 sound_pos, struct jaVector3 listener_pos)
+static inline float s3dVolume(struct jaVector3 listener_pos, struct jaVector3 sound_pos, struct PlayRange range)
 {
-	// TODO, hardcoded values
-	const float max_distance = 700.0f;
-	const float min_distance = 50.0f;
-
 	const float d = jaVector3Distance(sound_pos, listener_pos);
 
-	if (d < max_distance)
+	if (d < range.max)
 	{
-		if (d < min_distance)
+		if (d < range.min)
 			return 1.0f;
 		else
 		{
+			// Inverse square law
+
 			// The '15.0f + 1.0f' is an arbitrary number acting as an epsilon value
 			// value. Check the file './resources/inverse-square-law.py'
 
-			//printf("%f\n", 1.0f / powf(isql_feed, 2.0f));
-
-			float isql_feed = ((d - min_distance) / (max_distance - min_distance)) * 15.0f + 1.0f;
-			return 1.0f / powf(isql_feed, 2.0f);
+			float isql = ((d - range.min) / (range.max - range.min)) * 15.0f + 1.0f;
+			return 1.0f / (isql * isql);
 		}
 	}
 
@@ -74,7 +70,7 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 	const size_t channels_no = (size_t)mixer->cfg.channels;
 
 	float* temp_data = NULL;
-	float spatialization = 0.0f;
+	float volume3d = 0.0f;
 
 	for (float* output = raw_output; output < (float*)raw_output + (frames_no * channels_no); output += channels_no)
 	{
@@ -87,19 +83,19 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 			if (playitem->active == false)
 				continue;
 
-			// 3d Spatialization
-			if ((playitem->options & PLAY_NO_3D) != PLAY_NO_3D)
-				spatialization = sCalculateSpatialization(playitem->position, mixer->listener_pos);
+			// A 3d sound?
+			if (playitem->is_3d == true)
+				volume3d = s3dVolume(mixer->listener_pos, playitem->position, playitem->range);
 			else
-				spatialization = 1.0f;
+				volume3d = 1.0f; // Plain 2d sound
 
 			// Copy samples
-			if (spatialization > 0.0f) // TODO, use epsilon?
+			if (volume3d > 0.0f)
 			{
 				temp_data = playitem->sample->data + (playitem->sample->channels * playitem->cursor);
 
 				for (size_t ch = 0; ch < channels_no; ch++)
-					output[ch] += (temp_data[ch % playitem->sample->channels] * playitem->volume * spatialization);
+					output[ch] += (temp_data[ch % playitem->sample->channels] * playitem->volume * volume3d);
 			}
 
 			playitem->cursor += 1;
@@ -246,87 +242,105 @@ inline void SetListener(struct Mixer* mixer, struct jaVector3 position)
 
 /*-----------------------------
 
- Play
+ sStartMixer()
 -----------------------------*/
-static void sMixerStart(struct Mixer* mixer, struct jaStatus* st)
+static int sStartMixer(struct Mixer* mixer, struct jaStatus* st)
 {
 	PaError errcode = paNoError;
 
-	if ((errcode = Pa_StartStream(mixer->stream)) != paNoError)
-		jaStatusSet(st, "MixerStart", STATUS_ERROR, "Starting stream: \"%s\"", Pa_GetErrorText(errcode));
-}
-
-void PlayFile(struct Mixer* mixer, float volume, enum PlayOptions options, struct jaVector3 position, const char* filename)
-{
-	struct jaDictionaryItem* item = NULL;
-	struct Sample* sample = NULL;
-
-	if (mixer->valid == false)
-		return;
-
 	if (mixer->started == false)
 	{
-		sMixerStart(mixer, NULL); // TODO, handle error
-		mixer->started = true;
+		if ((errcode = Pa_StartStream(mixer->stream)) != paNoError)
+		{
+			jaStatusSet(st, "MixerStart", STATUS_ERROR, "Starting stream: \"%s\"", Pa_GetErrorText(errcode));
+			return 1;
+		}
 	}
 
+	mixer->started = true;
+	return 0;
+}
+
+
+/*-----------------------------
+
+ sFindSample()
+-----------------------------*/
+static struct Sample* sFindSample(struct Mixer* mixer, const char* filename)
+{
+	struct jaDictionaryItem* item = NULL;
+
 	if ((item = jaDictionaryGet(mixer->samples, filename)) != NULL)
-		PlaySample(mixer, volume, options, position, (struct Sample*)item->data);
+		return item->data;
 	else
 	{
 		printf("Creating sample for '%s'...\n", filename);
-
-		if ((sample = SampleCreate(mixer, filename, NULL)) != NULL)
-			PlaySample(mixer, volume, options, position, sample);
+		return SampleCreate(mixer, filename, NULL); // TODO, handle error
 	}
+
+	return NULL;
 }
 
-void PlaySample(struct Mixer* mixer, float volume, enum PlayOptions options, struct jaVector3 position, struct Sample* sample)
+
+/*-----------------------------
+
+ sFindPlayitem()
+-----------------------------*/
+static struct PlayItem* sFindPlayitem(struct Mixer* mixer)
 {
 	struct PlayItem* playitem = NULL;
+	int base_i = 0;
+	int i = 0;
 
-	if (mixer->valid == false)
+	for (base_i = 0; base_i < mixer->cfg.max_sounds; base_i++)
+	{
+		i = (mixer->last_index + base_i) % mixer->cfg.max_sounds;
+
+		if (mixer->playlist[i].active == false)
+		{
+			playitem = &mixer->playlist[i];
+			break;
+		}
+	}
+
+	// Bad luck, lets recycle
+	if (base_i == mixer->cfg.max_sounds)
+	{
+		i = (mixer->last_index + 1) % mixer->cfg.max_sounds;
+		playitem = &mixer->playlist[i];
+
+		if (playitem->active == true)
+		{
+			playitem->active = false;
+			playitem->sample->references -= 1;
+		}
+	}
+
+	// Save index for the next search
+	mixer->last_index = (i + 1);
+
+	return playitem;
+}
+
+
+/*-----------------------------
+
+ Play
+-----------------------------*/
+inline void PlayFile(struct Mixer* mixer, enum PlayOptions options, float volume, const char* filename)
+{
+	PlaySample(mixer, options, volume, sFindSample(mixer, filename));
+}
+
+void PlaySample(struct Mixer* mixer, enum PlayOptions options, float volume, struct Sample* sample)
+{
+	if (mixer->valid == false || sample == NULL)
 		return;
 
-	if (mixer->started == false)
-	{
-		sMixerStart(mixer, NULL); // TODO, handle error
-		mixer->started = true;
-	}
+	if (sStartMixer(mixer, NULL) != 0) // TODO, handle error
+		return;
 
-	// Find an item in the playlist
-	{
-		int base_i = 0;
-		int i = 0;
-
-		for (base_i = 0; base_i < mixer->cfg.max_sounds; base_i++)
-		{
-			i = (mixer->last_index + base_i) % mixer->cfg.max_sounds;
-
-			if (mixer->playlist[i].active == false)
-			{
-				playitem = &mixer->playlist[i];
-				break;
-			}
-		}
-
-		// Bad luck, lets recycle
-		if (base_i == mixer->cfg.max_sounds)
-		{
-			i = (mixer->last_index + 1) % mixer->cfg.max_sounds;
-			playitem = &mixer->playlist[i];
-		}
-
-		// Save index for the next play
-		mixer->last_index = (i + 1);
-	}
-
-	// Yay
-	if (playitem->active == true)
-	{
-		playitem->active = false;
-		playitem->sample->references -= 1;
-	}
+	struct PlayItem* playitem = sFindPlayitem(mixer);
 
 	sample->references += 1;
 
@@ -334,6 +348,42 @@ void PlaySample(struct Mixer* mixer, float volume, enum PlayOptions options, str
 	playitem->options = options;
 	playitem->sample = sample;
 	playitem->volume = volume;
+	playitem->is_3d = false;
+
+	playitem->active = true;
+}
+
+
+/*-----------------------------
+
+ Play3d
+-----------------------------*/
+inline void Play3dFile(struct Mixer* mixer, enum PlayOptions options, float volume, struct PlayRange range, struct jaVector3 position,
+                       const char* filename)
+{
+	Play3dSample(mixer, options, volume, range, position, sFindSample(mixer, filename));
+}
+
+void Play3dSample(struct Mixer* mixer, enum PlayOptions options, float volume, struct PlayRange range, struct jaVector3 position,
+                  struct Sample* sample)
+{
+	if (mixer->valid == false || sample == NULL)
+		return;
+
+	if (sStartMixer(mixer, NULL) != 0) // TODO, handle error
+		return;
+
+	struct PlayItem* playitem = sFindPlayitem(mixer);
+
+	sample->references += 1;
+
+	playitem->cursor = 0;
+	playitem->options = options;
+	playitem->sample = sample;
+	playitem->volume = volume;
+
+	playitem->is_3d = true;
+	playitem->range = range;
 	playitem->position = position;
 
 	playitem->active = true;

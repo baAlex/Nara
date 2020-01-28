@@ -50,8 +50,12 @@
 		struct Sample* sample;
 		float volume;
 
-		struct jaVector3 position;
 		enum PlayOptions options;
+
+		// 3d sounds
+		bool is_3d;
+		struct PlayRange range;
+		struct jaVector3 position;
 	};
 
 	struct Cfg
