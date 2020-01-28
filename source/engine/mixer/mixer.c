@@ -34,19 +34,24 @@ SOFTWARE.
 static inline float sCalculateSpatialization(struct jaVector3 sound_pos, struct jaVector3 listener_pos)
 {
 	// TODO, hardcoded values
-	const float max_distance = 500.0f;
+	const float max_distance = 700.0f;
 	const float min_distance = 50.0f;
 
-	const float distance = jaVector3Distance(sound_pos, listener_pos);
+	const float d = jaVector3Distance(sound_pos, listener_pos);
 
-	if (distance < max_distance)
+	if (d < max_distance)
 	{
-		if (distance < min_distance)
+		if (d < min_distance)
 			return 1.0f;
 		else
 		{
-			// printf("%.2f\n", (distance - max_distance) / (min_distance - max_distance));
-			return (distance - max_distance) / (min_distance - max_distance);
+			// The '15.0f + 1.0f' is an arbitrary number acting as an epsilon value
+			// value. Check the file './resources/inverse-square-law.py'
+
+			//printf("%f\n", 1.0f / powf(isql_feed, 2.0f));
+
+			float isql_feed = ((d - min_distance) / (max_distance - min_distance)) * 15.0f + 1.0f;
+			return 1.0f / powf(isql_feed, 2.0f);
 		}
 	}
 
