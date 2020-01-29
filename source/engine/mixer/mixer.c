@@ -31,30 +31,6 @@ SOFTWARE.
 #include "private.h"
 
 
-static inline float s3dVolume(struct jaVector3 listener_pos, struct jaVector3 sound_pos, struct PlayRange range)
-{
-	const float d = jaVector3Distance(sound_pos, listener_pos);
-
-	if (d < range.max)
-	{
-		if (d < range.min)
-			return 1.0f;
-		else
-		{
-			// Inverse square law
-
-			// The '15.0f + 1.0f' is an arbitrary number acting as an epsilon value
-			// value. Check the file './resources/inverse-square-law.py'
-
-			float isql = ((d - range.min) / (range.max - range.min)) * 15.0f + 1.0f;
-			return 1.0f / (isql * isql);
-		}
-	}
-
-	return 0.0f;
-}
-
-
 /*-----------------------------
 
  sCallback()
@@ -70,8 +46,8 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 	const size_t channels_no = (size_t)mixer->cfg.channels;
 
 	float* temp_data = NULL;
-	float volume3d = 0.0f;
 
+	// Cycle output frames
 	for (float* output = raw_output; output < (float*)raw_output + (frames_no * channels_no); output += channels_no)
 	{
 		for (size_t ch = 0; ch < channels_no; ch++)
@@ -83,20 +59,11 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 			if (playitem->active == false)
 				continue;
 
-			// A 3d sound?
-			if (playitem->is_3d == true)
-				volume3d = s3dVolume(mixer->listener_pos, playitem->position, playitem->range);
-			else
-				volume3d = 1.0f; // Plain 2d sound
-
 			// Copy samples
-			if (volume3d > 0.0f)
-			{
-				temp_data = playitem->sample->data + (playitem->sample->channels * playitem->cursor);
+			temp_data = playitem->sample->data + (playitem->sample->channels * playitem->cursor);
 
-				for (size_t ch = 0; ch < channels_no; ch++)
-					output[ch] += (temp_data[ch % playitem->sample->channels] * playitem->volume * volume3d);
-			}
+			for (size_t ch = 0; ch < channels_no; ch++)
+				output[ch] += (temp_data[ch % playitem->sample->channels] * playitem->volume * playitem->gain_3d[ch]);
 
 			playitem->cursor += 1;
 
@@ -114,6 +81,7 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 			}
 		}
 
+		// Frame final volume
 		for (size_t ch = 0; ch < channels_no; ch++)
 		{
 			output[ch] /= DspLimiterGain(&mixer->limiter, ch, output[ch]);
@@ -234,9 +202,61 @@ inline void MixerDelete(struct Mixer* mixer)
 
  SetListener()
 -----------------------------*/
-inline void SetListener(struct Mixer* mixer, struct jaVector3 position)
+static inline void sVolume3d(struct jaVector3 emitter_pos, struct jaVector3 listener_pos, struct PlayRange range, float* out_distance)
 {
+	float d = jaVector3Distance(emitter_pos, listener_pos);
+
+	if (d > range.max)
+		*out_distance = 0.0f;
+	else if (d < range.min)
+		*out_distance = 1.0f;
+	else
+	{
+		// Inverse square law
+
+		// The '15.0f + 1.0f' is an arbitrary number acting as an epsilon value
+		// value. Check the file './resources/inverse-square-law.py'
+
+		float isql = ((d - range.min) / (range.max - range.min)) * 15.0f + 1.0f;
+		*out_distance = 1.0f / (isql * isql);
+
+		// printf("%0.2f\n", *out_distance);
+	}
+}
+
+static inline void sPanning3d(struct jaVector3 emitter_pos, struct jaVector3 listener_pos, struct jaVector3 listener_left_axy,
+                              float* out_panning)
+{
+	struct jaVector3 angle = jaVector3Normalize(jaVector3Subtract(listener_pos, emitter_pos));
+	float dot = jaVector3Dot(listener_left_axy, angle);
+
+	out_panning[0] = fabsf(dot + 1.0f); // TODO, reaches 2.0, is this desirable?
+	out_panning[1] = fabsf(dot - 1.0f);
+
+	// printf("[%0.2f - %0.2f] %0.2f\n", out_panning[0], out_panning[1], dot);
+}
+
+inline void SetListener(struct Mixer* mixer, struct jaVector3 position, struct jaVector3 angle)
+{
+	float volume = 1.0f;
+	float panning[2] = {1.0f, 1.0f};
+
 	mixer->listener_pos = position;
+	VectorAxes(angle, NULL, &mixer->listener_left_axy, NULL);
+
+	for (struct PlayItem* playitem = mixer->playlist; playitem < (mixer->playlist + mixer->cfg.max_sounds); playitem++)
+	{
+		if (playitem->active == false || playitem->is_3d == false)
+			continue;
+
+		sVolume3d(playitem->position, mixer->listener_pos, playitem->range, &volume);
+
+		if(mixer->cfg.channels > 1)
+			sPanning3d(playitem->position, mixer->listener_pos, mixer->listener_left_axy, &panning[0]);
+
+		playitem->gain_3d[0] = volume * panning[0];
+		playitem->gain_3d[1] = volume * panning[1];
+	}
 }
 
 
@@ -350,6 +370,9 @@ void PlaySample(struct Mixer* mixer, enum PlayOptions options, float volume, str
 	playitem->volume = volume;
 	playitem->is_3d = false;
 
+	playitem->gain_3d[0] = 1.0f; // Plain 2d sound
+	playitem->gain_3d[1] = 1.0f;
+
 	playitem->active = true;
 }
 
@@ -385,6 +408,9 @@ void Play3dSample(struct Mixer* mixer, enum PlayOptions options, float volume, s
 	playitem->is_3d = true;
 	playitem->range = range;
 	playitem->position = position;
+
+	// playitem->gain_3d[0] = TODO
+	// playitem->gain_3d[1] = TODO
 
 	playitem->active = true;
 }

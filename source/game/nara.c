@@ -324,7 +324,7 @@ int main(int argc, const char* argv[])
 
 		PlayFile(s_mixer, PLAY_LOOP, 0.5f, "./assets/ambient01.au");
 		Play3dFile(s_mixer, PLAY_LOOP, 1.0f, (struct PlayRange){.min = 50.0f, .max = 700.0f},
-		           (struct jaVector3){.x = 1172.0f, .y = 1655.0f, .z = 127.0f}, "./assets/silly-loop.au");
+		           (struct jaVector3){.x = 1166.38f, .y = 1660.34f, .z = 102.28f}, "./assets/silly-loop.au");
 
 		SetProgram(s_context, &s_terrain_program);
 		SetTexture(s_context, 0, &s_terrain_lightmap);
@@ -385,7 +385,7 @@ int main(int argc, const char* argv[])
 				matrix = jaMatrix4Multiply(matrix, jaMatrix4Translate(jaVector3Invert(camera->co.position)));
 
 				SetCamera(s_context, matrix, camera->co.position);
-				SetListener(s_mixer, camera->co.position);
+				SetListener(s_mixer, camera->co.position, camera->co.angle);
 
 				s_terrain_view.angle = camera->co.angle;
 				s_terrain_view.position = camera->co.position;

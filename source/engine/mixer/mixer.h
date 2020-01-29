@@ -30,7 +30,7 @@
 	struct Sample* SampleCreate(struct Mixer* mixer, const char* filename, struct jaStatus* st);
 	void SampleDelete(struct Sample*);
 
-	void SetListener(struct Mixer* mixer, struct jaVector3 position);
+	void SetListener(struct Mixer* mixer, struct jaVector3 position, struct jaVector3 angle);
 
 	void PlayFile(struct Mixer*, enum PlayOptions, float volume, const char* filename);
 	void PlaySample(struct Mixer*, enum PlayOptions, float volume, struct Sample*);

@@ -21,6 +21,7 @@
 
 	#include "mixer.h"
 	#include "samplerate.h"
+	#include "../misc.h"
 
 	struct DspLimiter
 	{
@@ -28,7 +29,7 @@
 		float attack;
 		float release;
 
-		float last_envelope_sample[2];
+		float last_envelope_sample[2]; // TODO, hardcoded stereo
 	};
 
 	struct Sample
@@ -54,8 +55,9 @@
 
 		// 3d sounds
 		bool is_3d;
-		struct PlayRange range;
-		struct jaVector3 position;
+		struct PlayRange range;    // SetListener()
+		struct jaVector3 position; // SetListener()
+		float gain_3d[2];          // TODO, hardcoded stereo
 	};
 
 	struct Cfg
@@ -85,6 +87,7 @@
 		PaStream* stream;
 
 		struct jaVector3 listener_pos;
+		struct jaVector3 listener_left_axy;
 
 		int last_index;
 		struct PlayItem playlist[];

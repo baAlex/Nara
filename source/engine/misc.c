@@ -25,7 +25,7 @@ SOFTWARE.
 -------------------------------
 
  [misc.c]
- - Alexander Brandt 2019
+ - Alexander Brandt 2019-2020
 -----------------------------*/
 
 #include "misc.h"
@@ -49,15 +49,24 @@ void VectorAxes(struct jaVector3 angle, struct jaVector3* forward, struct jaVect
 	float cz = cosf(jaDegToRad(angle.z));
 	float sz = sinf(jaDegToRad(angle.z));
 
-	forward->x = sz * -sx;
-	forward->y = cz * -sx;
-	forward->z = -cx;
+	if (forward != NULL)
+	{
+		forward->x = sz * -sx;
+		forward->y = cz * -sx;
+		forward->z = -cx;
+	}
 
-	left->x = (sz * sy * sx) + (cy * cz);
-	left->y = (cz * sy * sx) + (cy * -sz);
-	left->z = sx * sy;
+	if (left != NULL)
+	{
+		left->x = (sz * sy * sx) + (cy * cz);
+		left->y = (cz * sy * sx) + (cy * -sz);
+		left->z = sx * sy;
+	}
 
-	up->x = (sz * cy * cx) + -(sy * cz);
-	up->y = (cz * cy * cx) + -(sy * -sz);
-	up->z = -sx * cy;
+	if (up != NULL)
+	{
+		up->x = (sz * cy * cx) + -(sy * cz);
+		up->y = (cz * cy * cx) + -(sy * -sz);
+		up->z = -sx * cy;
+	}
 }
