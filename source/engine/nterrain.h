@@ -61,6 +61,7 @@
 		float max_distance;
 		float aspect;
 		float fov;
+		int lod_factor; // 1, 3, 6, 9... in steps of 3
 	};
 
 	struct NTerrainState

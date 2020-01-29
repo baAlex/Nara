@@ -122,8 +122,11 @@ return_failure:
 -----------------------------*/
 inline void ProgramFree(struct Program* program)
 {
-	glDeleteProgram(program->glptr);
-	program->glptr = 0;
+	if (program->glptr != 0)
+	{
+		glDeleteProgram(program->glptr);
+		program->glptr = 0;
+	}
 }
 
 
@@ -180,8 +183,11 @@ return_failure:
 -----------------------------*/
 inline void VerticesFree(struct Vertices* vertices)
 {
-	glDeleteBuffers(1, &vertices->glptr);
-	vertices->glptr = 0;
+	if (vertices->glptr != 0)
+	{
+		glDeleteBuffers(1, &vertices->glptr);
+		vertices->glptr = 0;
+	}
 }
 
 
@@ -238,8 +244,11 @@ return_failure:
 -----------------------------*/
 inline void IndexFree(struct Index* index)
 {
-	glDeleteBuffers(1, &index->glptr);
-	index->glptr = 0;
+	if (index->glptr != 0)
+	{
+		glDeleteBuffers(1, &index->glptr);
+		index->glptr = 0;
+	}
 }
 
 
@@ -247,13 +256,15 @@ inline void IndexFree(struct Index* index)
 
  TextureInit()
 -----------------------------*/
-int TextureInitImage(const struct Context* context, const struct jaImage* image, struct Texture* out, struct jaStatus* st)
+int TextureInitImage(const struct Context* context, const struct jaImage* image, struct Texture* out,
+                     struct jaStatus* st)
 {
 	GLint old_bind = 0;
 
 	jaStatusSet(st, "TextureInitImage", STATUS_SUCCESS, NULL);
 
-	if (image->format != IMAGE_RGB8 && image->format != IMAGE_RGBA8 && image->format != IMAGE_GRAY8 && image->format != IMAGE_GRAYA8)
+	if (image->format != IMAGE_RGB8 && image->format != IMAGE_RGBA8 && image->format != IMAGE_GRAY8 &&
+	    image->format != IMAGE_GRAYA8)
 	{
 		jaStatusSet(st, "TextureInitImage", STATUS_UNEXPECTED_DATA, "Only 8 bits per component images supported");
 		return 1;
@@ -299,18 +310,20 @@ int TextureInitImage(const struct Context* context, const struct jaImage* image,
 	switch (image->format)
 	{
 	case IMAGE_RGB8:
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, (GLsizei)image->width, (GLsizei)image->height, 0, GL_RGB, GL_UNSIGNED_BYTE, image->data);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, (GLsizei)image->width, (GLsizei)image->height, 0, GL_RGB,
+		             GL_UNSIGNED_BYTE, image->data);
 		break;
 	case IMAGE_RGBA8:
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)image->width, (GLsizei)image->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->data);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)image->width, (GLsizei)image->height, 0, GL_RGBA,
+		             GL_UNSIGNED_BYTE, image->data);
 		break;
 	case IMAGE_GRAY8:
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, (GLsizei)image->width, (GLsizei)image->height, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE,
-		             image->data);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, (GLsizei)image->width, (GLsizei)image->height, 0, GL_LUMINANCE,
+		             GL_UNSIGNED_BYTE, image->data);
 		break;
 	case IMAGE_GRAYA8:
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE_ALPHA, (GLsizei)image->width, (GLsizei)image->height, 0, GL_LUMINANCE_ALPHA,
-		             GL_UNSIGNED_BYTE, image->data);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE_ALPHA, (GLsizei)image->width, (GLsizei)image->height, 0,
+		             GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE, image->data);
 		break;
 	default: break;
 	}
@@ -320,7 +333,8 @@ int TextureInitImage(const struct Context* context, const struct jaImage* image,
 	return 0;
 }
 
-int TextureInitFilename(const struct Context* context, const char* image_filename, struct Texture* out, struct jaStatus* st)
+int TextureInitFilename(const struct Context* context, const char* image_filename, struct Texture* out,
+                        struct jaStatus* st)
 {
 	struct jaImage* image = NULL;
 	jaStatusSet(st, "TextureInitFilename", STATUS_SUCCESS, NULL);
@@ -345,8 +359,11 @@ int TextureInitFilename(const struct Context* context, const char* image_filenam
 -----------------------------*/
 inline void TextureFree(struct Texture* texture)
 {
-	glDeleteTextures(1, &texture->glptr);
-	texture->glptr = 0;
+	if (texture->glptr != 0)
+	{
+		glDeleteTextures(1, &texture->glptr);
+		texture->glptr = 0;
+	}
 }
 
 #endif

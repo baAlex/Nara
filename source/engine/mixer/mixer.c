@@ -35,8 +35,8 @@ SOFTWARE.
 
  sCallback()
 -----------------------------*/
-static int sCallback(const void* raw_input, void* raw_output, unsigned long frames_no, const PaStreamCallbackTimeInfo* time,
-                     PaStreamCallbackFlags status, void* raw_mixer)
+static int sCallback(const void* raw_input, void* raw_output, unsigned long frames_no,
+                     const PaStreamCallbackTimeInfo* time, PaStreamCallbackFlags status, void* raw_mixer)
 {
 	(void)raw_input;
 	(void)time;
@@ -54,7 +54,8 @@ static int sCallback(const void* raw_input, void* raw_output, unsigned long fram
 			output[ch] = 0.0f;
 
 		// Sum all playlist
-		for (struct PlayItem* playitem = mixer->playlist; playitem < (mixer->playlist + mixer->cfg.max_sounds); playitem++)
+		for (struct PlayItem* playitem = mixer->playlist; playitem < (mixer->playlist + mixer->cfg.max_sounds);
+		     playitem++)
 		{
 			if (playitem->active == false)
 				continue;
@@ -112,11 +113,11 @@ struct Mixer* MixerCreate(const struct jaConfiguration* config, struct jaStatus*
 		struct Cfg temp_cfg = {0};
 		const char* sampling = NULL;
 
-		if (jaCvarRetrieve(config, "mixer.volume", &temp_cfg.volume, st) != 0 ||
-		    jaCvarRetrieve(config, "mixer.frequency", &temp_cfg.frequency, st) != 0 ||
-		    jaCvarRetrieve(config, "mixer.channels", &temp_cfg.channels, st) != 0 ||
-		    jaCvarRetrieve(config, "mixer.max_sounds", &temp_cfg.max_sounds, st) != 0 ||
-		    jaCvarRetrieve(config, "mixer.sampling", &sampling, st) != 0)
+		if (jaCvarValue(jaCvarFind(config, "mixer.volume"), &temp_cfg.volume, st) != 0 ||
+		    jaCvarValue(jaCvarFind(config, "mixer.frequency"), &temp_cfg.frequency, st) != 0 ||
+		    jaCvarValue(jaCvarFind(config, "mixer.channels"), &temp_cfg.channels, st) != 0 ||
+		    jaCvarValue(jaCvarFind(config, "mixer.max_sounds"), &temp_cfg.max_sounds, st) != 0 ||
+		    jaCvarValue(jaCvarFind(config, "mixer.sampling"), &sampling, st) != 0)
 			goto return_failure;
 
 		if (strcmp(sampling, "linear") == 0)
@@ -160,8 +161,9 @@ struct Mixer* MixerCreate(const struct jaConfiguration* config, struct jaStatus*
 			goto return_failure;
 		}
 
-		if ((errcode = Pa_OpenDefaultStream(&mixer->stream, 0, mixer->cfg.channels, paFloat32, (double)mixer->cfg.frequency,
-		                                    paFramesPerBufferUnspecified, sCallback, mixer)) != paNoError)
+		if ((errcode =
+		         Pa_OpenDefaultStream(&mixer->stream, 0, mixer->cfg.channels, paFloat32, (double)mixer->cfg.frequency,
+		                              paFramesPerBufferUnspecified, sCallback, mixer)) != paNoError)
 		{
 			jaStatusSet(st, "MixerCreate", STATUS_ERROR, "Opening stream: \"%s\"", Pa_GetErrorText(errcode));
 			goto return_failure;
@@ -184,6 +186,9 @@ return_failure:
 -----------------------------*/
 inline void MixerDelete(struct Mixer* mixer)
 {
+	if (mixer == NULL)
+		return;
+
 	if (mixer->valid == true)
 	{
 		if (mixer->stream != NULL)
@@ -202,7 +207,8 @@ inline void MixerDelete(struct Mixer* mixer)
 
  SetListener()
 -----------------------------*/
-static inline void sVolume3d(struct jaVector3 emitter_pos, struct jaVector3 listener_pos, struct PlayRange range, float* out_distance)
+static inline void sVolume3d(struct jaVector3 emitter_pos, struct jaVector3 listener_pos, struct PlayRange range,
+                             float* out_distance)
 {
 	float d = jaVector3Distance(emitter_pos, listener_pos);
 
@@ -224,8 +230,8 @@ static inline void sVolume3d(struct jaVector3 emitter_pos, struct jaVector3 list
 	}
 }
 
-static inline void sPanning3d(struct jaVector3 emitter_pos, struct jaVector3 listener_pos, struct jaVector3 listener_left_axy,
-                              float* out_panning)
+static inline void sPanning3d(struct jaVector3 emitter_pos, struct jaVector3 listener_pos,
+                              struct jaVector3 listener_left_axy, float* out_panning)
 {
 	struct jaVector3 angle = jaVector3Normalize(jaVector3Subtract(listener_pos, emitter_pos));
 	float dot = jaVector3Dot(listener_left_axy, angle);
@@ -251,7 +257,7 @@ inline void SetListener(struct Mixer* mixer, struct jaVector3 position, struct j
 
 		sVolume3d(playitem->position, mixer->listener_pos, playitem->range, &volume);
 
-		if(mixer->cfg.channels > 1)
+		if (mixer->cfg.channels > 1)
 			sPanning3d(playitem->position, mixer->listener_pos, mixer->listener_left_axy, &panning[0]);
 
 		playitem->gain_3d[0] = volume * panning[0];
@@ -381,14 +387,14 @@ void PlaySample(struct Mixer* mixer, enum PlayOptions options, float volume, str
 
  Play3d
 -----------------------------*/
-inline void Play3dFile(struct Mixer* mixer, enum PlayOptions options, float volume, struct PlayRange range, struct jaVector3 position,
-                       const char* filename)
+inline void Play3dFile(struct Mixer* mixer, enum PlayOptions options, float volume, struct PlayRange range,
+                       struct jaVector3 position, const char* filename)
 {
 	Play3dSample(mixer, options, volume, range, position, sFindSample(mixer, filename));
 }
 
-void Play3dSample(struct Mixer* mixer, enum PlayOptions options, float volume, struct PlayRange range, struct jaVector3 position,
-                  struct Sample* sample)
+void Play3dSample(struct Mixer* mixer, enum PlayOptions options, float volume, struct PlayRange range,
+                  struct jaVector3 position, struct Sample* sample)
 {
 	if (mixer->valid == false || sample == NULL)
 		return;

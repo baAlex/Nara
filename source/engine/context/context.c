@@ -73,13 +73,13 @@ struct Context* ContextCreate(const struct jaConfiguration* config, const char* 
 		if ((context = calloc(1, sizeof(struct Context))) == NULL)
 			return NULL;
 
-		if (jaCvarRetrieve(config, "render.width", &context->cfg.width, st) != 0 ||
-		    jaCvarRetrieve(config, "render.height", &context->cfg.height, st) != 0 ||
-		    jaCvarRetrieve(config, "render.samples", &context->cfg.samples, st) != 0 ||
-		    jaCvarRetrieve(config, "render.fullscreen", &context->cfg.fullscreen, st) != 0 ||
-		    jaCvarRetrieve(config, "render.wireframe", &context->cfg.wireframe, st) != 0 ||
-		    jaCvarRetrieve(config, "render.vsync", &context->cfg.vsync, st) != 0 ||
-		    jaCvarRetrieve(config, "render.filter", &filter, st) != 0)
+		if (jaCvarValue(jaCvarFind(config, "render.width"), &context->cfg.width, st) != 0 ||
+		    jaCvarValue(jaCvarFind(config, "render.height"), &context->cfg.height, st) != 0 ||
+		    jaCvarValue(jaCvarFind(config, "render.samples"), &context->cfg.samples, st) != 0 ||
+		    jaCvarValue(jaCvarFind(config, "render.fullscreen"), &context->cfg.fullscreen, st) != 0 ||
+		    jaCvarValue(jaCvarFind(config, "render.wireframe"), &context->cfg.wireframe, st) != 0 ||
+		    jaCvarValue(jaCvarFind(config, "render.vsync"), &context->cfg.vsync, st) != 0 ||
+		    jaCvarValue(jaCvarFind(config, "render.filter"), &filter, st) != 0)
 			goto return_failure;
 
 		if (strcmp(filter, "pixel") == 0)
@@ -137,7 +137,8 @@ struct Context* ContextCreate(const struct jaConfiguration* config, const char* 
 	if (context->cfg.fullscreen == true)
 	{
 		const GLFWvidmode* vid_mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-		glfwSetWindowMonitor(context->window, glfwGetPrimaryMonitor(), 0, 0, vid_mode->width, vid_mode->height, GLFW_DONT_CARE);
+		glfwSetWindowMonitor(context->window, glfwGetPrimaryMonitor(), 0, 0, vid_mode->width, vid_mode->height,
+		                     GLFW_DONT_CARE);
 	}
 
 	// OpenGL initialization
@@ -185,6 +186,9 @@ return_failure:
 -----------------------------*/
 inline void ContextDelete(struct Context* context)
 {
+	if (context == NULL)
+		return;
+
 	if (context->window != NULL)
 		glfwDestroyWindow(context->window);
 

@@ -25,7 +25,7 @@ SOFTWARE.
 -------------------------------
 
  [entity.c]
- - Alexander Brandt 2019
+ - Alexander Brandt 2019-2020
 -----------------------------*/
 
 #include <stdio.h>
@@ -47,8 +47,6 @@ static void sFreeEntityFromList(struct jaListItem* item)
 
 	if (class->to_delete == true && class->references == 0)
 		ClassDelete(class);
-
-	printf("(EntityFree) '%s : %p' freeded\n", class->item->key, (void*)entity);
 }
 
 
@@ -69,7 +67,6 @@ struct Class* ClassCreate(struct jaDictionary* dictionary, const char* name)
 		class->item = item;
 	}
 
-	printf("(ClassCreate) '%s' created (%p)\n", name, (void*)class);
 	return class;
 }
 
@@ -98,7 +95,7 @@ inline void ClassDelete(struct Class* class)
 	}
 	else
 	{
-		printf("(ClassDelete) '%s' deleted (%p)\n", class->item->key, (void*)class);
+		printf("Deleted entity '%s' : %p\n", class->item->key, (void*)class);
 		jaDictionaryRemove(class->item);
 	}
 }
@@ -126,7 +123,7 @@ struct Entity* EntityCreate(struct jaList* list, struct Class* class)
 
 	class->references++;
 
-	printf("(EntityCreate) '%s : %p' created\n", class->item->key, (void*)entity);
+	printf("Created entity '%s : %p'\n", class->item->key, (void*)entity);
 	return entity;
 }
 

@@ -458,6 +458,9 @@ return_failure:
 -----------------------------*/
 void NTerrainDelete(struct NTerrain* terrain)
 {
+	if(terrain == NULL)
+		return;
+
 	struct NTerrainState state = {.start = terrain->root};
 	struct NTerrainNode* node = NULL;
 
@@ -584,15 +587,21 @@ again:
 	// Future values
 	{
 		// Go in? (childrens)
-		float factor = sNodeDimension(state->actual) * 1.0f;
-		// factor = sNodeDimension(state->actual) * 3.0f; // Configurable quality, IN STEPS OF 3.0!
+		bool view_condition = false;
 
-		if (state->actual->children != NULL &&
-		    (view == NULL ||
-		     jaAABCollisionBoxBox(
-		         ((struct jaAABBox){jaVector3Subtract(view->position, (struct jaVector3){factor / 2.0f, factor / 2.0f, factor / 2.0f}),
-		                            jaVector3Add(view->position, (struct jaVector3){factor / 2.0f, factor / 2.0f, factor / 2.0f})}),
-		         state->actual->bbox) == true))
+		if (view != NULL)
+		{
+			const float factor = sNodeDimension(state->actual) * (float)view->lod_factor;
+
+			view_condition = jaAABCollisionBoxBox(
+			    ((struct jaAABBox){jaVector3Subtract(view->position, (struct jaVector3){factor / 2.0f, factor / 2.0f, factor / 2.0f}),
+			                       jaVector3Add(view->position, (struct jaVector3){factor / 2.0f, factor / 2.0f, factor / 2.0f})}),
+			    state->actual->bbox);
+		}
+		else
+			view_condition = true; // The user didn't provided a view, so we iterate every children
+
+		if (state->actual->children != NULL && view_condition == true)
 		{
 			if (buffer->size < (state->depth + 1) * sizeof(void*))
 			{
@@ -654,7 +663,7 @@ again:
 			// that 'factor' is the same, the difference is that this rectangle has
 			// his coordinates aligned.
 
-			float factor = sNodeDimension(state->actual->parent) * 1.0f; // Configurable quality, IN STEPS OF 3.0!
+			float factor = sNodeDimension(state->actual->parent) * (float)view->lod_factor;
 
 			struct jaVector2 align = {view->position.x, view->position.y};
 			align = jaVector2Scale(align, 1.0f / (sNodeDimension(state->actual->parent)));
@@ -759,4 +768,6 @@ void NTerrainPrintInfo(struct NTerrain* terrain)
 			prev_depth = state.depth;
 		}
 	}
+
+	printf("\n");
 }

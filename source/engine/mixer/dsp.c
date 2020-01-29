@@ -59,9 +59,9 @@ inline int DspLimiterInit(const struct jaConfiguration* config, struct DspLimite
 {
 	memset(limiter, 0, sizeof(struct DspLimiter));
 
-	if (jaCvarRetrieve(config, "mixer.limiter.threshold", &limiter->threshold, st) != 0 ||
-	    jaCvarRetrieve(config, "mixer.limiter.attack", &limiter->attack, st) != 0 ||
-	    jaCvarRetrieve(config, "mixer.limiter.release", &limiter->release, st) != 0)
+	if (jaCvarValue(jaCvarFind(config, "limiter.threshold"), &limiter->threshold, st) != 0 ||
+	    jaCvarValue(jaCvarFind(config, "limiter.attack"), &limiter->attack, st) != 0 ||
+	    jaCvarValue(jaCvarFind(config, "limiter.release"), &limiter->release, st) != 0)
 		return 1;
 
 	return 0;
