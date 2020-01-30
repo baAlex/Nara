@@ -1,11 +1,13 @@
 Nara
 ====
 
-The terrain in the screenshots should work as an overworld for an action rpg, but is more a renderer that a videogame.
+The terrain in the screenshots should work as an overworld for an RPG, but currently all this is more a renderer than a videogame.
 
-Check implemented features and future work in the [projects tab](https://github.com/baAlex/Nara/projects/). And while I always try to maintain the code in a compilable state, prepare yourself to found broken things, debug messages/graphics and incomplete functionality all over the place.
+Eventually Nara's goal is to recreate the experience of 90's RPGs (fixing all tedious corners), taking inspiration from the *Final Fantasy* franchise, and *Squaresoft* and *Game Arts* games.
 
-Any help is welcomed ⛰️📐️!.
+Check implemented features and future work in [Projects](https://github.com/baAlex/Nara/projects/). And while I always try to maintain the code in a compilable state, prepare yourself to found broken things, debug messages/graphics and incomplete functionality all over the place.
+
+Any help is welcomed ⛰️📐️... oh, and 'Nara' is a codename!.
 
 ![screenshot](./resources/screenshot-terrain.jpg)
 ![screenshot](./resources/screenshot-wire.jpg)
@@ -19,13 +21,11 @@ At runtime Nara requires:
 
 For compilation:
  - Python3
- - Pkg-config
- - Ninja
- - Git
+ - Cmake
 
 On Ubuntu you can install all dependencies with:
 ```
-sudo apt install libglfw3-dev portaudio19-dev python3 pkg-config ninja-build git
+sudo apt install libglfw3-dev portaudio19-dev python3 cmake
 ```
 
 And don't forget the `git submodule` steps when cloning the repo.
@@ -39,17 +39,22 @@ git clone https://github.com/baAlex/Nara.git
 cd Nara
 git submodule init
 git submodule update
-ninja -f posix-release.ninja
+
+mkdir build
+cd build
+cmake ..
+make
 ```
 
 Optionally you can compile a debug build with:
 ```
-ninja -f posix-debug.ninja
+cmake -DCMAKE_BUILD_TYPE=Debug ..
 ```
 
 
 Thanks to
 ---------
+- [0 A.D. team](https://play0ad.com/), for the textures that I'm borrowed
 - Henrik A. Glass (['erodr'](https://github.com/henrikglass/erodr), Simulated hydraulic erosion implementation)
 - Erik de Castro Lopo (['libsamplerate'](https://github.com/erikd/libsamplerate) library)
 - David Herberth ([GLAD](https://github.com/Dav1dde/glad) loader)
@@ -57,4 +62,4 @@ Thanks to
 
 License
 -------
-Under MIT License.
+Under MIT License, and terms specified in the 'THIRDPARTY_NOTICES' file.

@@ -93,10 +93,10 @@ static float* sProcessHeightmap(int width, int height, const char* filename, str
 			value *= 1.0f / (1.0f + (1.0f / 2.0f) + (1.0f / 4.0f) + (1.0f / 8.0f) + (1.0f / 16.0f));
 
 			if (value > max)
-				value = max;
+				max = value;
 
 			if (value < min)
-				value = min;
+				min = value;
 
 			buffer[col + width * row] = value;
 		}
