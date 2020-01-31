@@ -42,7 +42,7 @@ SOFTWARE.
 
 #include "game.h"
 
-#define NAME "Nara v0.2-alpha"
+#define NAME "Nara v0.3-alpha"
 #define NAME_SHORT "Nara"
 #define NAME_SIMPLE "nara"
 
