@@ -1,7 +1,7 @@
 Nara
 ====
 
-The terrain in the screenshots should work as an overworld for an RPG, but currently all this is more a renderer than a videogame.
+The terrain in the screenshots should work as an overworld for an RPG, but currently this project is more a renderer than a videogame.
 
 Eventually Nara's goal is to recreate the experience of 90's RPGs (fixing all tedious corners), taking inspiration from the *Final Fantasy* franchise, and *Squaresoft* and *Game Arts* games.
 
@@ -59,6 +59,7 @@ Thanks to
 - Erik de Castro Lopo (['libsamplerate'](https://github.com/erikd/libsamplerate) library)
 - David Herberth ([GLAD](https://github.com/Dav1dde/glad) loader)
 - And all contributors of [GLFW](https://github.com/glfw/glfw/graphs/contributors) and [Portaudio](http://portaudio.com/people.htmlm)
+
 
 License
 -------
