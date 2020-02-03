@@ -113,11 +113,11 @@ struct Mixer* MixerCreate(const struct jaConfiguration* config, struct jaStatus*
 		struct Cfg temp_cfg = {0};
 		const char* sampling = NULL;
 
-		if (jaCvarValue(jaCvarFind(config, "mixer.volume"), &temp_cfg.volume, st) != 0 ||
-		    jaCvarValue(jaCvarFind(config, "mixer.frequency"), &temp_cfg.frequency, st) != 0 ||
-		    jaCvarValue(jaCvarFind(config, "mixer.channels"), &temp_cfg.channels, st) != 0 ||
-		    jaCvarValue(jaCvarFind(config, "mixer.max_sounds"), &temp_cfg.max_sounds, st) != 0 ||
-		    jaCvarValue(jaCvarFind(config, "mixer.sampling"), &sampling, st) != 0)
+		if (jaCvarValue(jaCvarGet(config, "mixer.volume"), &temp_cfg.volume, st) != 0 ||
+		    jaCvarValue(jaCvarGet(config, "mixer.frequency"), &temp_cfg.frequency, st) != 0 ||
+		    jaCvarValue(jaCvarGet(config, "mixer.channels"), &temp_cfg.channels, st) != 0 ||
+		    jaCvarValue(jaCvarGet(config, "mixer.max_sounds"), &temp_cfg.max_sounds, st) != 0 ||
+		    jaCvarValue(jaCvarGet(config, "mixer.sampling"), &sampling, st) != 0)
 			goto return_failure;
 
 		if (strcmp(sampling, "linear") == 0)

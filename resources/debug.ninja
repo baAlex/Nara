@@ -64,7 +64,7 @@ build ./build/debug/lib-japan/vector.o:     compile_strict ./source/lib-japan/so
 
 build ./build/debug/lib-japan/configuration/configuration.o: compile_strict ./source/lib-japan/source/configuration/configuration.c
 build ./build/debug/lib-japan/configuration/arguments.o:     compile_strict ./source/lib-japan/source/configuration/arguments.c
-build ./build/debug/lib-japan/configuration/files.o:         compile_strict ./source/lib-japan/source/configuration/files.c
+build ./build/debug/lib-japan/configuration/file.o:          compile_strict ./source/lib-japan/source/configuration/file.c
 
 build ./build/debug/lib-japan/image/format-sgi.o: compile_strict ./source/lib-japan/source/image/format-sgi.c
 build ./build/debug/lib-japan/image/image.o:      compile_strict ./source/lib-japan/source/image/image.c
@@ -123,7 +123,7 @@ build nara-dbg: link $
 ./build/debug/lib-japan/vector.o $
 ./build/debug/lib-japan/configuration/configuration.o $
 ./build/debug/lib-japan/configuration/arguments.o $
-./build/debug/lib-japan/configuration/files.o $
+./build/debug/lib-japan/configuration/file.o $
 ./build/debug/lib-japan/image/format-sgi.o $
 ./build/debug/lib-japan/image/image.o $
 ./build/debug/lib-japan/sound/format-au.o $
@@ -148,7 +148,7 @@ build sdk-dbg: link $
 ./build/debug/lib-japan/vector.o $
 ./build/debug/lib-japan/configuration/configuration.o $
 ./build/debug/lib-japan/configuration/arguments.o $
-./build/debug/lib-japan/configuration/files.o $
+./build/debug/lib-japan/configuration/file.o $
 ./build/debug/lib-japan/image/format-sgi.o $
 ./build/debug/lib-japan/image/image.o $
 ./build/debug/lib-japan/sound/format-au.o $

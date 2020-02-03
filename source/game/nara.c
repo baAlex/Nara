@@ -118,8 +118,8 @@ static struct jaConfiguration* sInitializeConfiguration(int argc, const char* ar
 	    jaCvarCreate(config, "fov", 75.0f, 45.0f, 90.0f, st) == NULL)
 		goto return_failure;
 
-	jaConfigurationFile(config, "user.jcfg", NULL);     // TODO, I need to finish this error handling in LibJapan
-	jaConfigurationArguments(config, argc, argv, NULL); // "
+	jaConfigurationFile(config, "user.jcfg", NULL); // TODO
+	jaConfigurationArguments(config, argc, argv);   // "
 
 	// Bye!
 	return config;
@@ -410,9 +410,9 @@ int main(int argc, const char* argv[])
 	Play3dFile(modules.mixer, PLAY_LOOP, 1.0f, (struct PlayRange){.min = 50.0f, .max = 700.0f},
 	           (struct jaVector3){.x = 1166.38f, .y = 1660.34f, .z = 102.28f}, "./assets/silly-loop.au");
 
-	max_distance = jaCvarFind(modules.config, "max_distance");
-	fov = jaCvarFind(modules.config, "fov");
-	lod_terrain = jaCvarFind(modules.config, "lod.terrain");
+	max_distance = jaCvarGet(modules.config, "max_distance");
+	fov = jaCvarGet(modules.config, "fov");
+	lod_terrain = jaCvarGet(modules.config, "lod.terrain");
 	sSetProjectionAndView(fov, max_distance, lod_terrain, modules.context, &view);
 
 	while (1)

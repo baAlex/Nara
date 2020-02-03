@@ -73,13 +73,13 @@ struct Context* ContextCreate(const struct jaConfiguration* config, const char* 
 		if ((context = calloc(1, sizeof(struct Context))) == NULL)
 			return NULL;
 
-		if (jaCvarValue(jaCvarFind(config, "render.width"), &context->cfg.width, st) != 0 ||
-		    jaCvarValue(jaCvarFind(config, "render.height"), &context->cfg.height, st) != 0 ||
-		    jaCvarValue(jaCvarFind(config, "render.samples"), &context->cfg.samples, st) != 0 ||
-		    jaCvarValue(jaCvarFind(config, "render.fullscreen"), &context->cfg.fullscreen, st) != 0 ||
-		    jaCvarValue(jaCvarFind(config, "render.wireframe"), &context->cfg.wireframe, st) != 0 ||
-		    jaCvarValue(jaCvarFind(config, "render.vsync"), &context->cfg.vsync, st) != 0 ||
-		    jaCvarValue(jaCvarFind(config, "render.filter"), &filter, st) != 0)
+		if (jaCvarValue(jaCvarGet(config, "render.width"), &context->cfg.width, st) != 0 ||
+		    jaCvarValue(jaCvarGet(config, "render.height"), &context->cfg.height, st) != 0 ||
+		    jaCvarValue(jaCvarGet(config, "render.samples"), &context->cfg.samples, st) != 0 ||
+		    jaCvarValue(jaCvarGet(config, "render.fullscreen"), &context->cfg.fullscreen, st) != 0 ||
+		    jaCvarValue(jaCvarGet(config, "render.wireframe"), &context->cfg.wireframe, st) != 0 ||
+		    jaCvarValue(jaCvarGet(config, "render.vsync"), &context->cfg.vsync, st) != 0 ||
+		    jaCvarValue(jaCvarGet(config, "render.filter"), &filter, st) != 0)
 			goto return_failure;
 
 		if (strcmp(filter, "pixel") == 0)
