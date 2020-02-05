@@ -76,6 +76,16 @@ add_custom_command(
 	COMMAND python3 ${CMAKE_SOURCE_DIR}/source/c-ify.py ${CMAKE_SOURCE_DIR}/source/engine/terrain-vertex.glsl ./terrain-vertex.c
 )
 
+add_custom_command(
+	OUTPUT  ./debug-fragment.c
+	COMMAND python3 ${CMAKE_SOURCE_DIR}/source/c-ify.py ${CMAKE_SOURCE_DIR}/source/engine/debug-fragment.glsl ./debug-fragment.c
+)
+
+add_custom_command(
+	OUTPUT  ./debug-vertex.c
+	COMMAND python3 ${CMAKE_SOURCE_DIR}/source/c-ify.py ${CMAKE_SOURCE_DIR}/source/engine/debug-vertex.glsl ./debug-vertex.c
+)
+
 set(SDK_SOURCES
 	"./source/sdk/erosion.c"
 	"./source/sdk/sdk.c"
@@ -87,7 +97,9 @@ add_executable("nara"
 	${SAMPLERATE_SOURCES}
 	${NARA_SOURCES}
 	./terrain-fragment.c
-	./terrain-vertex.c)
+	./terrain-vertex.c
+	./debug-fragment.c
+	./debug-vertex.c)
 
 target_link_libraries("nara" "m")
 target_link_libraries("nara" "glfw")

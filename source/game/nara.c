@@ -42,12 +42,14 @@ SOFTWARE.
 
 #include "game.h"
 
-#define NAME "Nara v0.3-alpha"
+#define NAME "Nara v0.4-alpha"
 #define NAME_SHORT "Nara"
 #define NAME_SIMPLE "nara"
 
 extern const uint8_t g_terrain_vertex[];
 extern const uint8_t g_terrain_fragment[];
+extern const uint8_t g_debug_vertex[];
+extern const uint8_t g_debug_fragment[];
 
 struct
 {
@@ -63,6 +65,8 @@ struct Resources
 {
 	struct NTerrain* terrain;
 	struct Program terrain_program;
+
+	struct Program debug_program;
 
 	struct Texture lightmap;
 	struct Texture masksmap;
@@ -175,12 +179,16 @@ return_failure:
 -----------------------------*/
 static void sStatsCallback(const struct Context* context, const struct ContextEvents* events, bool press, void* data)
 {
-	(void)context;
 	(void)events;
 	struct Timer* timer = data;
+	struct jaVector3 cam = GetCameraOrigin(context);
 
 	if (press == true)
-		printf("Fps: %i (~%.02f)\n", timer->frames_per_second, timer->miliseconds_betwen);
+	{
+		printf("Fps: %i (~%.02f), DCalls: %i\n", timer->frames_per_second, timer->miliseconds_betwen,
+		       GetDrawCalls(context));
+		printf("Camera at: {.x = %0.2ff, .y = %0.2ff, .z = %0.2ff}\n", cam.x, cam.y, cam.z);
+	}
 }
 
 
@@ -218,6 +226,7 @@ static inline void sUnloadResources(struct Resources* res)
 {
 	NTerrainDelete(res->terrain);
 	ProgramFree(&res->terrain_program);
+	ProgramFree(&res->debug_program);
 	TextureFree(&res->lightmap);
 	TextureFree(&res->masksmap);
 	TextureFree(&res->grass);
@@ -236,10 +245,13 @@ static int sLoadResources(struct Context* context, struct Mixer* mixer, struct j
 {
 	jaStatusSet(st, "sLoadResources", STATUS_SUCCESS, NULL);
 
-	if ((out->terrain = NTerrainCreate("./assets/heightmap.sgi", 150.0, 1944.0, 72.0, 3, st)) == NULL)
+	if ((out->terrain = NTerrainCreate("./assets/heightmap.sgi", 150.0, 1944.0, 24.0, 2, st)) == NULL)
 		goto return_failure;
 
 	if (ProgramInit((char*)g_terrain_vertex, (char*)g_terrain_fragment, &out->terrain_program, st) != 0)
+		goto return_failure;
+
+	if (ProgramInit((char*)g_debug_vertex, (char*)g_debug_fragment, &out->debug_program, st) != 0)
 		goto return_failure;
 
 	if (TextureInit(context, "./assets/lightmap.sgi", &out->lightmap, st) != 0 ||
@@ -255,7 +267,6 @@ static int sLoadResources(struct Context* context, struct Mixer* mixer, struct j
 		goto return_failure;
 
 	// Set them
-	SetProgram(context, &out->terrain_program);
 	SetTexture(context, 0, &out->lightmap);
 	SetTexture(context, 1, &out->masksmap);
 	SetTexture(context, 2, &out->grass);
@@ -443,13 +454,17 @@ int main(int argc, const char* argv[])
 			sSetProjectionAndView(fov, max_distance, lod_terrain, modules.context, &view);
 
 		// Render
+		SetProgram(modules.context, &resources.terrain_program);
 		NTerrainDraw(modules.context, resources.terrain, &view);
+
+		SetProgram(modules.context, &resources.debug_program);
+		DrawAABB(modules.context, (struct jaAABBox){0}, (struct jaVector3){0.0f, 0.0f, 0.0f});
 
 		// Window title
 		if (modules.timer.one_second == true)
 		{
-			sprintf(temp_str, "%s | fps: %i (~%.02f)", NAME, modules.timer.frames_per_second,
-			        modules.timer.miliseconds_betwen);
+			sprintf(temp_str, "%s | fps: %i (~%.02f), dcalls: %i", NAME, modules.timer.frames_per_second,
+			        modules.timer.miliseconds_betwen, GetDrawCalls(modules.context));
 			SetTitle(modules.context, temp_str);
 		}
 

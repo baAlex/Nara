@@ -89,6 +89,8 @@ inline void SetProgram(struct Context* context, const struct Program* program)
 		glUniform1i(context->u_texture[5], 5);
 		glUniform1i(context->u_texture[6], 6);
 		glUniform1i(context->u_texture[7], 7);
+
+		context->draw_calls += 24; // TODO?
 	}
 }
 
@@ -107,6 +109,8 @@ inline void SetVertices(struct Context* context, const struct Vertices* vertices
 
 		glVertexAttribPointer(ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), NULL);
 		glVertexAttribPointer(ATTRIBUTE_UV, 2, GL_FLOAT, GL_FALSE, sizeof(struct Vertex), ((float*)NULL) + 3);
+
+		context->draw_calls += 3;
 	}
 }
 
@@ -120,6 +124,7 @@ inline void SetTexture(struct Context* context, int unit, const struct Texture* 
 	(void)context;
 	glActiveTexture((GLenum)(GL_TEXTURE0 + unit));
 	glBindTexture(GL_TEXTURE_2D, texture->glptr);
+	context->draw_calls += 2;
 }
 
 
@@ -132,7 +137,10 @@ inline void SetProjection(struct Context* context, struct jaMatrix4 matrix)
 	memcpy(&context->projection, &matrix, sizeof(struct jaMatrix4));
 
 	if (context->current_program != NULL)
+	{
 		glUniformMatrix4fv(context->u_projection, 1, GL_FALSE, &context->projection.e[0][0]);
+		context->draw_calls += 1;
+	}
 }
 
 
@@ -149,6 +157,7 @@ inline void SetCameraLookAt(struct Context* context, struct jaVector3 target, st
 	{
 		glUniformMatrix4fv(context->u_camera_projection, 1, GL_FALSE, &context->camera.e[0][0]);
 		glUniform3fv(context->u_camera_origin, 1, (float*)&context->camera_origin);
+		context->draw_calls += 2;
 	}
 }
 
@@ -166,6 +175,7 @@ inline void SetCameraMatrix(struct Context* context, struct jaMatrix4 matrix, st
 	{
 		glUniformMatrix4fv(context->u_camera_projection, 1, GL_FALSE, &context->camera.e[0][0]);
 		glUniform3fv(context->u_camera_origin, 1, (float*)&context->camera_origin);
+		context->draw_calls += 2;
 	}
 }
 
@@ -177,6 +187,7 @@ inline void SetCameraMatrix(struct Context* context, struct jaMatrix4 matrix, st
 inline void SetHighlight(struct Context* context, struct jaVector3 value)
 {
 	glUniform3fv(context->u_highlight, 1, (float*)&value);
+	context->draw_calls += 1;
 }
 
 
@@ -192,13 +203,21 @@ inline struct jaVector2i GetWindowSize(const struct Context* context)
 
 /*-----------------------------
 
- Draw()
+ GetDrawcalls()
 -----------------------------*/
-inline void Draw(struct Context* context, const struct Index* index)
+inline int GetDrawCalls(const struct Context* context)
 {
-	(void)context;
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index->glptr);
-	glDrawElements((context->cfg.wireframe == false) ? GL_TRIANGLES : GL_LINES, (GLsizei)index->length, GL_UNSIGNED_SHORT, NULL);
+	return context->draw_calls;
+}
+
+
+/*-----------------------------
+
+ GetCameraOrigin()
+-----------------------------*/
+inline struct jaVector3 GetCameraOrigin(const struct Context* context)
+{
+	return context->camera_origin;
 }
 
 
@@ -211,7 +230,8 @@ int TakeScreenshot(const struct Context* context, const char* filename, struct j
 	struct jaImage* image = NULL;
 	GLenum error;
 
-	if ((image = jaImageCreate(IMAGE_RGBA8, (size_t)context->window_size.x, (size_t)context->window_size.y + 1)) == NULL)
+	if ((image = jaImageCreate(IMAGE_RGBA8, (size_t)context->window_size.x, (size_t)context->window_size.y + 1)) ==
+	    NULL)
 	{
 		jaStatusSet(st, "TakeScreenshot", STATUS_MEMORY_ERROR, NULL);
 		goto return_failure;
@@ -235,14 +255,11 @@ int TakeScreenshot(const struct Context* context, const char* filename, struct j
 
 		// The image has an extra row
 		memcpy((uint8_t*)image->data + (image->width * bpp) * (image->height - 1),
-		       (uint8_t*)image->data + (image->width * bpp) * i,
-		       (image->width * bpp));
+		       (uint8_t*)image->data + (image->width * bpp) * i, (image->width * bpp));
 		memcpy((uint8_t*)image->data + (image->width * bpp) * i,
-		       (uint8_t*)image->data + (image->width * bpp) * (image->height - 2 - i),
-		       (image->width * bpp));
+		       (uint8_t*)image->data + (image->width * bpp) * (image->height - 2 - i), (image->width * bpp));
 		memcpy((uint8_t*)image->data + (image->width * bpp) * (image->height - 2 - i),
-		       (uint8_t*)image->data + (image->width * bpp) * (image->height - 1),
-		       (image->width * bpp));
+		       (uint8_t*)image->data + (image->width * bpp) * (image->height - 1), (image->width * bpp));
 	}
 
 	image->height -= 1; // ;)
@@ -258,4 +275,39 @@ return_failure:
 		jaImageDelete(image);
 
 	return 1;
+}
+
+
+/*-----------------------------
+
+ Draw()
+-----------------------------*/
+inline void Draw(struct Context* context, const struct Index* index)
+{
+	(void)context;
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index->glptr);
+	glDrawElements((context->cfg.wireframe == false) ? GL_TRIANGLES : GL_LINES, (GLsizei)index->length,
+	               GL_UNSIGNED_SHORT, NULL);
+
+		context->draw_calls += 2;
+}
+
+
+/*-----------------------------
+
+ DrawAABB()
+-----------------------------*/
+void DrawAABB(struct Context* context, struct jaAABBox box, struct jaVector3 pos)
+{
+	// GLint old_vertices = 0;
+	// glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &old_vertices);
+
+	SetVertices(context, &context->aabb_vertices);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, context->aabb_index.glptr);
+	glDrawElements((context->cfg.wireframe == false) ? GL_TRIANGLES : GL_LINES, (GLsizei)context->aabb_index.length,
+	               GL_UNSIGNED_SHORT, NULL);
+
+	context->draw_calls += 2;
+	// glBindBuffer(GL_ARRAY_BUFFER, (GLuint)old_vertices);
 }

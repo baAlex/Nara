@@ -24,6 +24,8 @@ rule link
 # Automatically generated files
 build ./build/debug/engine/terrain-fragment.c: generate ./source/engine/terrain-fragment.glsl
 build ./build/debug/engine/terrain-vertex.c:   generate ./source/engine/terrain-vertex.glsl
+build ./build/debug/engine/debug-fragment.c:   generate ./source/engine/debug-fragment.glsl
+build ./build/debug/engine/debug-vertex.c:     generate ./source/engine/debug-vertex.glsl
 
 # Engine
 build ./build/debug/engine/context/context.o: compile_strict ./source/engine/context/context.c
@@ -39,8 +41,11 @@ build ./build/debug/engine/entity.o:           compile_strict ./source/engine/en
 build ./build/debug/engine/misc.o:             compile_strict ./source/engine/misc.c
 build ./build/debug/engine/nterrain.o:         compile_strict ./source/engine/nterrain.c
 build ./build/debug/engine/timer.o:            compile_strict ./source/engine/timer.c
+
 build ./build/debug/engine/terrain-fragment.o: compile_strict ./build/debug/engine/terrain-fragment.c
 build ./build/debug/engine/terrain-vertex.o:   compile_strict ./build/debug/engine/terrain-vertex.c
+build ./build/debug/engine/debug-fragment.o:   compile_strict ./build/debug/engine/debug-fragment.c
+build ./build/debug/engine/debug-vertex.o:     compile_strict ./build/debug/engine/debug-vertex.c
 
 # Game
 build ./build/debug/game/camera.o: compile_strict ./source/game/camera.c
@@ -107,6 +112,8 @@ build nara-dbg: link $
 ./build/debug/engine/timer.o $
 ./build/debug/engine/terrain-fragment.o $
 ./build/debug/engine/terrain-vertex.o $
+./build/debug/engine/debug-fragment.o $
+./build/debug/engine/debug-vertex.o $
 ./build/debug/game/camera.o $
 ./build/debug/game/nara.o $
 ./build/debug/game/point.o $

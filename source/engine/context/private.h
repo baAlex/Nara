@@ -50,11 +50,16 @@
 		const struct Vertices* current_vertices;
 		const struct Texture* current_texture;
 
+		struct Vertices aabb_vertices;
+		struct Index aabb_index;
+
 		GLint u_projection;        // For current program
 		GLint u_camera_projection; // "
 		GLint u_camera_origin;     // "
 		GLint u_texture[8];        // "
 		GLint u_highlight;         // "
+
+		int draw_calls;
 
 		// Input
 		int active_gamepad;            // -1 if none

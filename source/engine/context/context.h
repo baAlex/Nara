@@ -7,11 +7,12 @@
 #ifndef CONTEXT_H
 #define CONTEXT_H
 
+	#include "japan-aabounding.h"
+	#include "japan-configuration.h"
 	#include "japan-image.h"
+	#include "japan-matrix.h"
 	#include "japan-status.h"
 	#include "japan-vector.h"
-	#include "japan-matrix.h"
-	#include "japan-configuration.h"
 
 	enum Filter
 	{
@@ -73,7 +74,7 @@
 	void ContextUpdate(struct Context* context, struct ContextEvents* out_events);
 
 	void SetFunctionKeyCallback(struct Context* context, int key, void* user_data,
-	                            void (*)(const struct Context*, const struct ContextEvents*, bool, void*));
+								void (*)(const struct Context*, const struct ContextEvents*, bool, void*));
 
 	void SetTitle(struct Context* context, const char* title);
 	void SetProgram(struct Context* context, const struct Program* program);
@@ -85,9 +86,12 @@
 	void SetCameraMatrix(struct Context* context, struct jaMatrix4 matrix, struct jaVector3 origin);
 
 	struct jaVector2i GetWindowSize(const struct Context* context);
+	int GetDrawCalls(const struct Context*);
+	struct jaVector3 GetCameraOrigin(const struct Context*);
 
 	int TakeScreenshot(const struct Context* context, const char* filename, struct jaStatus* st);
 	void Draw(struct Context* context, const struct Index* index);
+	void DrawAABB(struct Context* context, struct jaAABBox box, struct jaVector3 pos);
 
 	#define SetCamera(context, val, origin) \
 		_Generic((val), \

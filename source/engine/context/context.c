@@ -157,6 +157,30 @@ struct Context* ContextCreate(const struct jaConfiguration* config, const char* 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glBlendEquation(GL_FUNC_ADD);
 
+	// Vertices and an index for AABB draw
+	{
+		uint16_t index_data[] = {
+		    0, 1, 2, 3, 0, 2, // Top
+		    6, 5, 4, 6, 4, 7, // Bottom
+		    5, 1, 0, 0, 4, 5, // "South"
+		    3, 2, 6, 3, 6, 7, // "North"
+		    0, 3, 7, 0, 7, 4, // "West"
+		    6, 2, 1, 5, 6, 1  // "East"
+		};
+
+		struct Vertex vertices[] = {{.pos = {-0.5f, -0.5f, +0.5f}, .uv = {0.0f, 0.0f}}, // Top
+		                            {.pos = {+0.5f, -0.5f, +0.5f}, .uv = {1.0f, 0.0f}},
+		                            {.pos = {+0.5f, +0.5f, +0.5f}, .uv = {1.0f, 1.0f}},
+		                            {.pos = {-0.5f, +0.5f, +0.5f}, .uv = {0.0f, 1.0f}},
+		                            {.pos = {-0.5f, -0.5f, -0.5f}, .uv = {0.0f, 0.0f}}, // Bottom
+		                            {.pos = {+0.5f, -0.5f, -0.5f}, .uv = {1.0f, 0.0f}},
+		                            {.pos = {+0.5f, +0.5f, -0.5f}, .uv = {1.0f, 1.0f}},
+		                            {.pos = {-0.5f, +0.5f, -0.5f}, .uv = {0.0f, 1.0f}}};
+
+		VerticesInit(vertices, 8, &context->aabb_vertices, NULL);
+		IndexInit(index_data, 36, &context->aabb_index, NULL);
+	}
+
 	// Last things to do
 	printf("%s\n", glGetString(GL_VENDOR));
 	printf("%s\n", glGetString(GL_RENDERER));
@@ -192,6 +216,9 @@ inline void ContextDelete(struct Context* context)
 	if (context->window != NULL)
 		glfwDestroyWindow(context->window);
 
+	VerticesFree(&context->aabb_vertices);
+	IndexFree(&context->aabb_index);
+
 	glfwTerminate();
 	free(context);
 }
@@ -211,6 +238,8 @@ void ContextUpdate(struct Context* context, struct ContextEvents* out_events)
 	// if these takes time at least the screen didn't goes black
 	glfwSwapBuffers(context->window);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	context->draw_calls = 0;
 
 	if (out_events != NULL)
 	{

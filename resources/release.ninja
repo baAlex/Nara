@@ -18,6 +18,8 @@ rule link
 # Automatically generated files
 build ./build/release/engine/terrain-fragment.c: generate ./source/engine/terrain-fragment.glsl
 build ./build/release/engine/terrain-vertex.c:   generate ./source/engine/terrain-vertex.glsl
+build ./build/release/engine/debug-fragment.c:   generate ./source/engine/debug-fragment.glsl
+build ./build/release/engine/debug-vertex.c:     generate ./source/engine/debug-vertex.glsl
 
 # Engine
 build ./build/release/engine/context/context.o: compile ./source/engine/context/context.c
@@ -33,8 +35,11 @@ build ./build/release/engine/entity.o:           compile ./source/engine/entity.
 build ./build/release/engine/misc.o:             compile ./source/engine/misc.c
 build ./build/release/engine/nterrain.o:         compile ./source/engine/nterrain.c
 build ./build/release/engine/timer.o:            compile ./source/engine/timer.c
+
 build ./build/release/engine/terrain-fragment.o: compile ./build/release/engine/terrain-fragment.c
 build ./build/release/engine/terrain-vertex.o:   compile ./build/release/engine/terrain-vertex.c
+build ./build/release/engine/debug-fragment.o:   compile ./build/release/engine/debug-fragment.c
+build ./build/release/engine/debug-vertex.o:     compile ./build/release/engine/debug-vertex.c
 
 # Game
 build ./build/release/game/camera.o: compile ./source/game/camera.c
@@ -101,6 +106,8 @@ build nara: link $
 ./build/release/engine/timer.o $
 ./build/release/engine/terrain-fragment.o $
 ./build/release/engine/terrain-vertex.o $
+./build/release/engine/debug-fragment.o $
+./build/release/engine/debug-vertex.o $
 ./build/release/game/camera.o $
 ./build/release/game/nara.o $
 ./build/release/game/point.o $
