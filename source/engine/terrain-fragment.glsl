@@ -38,15 +38,15 @@ void main()
 	lowp float factor;
 
 	// Plains (grass + dirt)
-	a = texture2D(texture2, uv * vec2(16.0, 16.0));
-	b = texture2D(texture3, uv * vec2(16.0, 16.0));
+	a = texture2D(texture2, uv * vec2(32.0, 32.0));
+	b = texture2D(texture3, uv * vec2(32.0, 32.0));
 
 	factor = HeightBased(-50.0, 200.0, a.w, b.w, position.z);
 	lowp vec4 plains = mix(vec4(a.rgb, 1.0), vec4(b.rgb, 1.0), factor);
 
 	// Cliffs
-	a = texture2D(texture4, uv * vec2(16.0, 16.0));
-	b = texture2D(texture5, uv * vec2(16.0, 16.0));
+	a = texture2D(texture4, uv * vec2(32.0, 32.0));
+	b = texture2D(texture5, uv * vec2(32.0, 32.0));
 
 	factor = HeightBased(50.0, 100.0, a.w, b.w, position.z);
 	lowp vec4 cliffs = mix(vec4(a.rgb, 1.0), vec4(b.rgb, 1.0), position.z/150.0);

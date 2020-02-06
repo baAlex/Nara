@@ -34,13 +34,13 @@ SOFTWARE.
 #include "japan-dictionary.h"
 #include "japan-status.h"
 
-#include "../engine/context/context.h"
-#include "../engine/entity.h"
-#include "../engine/mixer/mixer.h"
-#include "../engine/nterrain.h"
-#include "../engine/timer.h"
+#include "context/context.h"
+#include "entity.h"
+#include "mixer/mixer.h"
+#include "nterrain.h"
+#include "timer.h"
 
-#include "game.h"
+#include "../game/game.h"
 
 #define NAME "Nara v0.4-alpha"
 #define NAME_SHORT "Nara"

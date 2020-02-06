@@ -39,6 +39,7 @@ build ./build/debug/engine/mixer/sample.o: compile_strict ./source/engine/mixer/
 
 build ./build/debug/engine/entity.o:           compile_strict ./source/engine/entity.c
 build ./build/debug/engine/misc.o:             compile_strict ./source/engine/misc.c
+build ./build/debug/engine/nara.o:             compile_strict ./source/engine/nara.c
 build ./build/debug/engine/nterrain.o:         compile_strict ./source/engine/nterrain.c
 build ./build/debug/engine/timer.o:            compile_strict ./source/engine/timer.c
 
@@ -49,7 +50,6 @@ build ./build/debug/engine/debug-vertex.o:     compile_strict ./build/debug/engi
 
 # Game
 build ./build/debug/game/camera.o: compile_strict ./source/game/camera.c
-build ./build/debug/game/nara.o:   compile_strict ./source/game/nara.c
 build ./build/debug/game/point.o:  compile_strict ./source/game/point.c
 
 # Lib Glad
@@ -108,6 +108,7 @@ build nara-dbg: link $
 ./build/debug/engine/mixer/sample.o $
 ./build/debug/engine/entity.o $
 ./build/debug/engine/misc.o $
+./build/debug/engine/nara.o $
 ./build/debug/engine/nterrain.o $
 ./build/debug/engine/timer.o $
 ./build/debug/engine/terrain-fragment.o $
@@ -115,7 +116,6 @@ build nara-dbg: link $
 ./build/debug/engine/debug-fragment.o $
 ./build/debug/engine/debug-vertex.o $
 ./build/debug/game/camera.o $
-./build/debug/game/nara.o $
 ./build/debug/game/point.o $
 ./build/debug/lib-glad/glad.o $
 ./build/debug/lib-japan/aabounding.o $

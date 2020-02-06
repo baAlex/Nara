@@ -60,10 +60,10 @@ set(NARA_SOURCES
 	"./source/engine/mixer/sample.c"
 	"./source/engine/entity.c"
 	"./source/engine/misc.c"
+	"./source/engine/nara.c"
 	"./source/engine/nterrain.c"
 	"./source/engine/timer.c"
 	"./source/game/camera.c"
-	"./source/game/nara.c"
 	"./source/game/point.c")
 
 add_custom_command(
