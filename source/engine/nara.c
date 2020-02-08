@@ -29,6 +29,7 @@ SOFTWARE.
 -----------------------------*/
 
 #include <stdio.h>
+#include <string.h>
 
 #include "japan-configuration.h"
 #include "japan-dictionary.h"
@@ -39,6 +40,7 @@ SOFTWARE.
 #include "mixer/mixer.h"
 #include "nterrain.h"
 #include "timer.h"
+#include "vm.h"
 
 #include "../game/game.h"
 
@@ -376,6 +378,17 @@ static inline bool sSingleClick(bool evn, bool* state)
 
 int main(int argc, const char* argv[])
 {
+	if (argc > 1 && strcmp(argv[1], "mruby_test") == 0)
+	{
+		struct Vm* vm = VmCreate((const char* []){"./assets/scripts/camera.rb", "./assets/scripts/player.rb",
+		                                          "./assets/scripts/point.rb", NULL}, NULL);
+
+		VmDelete(vm);
+		return 0;
+	}
+
+	// ----
+
 	struct jaStatus st = {0};
 
 	struct jaCvar* max_distance;

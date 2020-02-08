@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 
 project("Nara" C)
-include_directories("./source/lib-japan/include/")
 include_directories("./source/lib-glad/")
+include_directories("./source/lib-japan/include/")
 include_directories("./source/lib-samplerate/src")
 
 if ((CMAKE_C_COMPILER_ID MATCHES "Clang") OR (CMAKE_C_COMPILER_ID MATCHES "GNU"))
@@ -20,6 +20,8 @@ elseif (CMAKE_C_COMPILER_ID MATCHES "MSVC")
 	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /O2 /D_CRT_SECURE_NO_WARNINGS")
 
 endif()
+
+set(GLAD_SOURCES "./source/lib-glad/glad.c")
 
 set(JAPAN_SOURCES
 	"./source/lib-japan/source/aabounding.c"
@@ -42,8 +44,6 @@ set(JAPAN_SOURCES
 	"./source/lib-japan/source/sound/laws.c"
 	"./source/lib-japan/source/sound/sound.c")
 
-set(GLAD_SOURCES "./source/lib-glad/glad.c")
-
 set(SAMPLERATE_SOURCES
 	"./source/lib-samplerate/src/samplerate.c"
 	"./source/lib-samplerate/src/src_linear.c"
@@ -61,6 +61,7 @@ set(NARA_SOURCES
 	"./source/engine/entity.c"
 	"./source/engine/misc.c"
 	"./source/engine/nara.c"
+	"./source/engine/vm.c"
 	"./source/engine/nterrain.c"
 	"./source/engine/timer.c"
 	"./source/game/camera.c"
@@ -101,9 +102,10 @@ add_executable("nara"
 	./debug-fragment.c
 	./debug-vertex.c)
 
-target_link_libraries("nara" "m")
-target_link_libraries("nara" "glfw")
-target_link_libraries("nara" "portaudio")
+target_link_libraries("nara" "m")         # TODO
+target_link_libraries("nara" "glfw")      # "
+target_link_libraries("nara" "portaudio") # "
+target_link_libraries("nara" "mruby")     # "
 
 add_executable("sdk" ${JAPAN_SOURCES} ${SDK_SOURCES})
 target_link_libraries("sdk" "m")
