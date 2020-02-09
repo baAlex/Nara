@@ -383,6 +383,17 @@ int main(int argc, const char* argv[])
 		struct Vm* vm = VmCreate((const char* []){"./assets/scripts/camera.rb", "./assets/scripts/player.rb",
 		                                          "./assets/scripts/point.rb", NULL}, NULL);
 
+		struct NEntityState e_state = {0};
+
+		VmCreateEntity(vm, "Point", e_state);
+		VmCreateEntity(vm, "Camera", e_state);
+		VmCreateEntity(vm, "Point", e_state);
+		VmCreateEntity(vm, "Point", e_state);
+		VmCreateEntity(vm, "Camera", e_state);
+
+		for (int i = 0; i < 4; i++)
+			VmEntitiesUpdate(vm);
+
 		VmDelete(vm);
 		return 0;
 	}

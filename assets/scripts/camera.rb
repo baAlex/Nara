@@ -16,4 +16,8 @@ class Camera
 
 		print("~ Hello, Camera here! ~\n")
 	end
+
+	def think(delta)
+		print("~ #{@position}! (#{delta}) ~\n")
+	end
 end

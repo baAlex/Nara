@@ -37,6 +37,7 @@ SOFTWARE.
 #include <string.h>
 
 #include "japan-dictionary.h"
+#include "japan-list.h"
 
 #include <mruby.h>
 #include <mruby/array.h>
@@ -46,15 +47,24 @@ SOFTWARE.
 #include <mruby/variable.h>
 #include <mruby/version.h>
 
-struct EntityClass
+struct NEntityClass
 {
-	int placeholder;
+	struct RClass* rclass;
+};
+
+struct NEntity
+{
+	struct NEntityState state;
+	struct mrb_value robject;
 };
 
 struct Vm
 {
-	mrb_state* state;
+	mrb_state* rstate;
+	int rgc_state;
+
 	struct jaDictionary* classes;
+	struct jaList entities;
 };
 
 
@@ -78,6 +88,13 @@ static mrb_value sVmCallPrint(mrb_state* state, mrb_value self)
 }
 
 
+/*-----------------------------
+
+ sException()
+ - Inspects if an exception was raised
+ - (TODO) Prints an un-usefull message
+ - (TODO) And Im not really sure if the VM is usable after this state
+-----------------------------*/
 static inline bool sException(struct mrb_state* state)
 {
 	if (state->exc != NULL)
@@ -92,6 +109,14 @@ static inline bool sException(struct mrb_state* state)
 }
 
 
+/*-----------------------------
+
+ sCheckVariableIn()
+ - Checks if variable 'symbol' exists on 'object'
+ - If true, return the variable in 'out'
+ - If true, check if is of the specified 'type'
+ - Returns 'true' if both previous conditions meet
+-----------------------------*/
 static inline bool sCheckVariableIn(struct mrb_state* state, struct mrb_value object, mrb_sym symbol,
                                     enum mrb_vtype type, mrb_value* out)
 {
@@ -114,6 +139,13 @@ static inline bool sCheckVariableIn(struct mrb_state* state, struct mrb_value ob
 }
 
 
+/*-----------------------------
+
+ sCheckVector3In()
+ - Checks if variable 'symbol' in 'object' meets some conditions to pass as an Nara 'jaVector3'
+ - If is an MRuby object
+ - If has variables 'x', 'y' and 'z' (without check the type of these)
+-----------------------------*/
 static inline bool sCheckVector3In(struct mrb_state* state, struct mrb_value object, mrb_sym symbol)
 {
 	mrb_value temp = {.value.p = NULL};
@@ -155,7 +187,17 @@ static inline bool sCheckVector3In(struct mrb_state* state, struct mrb_value obj
 }
 
 
-static bool sCheckEntityClass(struct mrb_state* state, const char* class_name)
+/*-----------------------------
+
+ sCheckNEntityClass()
+ - If a MRuby class of 'class_name' exists returns it in 'out', without considering following tests
+ - Checks if that MRuby class meets some conditions to pass as an Nara 'NEntityClass', looks if
+ certain variables exist at initialization, math expected types, etc
+ - It just creates an instance a do some checks on it, of course being a dynamic language is
+ easy that those variables change of type or just dissapear on subsequent calls... in any
+ case is better to print some warnings at execution that in the middle of the game
+-----------------------------*/
+static bool sCheckNEntityClass(struct mrb_state* state, const char* class_name, struct RClass** out)
 {
 	struct RClass* class = NULL;
 	struct mrb_value object = {.value.p = NULL};
@@ -169,6 +211,10 @@ static bool sCheckEntityClass(struct mrb_state* state, const char* class_name)
 	}
 
 	class = mrb_class_get(state, class_name); // Always after mrb_class_defined()
+
+	if (out != NULL)
+		*out = class;
+
 	object = mrb_obj_new(state, class, 0, NULL);
 
 	if (sException(state) == true)
@@ -199,7 +245,9 @@ static bool sCheckEntityClass(struct mrb_state* state, const char* class_name)
 		valid = false;
 
 	if (sCheckVector3In(state, object, mrb_intern_cstr(state, "@angle")) == false)
-		valid = true;
+		valid = false;
+
+	// TODO: Check if method 'think' exists
 
 	// Bye!
 	mrb_gc_mark_value(state, object);
@@ -213,6 +261,9 @@ return_failure:
 }
 
 
+//-----------------------------
+
+
 struct Vm* VmCreate(const char* filename[], struct jaStatus* st)
 {
 	(void)st; // TODO
@@ -223,13 +274,16 @@ struct Vm* VmCreate(const char* filename[], struct jaStatus* st)
 	if ((vm = calloc(1, sizeof(struct Vm))) == NULL)
 		return NULL;
 
-	if ((vm->state = mrb_open_core(mrb_default_allocf, NULL)) == NULL)
+	if ((vm->classes = jaDictionaryCreate(NULL)) == NULL)
+		goto return_failure;
+
+	if ((vm->rstate = mrb_open_core(mrb_default_allocf, NULL)) == NULL)
 	{
 		jaStatusSet(st, "VmCreate", STATUS_ERROR, "mrb_open_core()");
 		goto return_failure;
 	}
 
-	mrb_define_method(vm->state, vm->state->object_class, "print", sVmCallPrint, MRB_ARGS_REQ(1));
+	mrb_define_method(vm->rstate, vm->rstate->object_class, "print", sVmCallPrint, MRB_ARGS_REQ(1));
 
 	// Load files
 	for (int i = 0;; i++)
@@ -243,20 +297,21 @@ struct Vm* VmCreate(const char* filename[], struct jaStatus* st)
 			goto return_failure;
 		}
 
-		mrb_load_file(vm->state, file);
+		mrb_load_file(vm->rstate, file);
 		fclose(file);
 
-		if (sException(vm->state) == true)
+		if (sException(vm->rstate) == true)
 		{
 			printf("[Error] Exception raised at '%s' load procedure\n", filename[i]);
 			goto return_failure;
 		}
 	}
 
-	// Test test test
-	sCheckEntityClass(vm->state, "Camera");
-	sCheckEntityClass(vm->state, "Point");
-	sCheckEntityClass(vm->state, "Player");
+	// Save the current GC state, then a call to mrb_gc_arena_restore()
+	// will free everything created from here. Indicated for C created
+	// objects that the GC didn't know how to handle
+	// (https://github.com/mruby/mruby/blob/master/doc/guides/gc-arena-howto.mds)
+	vm->rgc_state = mrb_gc_arena_save(vm->rstate);
 
 	// Bye!
 	return vm;
@@ -272,8 +327,87 @@ void VmDelete(struct Vm* vm)
 	if (vm == NULL)
 		return;
 
-	if (vm->state != NULL)
-		mrb_close(vm->state);
+	if (vm->classes != NULL)
+		jaDictionaryDelete(vm->classes);
 
+	if (vm->rstate != NULL)
+		mrb_close(vm->rstate);
+
+	jaListClean(&vm->entities);
 	free(vm);
+}
+
+
+void VmClean(struct Vm* vm)
+{
+	mrb_gc_arena_restore(vm->rstate, vm->rgc_state);
+}
+
+
+struct NEntity* VmCreateEntity(struct Vm* vm, const char* class_name, struct NEntityState initial_state)
+{
+	struct NEntity* entity = NULL;
+	struct NEntityClass* class = NULL;
+
+	struct mrb_value object = {.value.p = NULL};
+
+	union {
+		struct jaDictionaryItem* d;
+		struct jaListItem* l;
+	} item;
+
+	// Is an know class?
+	if ((item.d = jaDictionaryGet(vm->classes, class_name)) != NULL)
+		class = item.d->data;
+	else
+	{
+		struct RClass* temp = NULL;
+
+		printf("Validating class '%s'...\n", class_name);
+
+		if (sCheckNEntityClass(vm->rstate, class_name, &temp) == false)
+			return NULL;
+
+		if ((item.d = jaDictionaryAdd(vm->classes, class_name, NULL, sizeof(struct NEntityClass))) == NULL)
+			return NULL;
+
+		class = item.d->data;
+		class->rclass = temp;
+	}
+
+	// Create MRuby entity object
+	object = mrb_obj_new(vm->rstate, class->rclass, 0, NULL);
+
+	mrb_iv_set(vm->rstate, object, mrb_intern_cstr(vm->rstate, "@position"), mrb_fixnum_value(42));
+	mrb_iv_set(vm->rstate, object, mrb_intern_cstr(vm->rstate, "@angle"), mrb_fixnum_value(16));
+
+	// Create Nara entity counterpart
+	if ((item.l = jaListAdd(&vm->entities, NULL, sizeof(struct NEntity))) == NULL)
+		return NULL;
+
+	entity = item.l->data;
+	entity->state = initial_state;
+	entity->robject = object;
+
+	// Bye!
+	printf("Created entity '%s'\n", class_name);
+
+	return NULL;
+}
+
+
+void VmEntitiesUpdate(struct Vm* vm)
+{
+	struct jaListItem* item = NULL;
+	struct NEntity* entity = NULL;
+
+	struct jaListState s = {0};
+	s.start = vm->entities.first;
+	s.reverse = false;
+
+	while ((item = jaListIterate(&s)) != NULL)
+	{
+		entity = item->data;
+		mrb_funcall(vm->rstate, entity->robject, "think", 1, mrb_float_value(vm->rstate, 3.14f));
+	}
 }
