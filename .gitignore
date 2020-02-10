@@ -3,6 +3,8 @@
 /sdk
 /sdk-dbg
 /nterrain-tests
+/game.mrb
+/game-dbg.mrb
 
 /user.jcfg
 /nara - *.sgi

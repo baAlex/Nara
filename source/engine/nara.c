@@ -358,10 +358,13 @@ int main(int argc, const char* argv[])
 	if ((modules.mixer = MixerCreate(modules.config, &st)) == NULL)
 		goto return_failure;
 
-	if ((modules.vm = VmCreate((const char* []){"./assets/scripts/common.rb", "./assets/scripts/player.rb",
-	                                            "./assets/scripts/point.rb", "./assets/scripts/camera.rb", NULL},
-	                           NULL)) == NULL)
+#ifdef DEBUG
+	if ((modules.vm = VmCreate("game-dbg.mrb", NULL)) == NULL)
 		goto return_failure;
+#else
+	if ((modules.vm = VmCreate("game.mrb", NULL)) == NULL)
+		goto return_failure;
+#endif
 
 	TimerInit(&modules.timer);
 
@@ -402,7 +405,8 @@ int main(int argc, const char* argv[])
 		VmEntitiesUpdate(modules.vm, &globals);
 
 		if (jaVector3Equals(resources.camera->position, resources.camera->old_position) == false ||
-		    jaVector3Equals(resources.camera->angle, resources.camera->old_angle) == false || modules.timer.frame_number == 1)
+		    jaVector3Equals(resources.camera->angle, resources.camera->old_angle) == false ||
+		    modules.timer.frame_number == 1)
 		{
 			matrix_camera = jaMatrix4Identity();
 			matrix_camera = jaMatrix4RotateX(matrix_camera, jaDegToRad(resources.camera->angle.x));

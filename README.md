@@ -25,7 +25,7 @@ For compilation:
 
 On Ubuntu you can install all dependencies with:
 ```
-sudo apt install libglfw3-dev portaudio19-dev python3 cmake
+sudo apt install libglfw3-dev portaudio19-dev libmruby-dev mruby python3 cmake
 ```
 
 And don't forget the `git submodule` steps when cloning the repo.
@@ -54,7 +54,7 @@ cmake -DCMAKE_BUILD_TYPE=Debug ..
 
 Thanks to
 ---------
-- [0 A.D. team](https://play0ad.com/), for the textures that I borrowed
+- [0 A.D. team](https://play0ad.com/), for the textures that borrowed
 - Henrik A. Glass (['erodr'](https://github.com/henrikglass/erodr), Simulated hydraulic erosion implementation)
 - Erik de Castro Lopo (['libsamplerate'](https://github.com/erikd/libsamplerate) library)
 - David Herberth ([GLAD](https://github.com/Dav1dde/glad) loader)

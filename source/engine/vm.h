@@ -34,7 +34,7 @@
 		struct jaVector3 old_angle;
 	};
 
-	struct Vm* VmCreate(const char* filename[], struct jaStatus* st);
+	struct Vm* VmCreate(const char* filename, struct jaStatus* st);
 	void VmDelete(struct Vm*);
 	void VmClean(struct Vm*);
 

@@ -42,6 +42,7 @@ SOFTWARE.
 #include <mruby.h>
 #include <mruby/array.h>
 #include <mruby/compile.h>
+#include <mruby/dump.h>
 #include <mruby/error.h>
 #include <mruby/string.h>
 #include <mruby/variable.h>
@@ -484,7 +485,7 @@ static struct jaVector3 sGetVector3(struct Vm* vm, struct mrb_value vector)
 //-----------------------------
 
 
-struct Vm* VmCreate(const char* filename[], struct jaStatus* st)
+struct Vm* VmCreate(const char* filename, struct jaStatus* st)
 {
 	(void)st; // TODO
 
@@ -506,23 +507,20 @@ struct Vm* VmCreate(const char* filename[], struct jaStatus* st)
 	if (sDefineGlobals(vm) != 0)
 		goto return_failure;
 
-	// Load files
-	for (int i = 0;; i++)
+	// Load bytecode
+	if (filename == NULL)
+		goto return_failure;
+
+	if ((file = fopen(filename, "r")) == NULL)
+		goto return_failure;
+
+	mrb_load_irep_file(vm->rstate, file);
+	fclose(file);
+
+	if (sException(vm->rstate) == true)
 	{
-		if (filename[i] == NULL)
-			break;
-
-		if ((file = fopen(filename[i], "r")) == NULL)
-			goto return_failure;
-
-		mrb_load_file(vm->rstate, file);
-		fclose(file);
-
-		if (sException(vm->rstate) == true)
-		{
-			printf("[Error] Exception raised at '%s' load procedure\n", filename[i]);
-			goto return_failure;
-		}
+		printf("[Error] Exception raised at '%s' load procedure\n", filename);
+		goto return_failure;
 	}
 
 	// Save the current GC state, then a call to mrb_gc_arena_restore()

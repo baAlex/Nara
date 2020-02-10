@@ -17,7 +17,7 @@
 	#include "context.h"
 	#include "glad.h" // Before GLFW
 
-	#define GLFW_INCLUDE_ES2
+	#define GLFW_INCLUDE_NONE
 	#include <GLFW/glfw3.h>
 
 	#define ATTRIBUTE_POSITION 10

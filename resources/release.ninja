@@ -1,94 +1,96 @@
 
-cflags = `pkg-config --cflags glfw3 portaudio-2.0` -O3 -flto -mtune=generic $
+# "Works on my machine ¯\_(ツ)_/¯"
+
+cflags = -O3 -flto -mtune=generic $
 -I./source/lib-glad -I./source/lib-japan/include -I./source/lib-samplerate/src
 
-lflags = `pkg-config --libs glfw3 portaudio-2.0` -lmruby -lm
+lflags = -lglfw -lportaudio -lmruby -lm
 
 
-rule generate
+rule ToHeader
  command = python3 ./source/c-ify.py $in $out
 
-rule compile
- command = cc $cflags -c $in -o $out
+rule CompileC
+ command = clang -fcolor-diagnostics $cflags -c $in -o $out
 
-rule link
- command = cc $in $lflags -o $out
+rule Link
+ command = clang -fuse-ld=lld $in $lflags -o $out
+
+rule CompileMRuby
+ command = mrbc -o $out $in
 
 
-# Automatically generated files
-build ./build/release/engine/terrain-fragment.c: generate ./source/engine/terrain-fragment.glsl
-build ./build/release/engine/terrain-vertex.c:   generate ./source/engine/terrain-vertex.glsl
-build ./build/release/engine/debug-fragment.c:   generate ./source/engine/debug-fragment.glsl
-build ./build/release/engine/debug-vertex.c:     generate ./source/engine/debug-vertex.glsl
+# Inlined files
+build ./build/release/engine/debug-fragment.c:   ToHeader ./source/engine/debug-fragment.glsl
+build ./build/release/engine/debug-vertex.c:     ToHeader ./source/engine/debug-vertex.glsl
+build ./build/release/engine/terrain-fragment.c: ToHeader ./source/engine/terrain-fragment.glsl
+build ./build/release/engine/terrain-vertex.c:   ToHeader ./source/engine/terrain-vertex.glsl
+
+build ./build/release/engine/debug-fragment.o:   CompileC ./build/release/engine/debug-fragment.c
+build ./build/release/engine/debug-vertex.o:     CompileC ./build/release/engine/debug-vertex.c
+build ./build/release/engine/terrain-fragment.o: CompileC ./build/release/engine/terrain-fragment.c
+build ./build/release/engine/terrain-vertex.o:   CompileC ./build/release/engine/terrain-vertex.c
 
 # Engine
-build ./build/release/engine/context/context.o: compile ./source/engine/context/context.c
-build ./build/release/engine/context/input.o:   compile ./source/engine/context/input.c
-build ./build/release/engine/context/objects.o: compile ./source/engine/context/objects.c
-build ./build/release/engine/context/state.o:   compile ./source/engine/context/state.c
+build ./build/release/engine/context/context.o: CompileC ./source/engine/context/context.c
+build ./build/release/engine/context/input.o:   CompileC ./source/engine/context/input.c
+build ./build/release/engine/context/objects.o: CompileC ./source/engine/context/objects.c
+build ./build/release/engine/context/state.o:   CompileC ./source/engine/context/state.c
 
-build ./build/release/engine/mixer/dsp.o:    compile ./source/engine/mixer/dsp.c
-build ./build/release/engine/mixer/mixer.o:  compile ./source/engine/mixer/mixer.c
-build ./build/release/engine/mixer/sample.o: compile ./source/engine/mixer/sample.c
+build ./build/release/engine/mixer/dsp.o:    CompileC ./source/engine/mixer/dsp.c
+build ./build/release/engine/mixer/mixer.o:  CompileC ./source/engine/mixer/mixer.c
+build ./build/release/engine/mixer/sample.o: CompileC ./source/engine/mixer/sample.c
 
-build ./build/release/engine/misc.o:             compile ./source/engine/misc.c
-build ./build/release/engine/nara.o:             compile ./source/engine/nara.c
-build ./build/release/engine/nterrain.o:         compile ./source/engine/nterrain.c
-build ./build/release/engine/timer.o:            compile ./source/engine/timer.c
-build ./build/release/engine/vm.o:            compile ./source/engine/vm.c
-
-build ./build/release/engine/terrain-fragment.o: compile ./build/release/engine/terrain-fragment.c
-build ./build/release/engine/terrain-vertex.o:   compile ./build/release/engine/terrain-vertex.c
-build ./build/release/engine/debug-fragment.o:   compile ./build/release/engine/debug-fragment.c
-build ./build/release/engine/debug-vertex.o:     compile ./build/release/engine/debug-vertex.c
+build ./build/release/engine/misc.o:     CompileC ./source/engine/misc.c
+build ./build/release/engine/nara.o:     CompileC ./source/engine/nara.c
+build ./build/release/engine/nterrain.o: CompileC ./source/engine/nterrain.c
+build ./build/release/engine/timer.o:    CompileC ./source/engine/timer.c
+build ./build/release/engine/vm.o:       CompileC ./source/engine/vm.c
 
 # Lib Glad
-build ./build/release/lib-glad/glad.o: compile ./source/lib-glad/glad.c
+build ./build/release/lib-glad/glad.o: CompileC ./source/lib-glad/glad.c
 
 # Lib Japan
-build ./build/release/lib-japan/aabounding.o: compile ./source/lib-japan/source/aabounding.c
-build ./build/release/lib-japan/buffer.o:     compile ./source/lib-japan/source/buffer.c
-build ./build/release/lib-japan/dictionary.o: compile ./source/lib-japan/source/dictionary.c
-build ./build/release/lib-japan/endianness.o: compile ./source/lib-japan/source/endianness.c
-build ./build/release/lib-japan/list.o:       compile ./source/lib-japan/source/list.c
-build ./build/release/lib-japan/matrix.o:     compile ./source/lib-japan/source/matrix.c
-build ./build/release/lib-japan/status.o:     compile ./source/lib-japan/source/status.c
-build ./build/release/lib-japan/tree.o:       compile ./source/lib-japan/source/tree.c
-build ./build/release/lib-japan/utilities.o:  compile ./source/lib-japan/source/utilities.c
-build ./build/release/lib-japan/vector.o:     compile ./source/lib-japan/source/vector.c
+build ./build/release/lib-japan/aabounding.o: CompileC ./source/lib-japan/source/aabounding.c
+build ./build/release/lib-japan/buffer.o:     CompileC ./source/lib-japan/source/buffer.c
+build ./build/release/lib-japan/dictionary.o: CompileC ./source/lib-japan/source/dictionary.c
+build ./build/release/lib-japan/endianness.o: CompileC ./source/lib-japan/source/endianness.c
+build ./build/release/lib-japan/list.o:       CompileC ./source/lib-japan/source/list.c
+build ./build/release/lib-japan/matrix.o:     CompileC ./source/lib-japan/source/matrix.c
+build ./build/release/lib-japan/status.o:     CompileC ./source/lib-japan/source/status.c
+build ./build/release/lib-japan/tree.o:       CompileC ./source/lib-japan/source/tree.c
+build ./build/release/lib-japan/utilities.o:  CompileC ./source/lib-japan/source/utilities.c
+build ./build/release/lib-japan/vector.o:     CompileC ./source/lib-japan/source/vector.c
 
-build ./build/release/lib-japan/configuration/configuration.o: compile ./source/lib-japan/source/configuration/configuration.c
-build ./build/release/lib-japan/configuration/arguments.o:     compile ./source/lib-japan/source/configuration/arguments.c
-build ./build/release/lib-japan/configuration/file.o:          compile ./source/lib-japan/source/configuration/file.c
+build ./build/release/lib-japan/configuration/configuration.o: CompileC ./source/lib-japan/source/configuration/configuration.c
+build ./build/release/lib-japan/configuration/arguments.o:     CompileC ./source/lib-japan/source/configuration/arguments.c
+build ./build/release/lib-japan/configuration/file.o:          CompileC ./source/lib-japan/source/configuration/file.c
 
-build ./build/release/lib-japan/image/format-sgi.o: compile ./source/lib-japan/source/image/format-sgi.c
-build ./build/release/lib-japan/image/image.o:      compile ./source/lib-japan/source/image/image.c
+build ./build/release/lib-japan/image/format-sgi.o: CompileC ./source/lib-japan/source/image/format-sgi.c
+build ./build/release/lib-japan/image/image.o:      CompileC ./source/lib-japan/source/image/image.c
 
-build ./build/release/lib-japan/sound/format-au.o:  compile ./source/lib-japan/source/sound/format-au.c
-build ./build/release/lib-japan/sound/format-wav.o: compile ./source/lib-japan/source/sound/format-wav.c
-build ./build/release/lib-japan/sound/laws.o:       compile ./source/lib-japan/source/sound/laws.c
-build ./build/release/lib-japan/sound/sound.o:      compile ./source/lib-japan/source/sound/sound.c
+build ./build/release/lib-japan/sound/format-au.o:  CompileC ./source/lib-japan/source/sound/format-au.c
+build ./build/release/lib-japan/sound/format-wav.o: CompileC ./source/lib-japan/source/sound/format-wav.c
+build ./build/release/lib-japan/sound/laws.o:       CompileC ./source/lib-japan/source/sound/laws.c
+build ./build/release/lib-japan/sound/sound.o:      CompileC ./source/lib-japan/source/sound/sound.c
 
 # Lib Samplerate
-# CPU_CLIPS_POSITIVE = 0 and CPU_CLIPS_NEGATIVE = 0; disables an branch optimization.
-# Nothing really important, but at the first issue I promise to replace this terrible hack.
-# (https://github.com/erikd/libsamplerate/pull/85#issuecomment-520136261)
-build ./build/release/lib-samplerate/samplerate.o: compile ./source/lib-samplerate/src/samplerate.c
+build ./build/release/lib-samplerate/samplerate.o: CompileC ./source/lib-samplerate/src/samplerate.c
  cflags = -O3 -flto -mtune=generic $
  '-DPACKAGE="NaraLibSamplerate"' '-DVERSION="NaraCustom"' $
  '-DCPU_CLIPS_POSITIVE=0' '-DCPU_CLIPS_NEGATIVE=0'
 
-build ./build/release/lib-samplerate/src_linear.o: compile ./source/lib-samplerate/src/src_linear.c
-build ./build/release/lib-samplerate/src_sinc.o:   compile ./source/lib-samplerate/src/src_sinc.c
-build ./build/release/lib-samplerate/src_zoh.o:    compile ./source/lib-samplerate/src/src_zoh.c
+build ./build/release/lib-samplerate/src_linear.o: CompileC ./source/lib-samplerate/src/src_linear.c
+build ./build/release/lib-samplerate/src_sinc.o:   CompileC ./source/lib-samplerate/src/src_sinc.c
+build ./build/release/lib-samplerate/src_zoh.o:    CompileC ./source/lib-samplerate/src/src_zoh.c
 
 # Sdk
-build ./build/release/sdk/sdk.o:     compile ./source/sdk/sdk.c
-build ./build/release/sdk/erosion.o: compile ./source/sdk/erosion.c
-build ./build/release/sdk/simplex.o: compile ./source/sdk/simplex.c
+build ./build/release/sdk/erosion.o: CompileC ./source/sdk/erosion.c
+build ./build/release/sdk/sdk.o:     CompileC ./source/sdk/sdk.c
+build ./build/release/sdk/simplex.o: CompileC ./source/sdk/simplex.c
 
-# Link
-build nara: link $
+# Link Engine
+build nara: Link $
 ./build/release/engine/context/context.o $
 ./build/release/engine/context/input.o $
 ./build/release/engine/context/objects.o $
@@ -101,10 +103,10 @@ build nara: link $
 ./build/release/engine/nterrain.o $
 ./build/release/engine/timer.o $
 ./build/release/engine/vm.o $
-./build/release/engine/terrain-fragment.o $
-./build/release/engine/terrain-vertex.o $
 ./build/release/engine/debug-fragment.o $
 ./build/release/engine/debug-vertex.o $
+./build/release/engine/terrain-fragment.o $
+./build/release/engine/terrain-vertex.o $
 ./build/release/lib-glad/glad.o $
 ./build/release/lib-japan/aabounding.o $
 ./build/release/lib-japan/buffer.o $
@@ -130,7 +132,8 @@ build nara: link $
 ./build/release/lib-samplerate/src_sinc.o $
 ./build/release/lib-samplerate/src_zoh.o
 
-build sdk: link $
+# Link Sdk
+build sdk: Link $
 ./build/release/lib-japan/aabounding.o $
 ./build/release/lib-japan/buffer.o $
 ./build/release/lib-japan/dictionary.o $
@@ -150,6 +153,13 @@ build sdk: link $
 ./build/release/lib-japan/sound/format-wav.o $
 ./build/release/lib-japan/sound/laws.o $
 ./build/release/lib-japan/sound/sound.o $
-./build/release/sdk/sdk.o $
 ./build/release/sdk/erosion.o $
+./build/release/sdk/sdk.o $
 ./build/release/sdk/simplex.o
+
+# Compile/link game bytecode
+build game.mrb: CompileMRuby $
+./source/game/common.rb $
+./source/game/camera.rb $
+./source/game/player.rb $
+./source/game/point.rb
