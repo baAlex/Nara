@@ -55,16 +55,41 @@ struct NEntityClass
 struct NEntity
 {
 	struct NEntityState state;
+
 	struct mrb_value robject;
+	struct mrb_value position_robject;
+	struct mrb_value angle_robject;
 };
 
 struct Vm
 {
+	struct jaDictionary* classes;
+	struct jaList entities;
+	struct VmGlobals last_globals;
+
 	mrb_state* rstate;
 	int rgc_state;
 
-	struct jaDictionary* classes;
-	struct jaList entities;
+	struct RClass* nara_module;
+	struct RClass* input_module;
+
+	struct
+	{
+		mrb_sym x, y, z;
+		mrb_sym position, angle;
+	} sym_iv;
+
+	struct
+	{
+		mrb_sym delta, frame;
+		mrb_sym a, b, x, y;
+		mrb_sym lb, rb;
+		mrb_sym view, menu, guide;
+		mrb_sym ls, rs;
+		mrb_sym pad_h, pad_v;
+		mrb_sym la_h, la_v, la_t;
+		mrb_sym ra_h, ra_v, ra_t;
+	} sym_cv;
 };
 
 
@@ -85,6 +110,29 @@ static mrb_value sVmCallPrint(mrb_state* state, mrb_value self)
 	}
 
 	return argv;
+}
+
+static mrb_value sVmCallCos(mrb_state* mrb, mrb_value obj)
+{
+	// https://github.com/mruby/mruby/blob/master/mrbgems/mruby-math/src/math.c
+	mrb_float x;
+
+	mrb_get_args(mrb, "f", &x);
+	x = cos(x);
+
+	return mrb_float_value(mrb, x);
+}
+
+
+static mrb_value sVmCallSin(mrb_state* mrb, mrb_value obj)
+{
+	// https://github.com/mruby/mruby/blob/master/mrbgems/mruby-math/src/math.c
+	mrb_float x;
+
+	mrb_get_args(mrb, "f", &x);
+	x = sin(x);
+
+	return mrb_float_value(mrb, x);
 }
 
 
@@ -117,8 +165,8 @@ static inline bool sException(struct mrb_state* state)
  - If true, check if is of the specified 'type'
  - Returns 'true' if both previous conditions meet
 -----------------------------*/
-static inline bool sCheckVariableIn(struct mrb_state* state, struct mrb_value object, mrb_sym symbol,
-                                    enum mrb_vtype type, mrb_value* out)
+static bool sCheckVariableIn(struct mrb_state* state, struct mrb_value object, mrb_sym symbol, enum mrb_vtype type,
+                             mrb_value* out)
 {
 	mrb_value temp = {.value.p = NULL};
 
@@ -146,7 +194,7 @@ static inline bool sCheckVariableIn(struct mrb_state* state, struct mrb_value ob
  - If is an MRuby object
  - If has variables 'x', 'y' and 'z' (without check the type of these)
 -----------------------------*/
-static inline bool sCheckVector3In(struct mrb_state* state, struct mrb_value object, mrb_sym symbol)
+static bool sCheckVector3In(struct mrb_state* state, struct mrb_value object, mrb_sym symbol)
 {
 	mrb_value temp = {.value.p = NULL};
 	const char* class_name = mrb_class_name(state, mrb_obj_ptr(object)->c);
@@ -261,6 +309,178 @@ return_failure:
 }
 
 
+static int sCreateSymbols(struct Vm* vm)
+{
+	vm->sym_iv.x = mrb_intern_cstr(vm->rstate, "@x");
+	vm->sym_iv.y = mrb_intern_cstr(vm->rstate, "@y");
+	vm->sym_iv.z = mrb_intern_cstr(vm->rstate, "@z");
+	vm->sym_iv.position = mrb_intern_cstr(vm->rstate, "@position");
+	vm->sym_iv.angle = mrb_intern_cstr(vm->rstate, "@angle");
+
+	vm->sym_cv.delta = mrb_intern_cstr(vm->rstate, "@@delta");
+	vm->sym_cv.frame = mrb_intern_cstr(vm->rstate, "@@frame");
+	vm->sym_cv.a = mrb_intern_cstr(vm->rstate, "@@a");
+	vm->sym_cv.b = mrb_intern_cstr(vm->rstate, "@@b");
+	vm->sym_cv.x = mrb_intern_cstr(vm->rstate, "@@x");
+	vm->sym_cv.y = mrb_intern_cstr(vm->rstate, "@@y");
+	vm->sym_cv.lb = mrb_intern_cstr(vm->rstate, "@@lb");
+	vm->sym_cv.rb = mrb_intern_cstr(vm->rstate, "@@rb");
+	vm->sym_cv.view = mrb_intern_cstr(vm->rstate, "@@view");
+	vm->sym_cv.menu = mrb_intern_cstr(vm->rstate, "@@menu");
+	vm->sym_cv.guide = mrb_intern_cstr(vm->rstate, "@@guide");
+	vm->sym_cv.ls = mrb_intern_cstr(vm->rstate, "@@ls");
+	vm->sym_cv.rs = mrb_intern_cstr(vm->rstate, "@@rs");
+	vm->sym_cv.pad_h = mrb_intern_cstr(vm->rstate, "@@pad_h");
+	vm->sym_cv.pad_v = mrb_intern_cstr(vm->rstate, "@@pad_v");
+	vm->sym_cv.la_h = mrb_intern_cstr(vm->rstate, "@@la_h");
+	vm->sym_cv.la_v = mrb_intern_cstr(vm->rstate, "@@la_v");
+	vm->sym_cv.la_t = mrb_intern_cstr(vm->rstate, "@@la_t");
+	vm->sym_cv.ra_h = mrb_intern_cstr(vm->rstate, "@@ra_h");
+	vm->sym_cv.ra_v = mrb_intern_cstr(vm->rstate, "@@ra_v");
+	vm->sym_cv.ra_t = mrb_intern_cstr(vm->rstate, "@@ra_t");
+
+	return 0; // TODO
+}
+
+
+static int sUpdateGlobals(struct Vm* vm, struct VmGlobals* globals, bool force_update)
+{
+	if (globals->delta != vm->last_globals.delta || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->nara_module, vm->sym_cv.delta, mrb_float_value(vm->rstate, globals->delta));
+
+	if (globals->frame != vm->last_globals.frame || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->nara_module, vm->sym_cv.frame, mrb_fixnum_value(globals->frame));
+
+	if (globals->a != vm->last_globals.a || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.a, mrb_bool_value(globals->a));
+
+	if (globals->b != vm->last_globals.b || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.b, mrb_bool_value(globals->b));
+
+	if (globals->x != vm->last_globals.x || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.x, mrb_bool_value(globals->x));
+
+	if (globals->y != vm->last_globals.y || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.y, mrb_bool_value(globals->y));
+
+	if (globals->lb != vm->last_globals.lb || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.lb, mrb_bool_value(globals->lb));
+
+	if (globals->rb != vm->last_globals.rb || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.rb, mrb_bool_value(globals->rb));
+
+	if (globals->view != vm->last_globals.view || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.view, mrb_bool_value(globals->view));
+
+	if (globals->menu != vm->last_globals.menu || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.menu, mrb_bool_value(globals->menu));
+
+	if (globals->guide != vm->last_globals.guide || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.guide, mrb_bool_value(globals->guide));
+
+	if (globals->ls != vm->last_globals.ls || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.ls, mrb_bool_value(globals->ls));
+
+	if (globals->rs != vm->last_globals.rs || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.rs, mrb_bool_value(globals->rs));
+
+	if (globals->pad.h != vm->last_globals.pad.h || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.pad_h, mrb_float_value(vm->rstate, globals->pad.h));
+
+	if (globals->pad.v != vm->last_globals.pad.v || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.pad_v, mrb_float_value(vm->rstate, globals->pad.v));
+
+	if (globals->la.h != vm->last_globals.la.h || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.la_h, mrb_float_value(vm->rstate, globals->la.h));
+
+	if (globals->la.v != vm->last_globals.la.v || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.la_v, mrb_float_value(vm->rstate, globals->la.v));
+
+	if (globals->la.t != vm->last_globals.la.t || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.la_t, mrb_float_value(vm->rstate, globals->la.t));
+
+	if (globals->ra.h != vm->last_globals.ra.h || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.ra_h, mrb_float_value(vm->rstate, globals->ra.h));
+
+	if (globals->ra.v != vm->last_globals.ra.v || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.ra_v, mrb_float_value(vm->rstate, globals->ra.v));
+
+	if (globals->ra.t != vm->last_globals.ra.t || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.ra_t, mrb_float_value(vm->rstate, globals->ra.t));
+
+	memcpy(&vm->last_globals, globals, sizeof(struct VmGlobals));
+	return 0; // TODO
+}
+
+
+static int sDefineGlobals(struct Vm* vm)
+{
+	vm->nara_module = mrb_define_module(vm->rstate, "Nara");
+	vm->input_module = mrb_define_module_under(vm->rstate, vm->nara_module, "Input");
+
+	mrb_define_module_function(vm->rstate, vm->nara_module, "print", sVmCallPrint, MRB_ARGS_REQ(1));
+	mrb_define_module_function(vm->rstate, vm->nara_module, "cos", sVmCallCos, MRB_ARGS_REQ(1));
+	mrb_define_module_function(vm->rstate, vm->nara_module, "sin", sVmCallSin, MRB_ARGS_REQ(1));
+
+	sUpdateGlobals(vm, &(struct VmGlobals){0}, true);
+
+	mrb_load_string(vm->rstate, "\
+	module Nara\n\
+		VERSION = \"v0.4-alpha\"\n\
+		VERSION_MAJOR = 0\n\
+		VERSION_MINOR = 1\n\
+		VERSION_PATCH = 0\n\
+		VERSION_SUFFIX = \"alpha\"\n\
+		PI = 3.14159265358979323846264338327950288\n\
+		def delta; @@delta; end; module_function :delta\n\
+		def frame; @@frame; end; module_function :frame\n\
+		module Input\n\
+			def a; @@a; end; module_function :a\n\
+			def b; @@b; end; module_function :b\n\
+			def x; @@x; end; module_function :x\n\
+			def y; @@y; end; module_function :y\n\
+			def lb; @@lb; end; module_function :lb\n\
+			def rb; @@rb; end; module_function :rb\n\
+			def view; @@view; end; module_function :view\n\
+			def menu; @@menu; end; module_function :menu\n\
+			def guide; @@guide; end; module_function :guide\n\
+			def ls; @@ls; end; module_function :ls\n\
+			def rs; @@rs; end; module_function :rs\n\
+			def pad_h; @@pad_h; end; module_function :pad_h\n\
+			def pad_v; @@pad_v; end; module_function :pad_v\n\
+			def la_h; @@la_h; end; module_function :la_h\n\
+			def la_v; @@la_v; end; module_function :la_v\n\
+			def la_t; @@la_t; end; module_function :la_t\n\
+			def ra_h; @@ra_h; end; module_function :ra_h\n\
+			def ra_v; @@ra_v; end; module_function :ra_v\n\
+			def ra_t; @@ra_t; end; module_function :ra_t\n\
+		end\n\
+	end");
+
+	return 0; // TODO
+}
+
+
+static inline int sSetVector3(struct Vm* vm, struct mrb_value vector, struct jaVector3 value)
+{
+	mrb_iv_set(vm->rstate, vector, vm->sym_iv.x, mrb_float_value(vm->rstate, value.x));
+	mrb_iv_set(vm->rstate, vector, vm->sym_iv.y, mrb_float_value(vm->rstate, value.y));
+	mrb_iv_set(vm->rstate, vector, vm->sym_iv.z, mrb_float_value(vm->rstate, value.z));
+}
+
+
+static struct jaVector3 sGetVector3(struct Vm* vm, struct mrb_value vector)
+{
+	struct jaVector3 ret = {0};
+
+	ret.x = mrb_float(mrb_iv_get(vm->rstate, vector, vm->sym_iv.x));
+	ret.y = mrb_float(mrb_iv_get(vm->rstate, vector, vm->sym_iv.y));
+	ret.z = mrb_float(mrb_iv_get(vm->rstate, vector, vm->sym_iv.z));
+
+	return ret;
+}
+
+
 //-----------------------------
 
 
@@ -278,12 +498,13 @@ struct Vm* VmCreate(const char* filename[], struct jaStatus* st)
 		goto return_failure;
 
 	if ((vm->rstate = mrb_open_core(mrb_default_allocf, NULL)) == NULL)
-	{
-		jaStatusSet(st, "VmCreate", STATUS_ERROR, "mrb_open_core()");
 		goto return_failure;
-	}
 
-	mrb_define_method(vm->rstate, vm->rstate->object_class, "print", sVmCallPrint, MRB_ARGS_REQ(1));
+	if (sCreateSymbols(vm) != 0)
+		goto return_failure;
+
+	if (sDefineGlobals(vm) != 0)
+		goto return_failure;
 
 	// Load files
 	for (int i = 0;; i++)
@@ -292,10 +513,7 @@ struct Vm* VmCreate(const char* filename[], struct jaStatus* st)
 			break;
 
 		if ((file = fopen(filename[i], "r")) == NULL)
-		{
-			jaStatusSet(st, "VmCreate", STATUS_IO_ERROR, "%s", filename[i]);
 			goto return_failure;
-		}
 
 		mrb_load_file(vm->rstate, file);
 		fclose(file);
@@ -338,7 +556,7 @@ void VmDelete(struct Vm* vm)
 }
 
 
-void VmClean(struct Vm* vm)
+inline void VmClean(struct Vm* vm)
 {
 	mrb_gc_arena_restore(vm->rstate, vm->rgc_state);
 }
@@ -375,13 +593,9 @@ struct NEntity* VmCreateEntity(struct Vm* vm, const char* class_name, struct NEn
 		class->rclass = temp;
 	}
 
-	// Create MRuby entity object
+	// Create MRuby object / Nara counterpart
 	object = mrb_obj_new(vm->rstate, class->rclass, 0, NULL);
 
-	mrb_iv_set(vm->rstate, object, mrb_intern_cstr(vm->rstate, "@position"), mrb_fixnum_value(42));
-	mrb_iv_set(vm->rstate, object, mrb_intern_cstr(vm->rstate, "@angle"), mrb_fixnum_value(16));
-
-	// Create Nara entity counterpart
 	if ((item.l = jaListAdd(&vm->entities, NULL, sizeof(struct NEntity))) == NULL)
 		return NULL;
 
@@ -389,17 +603,39 @@ struct NEntity* VmCreateEntity(struct Vm* vm, const char* class_name, struct NEn
 	entity->state = initial_state;
 	entity->robject = object;
 
+	sCheckVariableIn(vm->rstate, object, vm->sym_iv.position, MRB_TT_OBJECT, &entity->position_robject);
+	sCheckVariableIn(vm->rstate, object, vm->sym_iv.angle, MRB_TT_OBJECT, &entity->angle_robject);
+
+	sSetVector3(vm, entity->position_robject, initial_state.position);
+	sSetVector3(vm, entity->angle_robject, initial_state.angle);
+
 	// Bye!
 	printf("Created entity '%s'\n", class_name);
-
-	return NULL;
+	return entity;
 }
 
 
-void VmEntitiesUpdate(struct Vm* vm)
+inline const struct NEntityState* VmEntityState(const struct NEntity* entity)
+{
+	return &entity->state;
+}
+
+
+inline void VmDeleteEntity(struct Vm* vm, struct NEntity* entity)
+{
+	// TODO
+	(void)vm;
+	(void)entity;
+}
+
+
+void VmEntitiesUpdate(struct Vm* vm, struct VmGlobals* globals)
 {
 	struct jaListItem* item = NULL;
 	struct NEntity* entity = NULL;
+
+	if (globals != NULL)
+		sUpdateGlobals(vm, globals, false);
 
 	struct jaListState s = {0};
 	s.start = vm->entities.first;
@@ -408,6 +644,17 @@ void VmEntitiesUpdate(struct Vm* vm)
 	while ((item = jaListIterate(&s)) != NULL)
 	{
 		entity = item->data;
-		mrb_funcall(vm->rstate, entity->robject, "think", 1, mrb_float_value(vm->rstate, 3.14f));
+		mrb_funcall(vm->rstate, entity->robject, "think", 0);
+
+		if (sException(vm->rstate) == true)
+			printf("[Error] Exception raised at '%s' 'think' call\n",
+			       mrb_class_name(vm->rstate, mrb_obj_ptr(entity->robject)->c));
+
+		entity->state.position = sGetVector3(vm, entity->position_robject);
+		entity->state.angle = sGetVector3(vm, entity->angle_robject);
+
+		if (sException(vm->rstate) == true)
+			printf("[Error] Exception raised when retrieving variables from '%s'\n",
+			       mrb_class_name(vm->rstate, mrb_obj_ptr(entity->robject)->c));
 	}
 }

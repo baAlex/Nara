@@ -384,15 +384,28 @@ int main(int argc, const char* argv[])
 		                                          "./assets/scripts/point.rb", NULL}, NULL);
 
 		struct NEntityState e_state = {0};
+		struct VmGlobals globals = {0};
+
+		e_state.position.x = 3456.0f;
 
 		VmCreateEntity(vm, "Point", e_state);
-		VmCreateEntity(vm, "Camera", e_state);
+		struct NEntity* cam = VmCreateEntity(vm, "Camera", e_state);
 		VmCreateEntity(vm, "Point", e_state);
 		VmCreateEntity(vm, "Point", e_state);
 		VmCreateEntity(vm, "Camera", e_state);
 
-		for (int i = 0; i < 4; i++)
-			VmEntitiesUpdate(vm);
+		for (int i = 0; i < 2; i++)
+			VmEntitiesUpdate(vm, &globals);
+
+		globals.frame += 1;
+		globals.delta = 0.5f;
+
+		for (int i = 0; i < 2; i++)
+			VmEntitiesUpdate(vm, &globals);
+
+		const struct NEntityState* s = VmEntityState(cam);
+
+		printf("%f\n", s->position.x);
 
 		VmDelete(vm);
 		return 0;
