@@ -358,8 +358,8 @@ int main(int argc, const char* argv[])
 	if ((modules.mixer = MixerCreate(modules.config, &st)) == NULL)
 		goto return_failure;
 
-	if ((modules.vm = VmCreate((const char* []){"./assets/scripts/camera.rb", "./assets/scripts/player.rb",
-	                                            "./assets/scripts/point.rb", "./assets/scripts/common.rb", NULL},
+	if ((modules.vm = VmCreate((const char* []){"./assets/scripts/common.rb", "./assets/scripts/player.rb",
+	                                            "./assets/scripts/point.rb", "./assets/scripts/camera.rb", NULL},
 	                           NULL)) == NULL)
 		goto return_failure;
 
