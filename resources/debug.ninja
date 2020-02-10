@@ -5,7 +5,7 @@ cflags = `pkg-config --cflags glfw3 portaudio-2.0` -O0 -std=c11 -Wall -Wextra -p
 cflags_strict = `pkg-config --cflags glfw3 portaudio-2.0` -O0 -std=c11 -Wall -Wextra -Wconversion -pedantic -g -DDEBUG $
 -I./source/lib-glad -I./source/lib-japan/include -I./source/lib-samplerate/src
 
-lflags = `pkg-config --libs glfw3 portaudio-2.0` -lm
+lflags = `pkg-config --libs glfw3 portaudio-2.0` -lmruby -lm
 
 
 rule generate
@@ -37,20 +37,16 @@ build ./build/debug/engine/mixer/dsp.o:    compile_strict ./source/engine/mixer/
 build ./build/debug/engine/mixer/mixer.o:  compile_strict ./source/engine/mixer/mixer.c
 build ./build/debug/engine/mixer/sample.o: compile_strict ./source/engine/mixer/sample.c
 
-build ./build/debug/engine/entity.o:           compile_strict ./source/engine/entity.c
 build ./build/debug/engine/misc.o:             compile_strict ./source/engine/misc.c
 build ./build/debug/engine/nara.o:             compile_strict ./source/engine/nara.c
 build ./build/debug/engine/nterrain.o:         compile_strict ./source/engine/nterrain.c
 build ./build/debug/engine/timer.o:            compile_strict ./source/engine/timer.c
+build ./build/debug/engine/vm.o:            compile_strict ./source/engine/vm.c
 
 build ./build/debug/engine/terrain-fragment.o: compile_strict ./build/debug/engine/terrain-fragment.c
 build ./build/debug/engine/terrain-vertex.o:   compile_strict ./build/debug/engine/terrain-vertex.c
 build ./build/debug/engine/debug-fragment.o:   compile_strict ./build/debug/engine/debug-fragment.c
 build ./build/debug/engine/debug-vertex.o:     compile_strict ./build/debug/engine/debug-vertex.c
-
-# Game
-build ./build/debug/game/camera.o: compile_strict ./source/game/camera.c
-build ./build/debug/game/point.o:  compile_strict ./source/game/point.c
 
 # Lib Glad
 build ./build/debug/lib-glad/glad.o: compile_strict ./source/lib-glad/glad.c
@@ -106,17 +102,15 @@ build nara-dbg: link $
 ./build/debug/engine/mixer/dsp.o $
 ./build/debug/engine/mixer/mixer.o $
 ./build/debug/engine/mixer/sample.o $
-./build/debug/engine/entity.o $
 ./build/debug/engine/misc.o $
 ./build/debug/engine/nara.o $
 ./build/debug/engine/nterrain.o $
 ./build/debug/engine/timer.o $
+./build/debug/engine/vm.o $
 ./build/debug/engine/terrain-fragment.o $
 ./build/debug/engine/terrain-vertex.o $
 ./build/debug/engine/debug-fragment.o $
 ./build/debug/engine/debug-vertex.o $
-./build/debug/game/camera.o $
-./build/debug/game/point.o $
 ./build/debug/lib-glad/glad.o $
 ./build/debug/lib-japan/aabounding.o $
 ./build/debug/lib-japan/buffer.o $

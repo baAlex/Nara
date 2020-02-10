@@ -16,18 +16,10 @@ class Camera
 
 	def initialize()
 		@position = Vector3.new()
-		@angle = Vector3.new(4.0, 5.0, 6.0)
-
-		Nara.print("~ Hello, Camera here! ~\n")
-		Nara.print("#{Nara::Input.a} #{Nara::Input.view}\n")
+		@angle = Vector3.new()
 	end
 
 	def think()
-
-		if Nara.frame > 0 then
-			@position.x = 420.0
-		end
-
-		Nara.print("~ #{@position.x}! (#{Nara.frame} #{Nara.delta}) #{Nara::VERSION} ~\n")
+		#Nara.print("hello #{@position.x}\n")
 	end
 end

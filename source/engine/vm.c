@@ -650,6 +650,9 @@ void VmEntitiesUpdate(struct Vm* vm, struct VmGlobals* globals)
 			printf("[Error] Exception raised at '%s' 'think' call\n",
 			       mrb_class_name(vm->rstate, mrb_obj_ptr(entity->robject)->c));
 
+		entity->state.old_position = entity->state.position;
+		entity->state.old_angle = entity->state.angle;
+
 		entity->state.position = sGetVector3(vm, entity->position_robject);
 		entity->state.angle = sGetVector3(vm, entity->angle_robject);
 

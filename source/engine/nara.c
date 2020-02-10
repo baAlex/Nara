@@ -34,15 +34,13 @@ SOFTWARE.
 #include "japan-configuration.h"
 #include "japan-dictionary.h"
 #include "japan-status.h"
+#include "japan-utilities.h"
 
 #include "context/context.h"
-#include "entity.h"
 #include "mixer/mixer.h"
 #include "nterrain.h"
 #include "timer.h"
 #include "vm.h"
-
-#include "../game/game.h"
 
 #define NAME "Nara v0.4-alpha"
 #define NAME_SHORT "Nara"
@@ -59,7 +57,7 @@ struct
 	struct Context* context;
 	struct Mixer* mixer;
 	struct Timer timer;
-	struct jaDictionary* classes;
+	struct Vm* vm;
 
 } modules;
 
@@ -77,8 +75,7 @@ struct Resources
 	struct Texture cliff1;
 	struct Texture cliff2;
 
-	struct jaList entities;
-	struct Entity* camera;
+	const struct NEntityState* camera;
 
 } resources;
 
@@ -133,44 +130,6 @@ static struct jaConfiguration* sInitializeConfiguration(int argc, const char* ar
 return_failure:
 	if (config != NULL)
 		jaConfigurationDelete(config);
-	return NULL;
-}
-
-
-/*-----------------------------
-
- sInitializeClasses()
------------------------------*/
-static struct jaDictionary* sInitializeClasses(struct jaStatus* st)
-{
-	struct jaDictionary* classes = jaDictionaryCreate(NULL);
-	struct Class* class = NULL;
-
-	if (classes == NULL)
-		goto return_failure;
-
-	if ((class = ClassCreate(classes, "Camera")) == NULL)
-		goto return_failure;
-
-	class->func_start = GameCameraStart;
-	class->func_think = GameCameraThink;
-	class->func_delete = GameCameraDelete;
-
-	if ((class = ClassCreate(classes, "Point")) == NULL)
-		goto return_failure;
-
-	class->func_start = GamePointStart;
-	class->func_think = GamePointThink;
-	class->func_delete = GamePointDelete;
-
-	// Bye!
-	return classes;
-
-return_failure:
-	jaStatusSet(st, "sInitializeClasses", STATUS_MEMORY_ERROR, NULL);
-
-	if (classes != NULL)
-		jaDictionaryDelete(classes);
 	return NULL;
 }
 
@@ -242,8 +201,8 @@ static inline void sUnloadResources(struct Resources* res)
 
  sLoadResources()
 -----------------------------*/
-static int sLoadResources(struct Context* context, struct Mixer* mixer, struct jaDictionary* classes,
-                          struct Resources* out, struct jaStatus* st)
+static int sLoadResources(struct Context* context, struct Mixer* mixer, struct Vm* vm, struct Resources* out,
+                          struct jaStatus* st)
 {
 	jaStatusSet(st, "sLoadResources", STATUS_SUCCESS, NULL);
 
@@ -276,13 +235,16 @@ static int sLoadResources(struct Context* context, struct Mixer* mixer, struct j
 	SetTexture(context, 4, &out->cliff1);
 	SetTexture(context, 5, &out->cliff2);
 
-	// Entities (just two)
-	jaListClean(&out->entities);
+	// Entities
+	struct NEntityState initial_state = {0};
 
-	EntityCreate(&out->entities, ClassGet(classes, "Point"));
-	out->camera = EntityCreate(&out->entities, ClassGet(classes, "Camera"));
-	out->camera->co.position = (struct jaVector3){700.0f, 700.0f, 256.0f};
-	out->camera->co.angle = (struct jaVector3){-50.0f, 0.0f, 45.0f};
+	VmCreateEntity(vm, "Point", initial_state);
+	VmCreateEntity(vm, "Point", initial_state);
+
+	initial_state.position = (struct jaVector3){700.0f, 700.0f, 256.0f};
+	initial_state.angle = (struct jaVector3){-50.0f, 0.0f, 45.0f};
+
+	out->camera = VmEntityState(VmCreateEntity(vm, "Camera", initial_state));
 
 	// Bye!
 	NTerrainPrintInfo(out->terrain);
@@ -327,35 +289,35 @@ static void sSetProjectionAndView(const struct jaCvar* fov_cvar, const struct ja
 
 /*-----------------------------
 
- sCreateEntitiesInput()
+ sCreateVmGlobals()
 -----------------------------*/
-static struct EntityInput sCreateEntitiesInput(struct ContextEvents* events, double ms_betwen)
+static struct VmGlobals sCreateVmGlobals(struct ContextEvents* events, double ms_betwen)
 {
-	struct EntityInput in = {0};
+	struct VmGlobals globals = {0};
 
-	in.a = events->a;
-	in.b = events->b;
-	in.x = events->x;
-	in.y = events->y;
-	in.lb = events->lb;
-	in.rb = events->rb;
-	in.view = events->view;
-	in.menu = events->menu;
-	in.guide = events->guide;
-	in.ls = events->ls;
-	in.rs = events->rs;
-	in.pad.h = events->pad.h;
-	in.pad.v = events->pad.v;
-	in.left_analog.h = events->left_analog.h;
-	in.left_analog.v = events->left_analog.v;
-	in.left_analog.t = events->left_analog.t;
-	in.right_analog.h = events->right_analog.h;
-	in.right_analog.v = events->right_analog.v;
-	in.right_analog.t = events->right_analog.t;
+	globals.a = events->a;
+	globals.b = events->b;
+	globals.x = events->x;
+	globals.y = events->y;
+	globals.lb = events->lb;
+	globals.rb = events->rb;
+	globals.view = events->view;
+	globals.menu = events->menu;
+	globals.guide = events->guide;
+	globals.ls = events->ls;
+	globals.rs = events->rs;
+	globals.pad.h = events->pad.h;
+	globals.pad.v = events->pad.v;
+	globals.la.h = events->left_analog.h;
+	globals.la.v = events->left_analog.v;
+	globals.la.t = events->left_analog.t;
+	globals.ra.h = events->right_analog.h;
+	globals.ra.v = events->right_analog.v;
+	globals.ra.t = events->right_analog.t;
 
-	in.delta = (float)ms_betwen / 33.3333f;
+	globals.delta = (float)ms_betwen / 33.3333f;
 
-	return in;
+	return globals;
 }
 
 
@@ -378,41 +340,6 @@ static inline bool sSingleClick(bool evn, bool* state)
 
 int main(int argc, const char* argv[])
 {
-	if (argc > 1 && strcmp(argv[1], "mruby_test") == 0)
-	{
-		struct Vm* vm = VmCreate((const char* []){"./assets/scripts/camera.rb", "./assets/scripts/player.rb",
-		                                          "./assets/scripts/point.rb", NULL}, NULL);
-
-		struct NEntityState e_state = {0};
-		struct VmGlobals globals = {0};
-
-		e_state.position.x = 3456.0f;
-
-		VmCreateEntity(vm, "Point", e_state);
-		struct NEntity* cam = VmCreateEntity(vm, "Camera", e_state);
-		VmCreateEntity(vm, "Point", e_state);
-		VmCreateEntity(vm, "Point", e_state);
-		VmCreateEntity(vm, "Camera", e_state);
-
-		for (int i = 0; i < 2; i++)
-			VmEntitiesUpdate(vm, &globals);
-
-		globals.frame += 1;
-		globals.delta = 0.5f;
-
-		for (int i = 0; i < 2; i++)
-			VmEntitiesUpdate(vm, &globals);
-
-		const struct NEntityState* s = VmEntityState(cam);
-
-		printf("%f\n", s->position.x);
-
-		VmDelete(vm);
-		return 0;
-	}
-
-	// ----
-
 	struct jaStatus st = {0};
 
 	struct jaCvar* max_distance;
@@ -425,13 +352,15 @@ int main(int argc, const char* argv[])
 	if ((modules.config = sInitializeConfiguration(argc, argv, &st)) == NULL)
 		goto return_failure;
 
-	if ((modules.classes = sInitializeClasses(&st)) == NULL)
-		goto return_failure;
-
 	if ((modules.context = ContextCreate(modules.config, NAME, &st)) == NULL)
 		goto return_failure;
 
 	if ((modules.mixer = MixerCreate(modules.config, &st)) == NULL)
+		goto return_failure;
+
+	if ((modules.vm = VmCreate((const char* []){"./assets/scripts/camera.rb", "./assets/scripts/player.rb",
+	                                            "./assets/scripts/point.rb", "./assets/scripts/common.rb", NULL},
+	                           NULL)) == NULL)
 		goto return_failure;
 
 	TimerInit(&modules.timer);
@@ -439,7 +368,7 @@ int main(int argc, const char* argv[])
 	SetFunctionKeyCallback(modules.context, 9, &modules.timer, sStatsCallback);
 	SetFunctionKeyCallback(modules.context, 12, &modules.timer, sScreenshotCallback);
 
-	if (sLoadResources(modules.context, modules.mixer, modules.classes, &resources, &st) != 0)
+	if (sLoadResources(modules.context, modules.mixer, modules.vm, &resources, &st) != 0)
 		goto return_failure;
 
 	// Game loop
@@ -469,22 +398,23 @@ int main(int argc, const char* argv[])
 		TimerUpdate(&modules.timer);
 		ContextUpdate(modules.context, &events);
 
-		EntitiesUpdate(&resources.entities, sCreateEntitiesInput(&events, modules.timer.miliseconds_betwen));
+		struct VmGlobals globals = sCreateVmGlobals(&events, modules.timer.miliseconds_betwen);
+		VmEntitiesUpdate(modules.vm, &globals);
 
-		if (jaVector3Equals(resources.camera->co.position, resources.camera->old_co.position) == false ||
-		    jaVector3Equals(resources.camera->co.angle, resources.camera->old_co.angle) == false)
+		if (jaVector3Equals(resources.camera->position, resources.camera->old_position) == false ||
+		    jaVector3Equals(resources.camera->angle, resources.camera->old_angle) == false || modules.timer.frame_number == 1)
 		{
 			matrix_camera = jaMatrix4Identity();
-			matrix_camera = jaMatrix4RotateX(matrix_camera, jaDegToRad(resources.camera->co.angle.x));
-			matrix_camera = jaMatrix4RotateZ(matrix_camera, jaDegToRad(resources.camera->co.angle.z));
+			matrix_camera = jaMatrix4RotateX(matrix_camera, jaDegToRad(resources.camera->angle.x));
+			matrix_camera = jaMatrix4RotateZ(matrix_camera, jaDegToRad(resources.camera->angle.z));
 			matrix_camera =
-			    jaMatrix4Multiply(matrix_camera, jaMatrix4Translate(jaVector3Invert(resources.camera->co.position)));
+			    jaMatrix4Multiply(matrix_camera, jaMatrix4Translate(jaVector3Invert(resources.camera->position)));
 
-			SetCamera(modules.context, matrix_camera, resources.camera->co.position);
-			SetListener(modules.mixer, resources.camera->co.position, resources.camera->co.angle);
+			SetCamera(modules.context, matrix_camera, resources.camera->position);
+			SetListener(modules.mixer, resources.camera->position, resources.camera->angle);
 
-			view.angle = resources.camera->co.angle;
-			view.position = resources.camera->co.position;
+			view.angle = resources.camera->angle;
+			view.position = resources.camera->position;
 		}
 
 		if (events.resized == true)
@@ -527,7 +457,7 @@ int main(int argc, const char* argv[])
 	sUnloadResources(&resources);
 	MixerDelete(modules.mixer);
 	ContextDelete(modules.context);
-	jaDictionaryDelete(modules.classes);
+	VmDelete(modules.vm);
 	jaConfigurationDelete(modules.config);
 	return 0;
 
@@ -537,9 +467,8 @@ return_failure:
 	sUnloadResources(&resources);
 	MixerDelete(modules.mixer);
 	ContextDelete(modules.context);
+	VmDelete(modules.vm);
 
-	if (modules.classes != NULL)
-		jaDictionaryDelete(modules.classes);
 	if (modules.config != NULL)
 		jaConfigurationDelete(modules.config);
 

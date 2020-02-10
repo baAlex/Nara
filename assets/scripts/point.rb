@@ -2,9 +2,10 @@
 class Point
 
 	def initialize()
-		@position = 1.0
-		@angle = 6.0
+		@position = Vector3.new()
+		@angle = Vector3.new()
+	end
 
-		Nara.print("~ Hello, Point here! ~\n")
+	def think()
 	end
 end

@@ -29,6 +29,9 @@
 	{
 		struct jaVector3 position;
 		struct jaVector3 angle;
+
+		struct jaVector3 old_position;
+		struct jaVector3 old_angle;
 	};
 
 	struct Vm* VmCreate(const char* filename[], struct jaStatus* st);
