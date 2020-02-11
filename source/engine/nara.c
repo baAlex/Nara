@@ -38,9 +38,10 @@ SOFTWARE.
 
 #include "context/context.h"
 #include "mixer/mixer.h"
+#include "vm/vm.h"
+
 #include "nterrain.h"
 #include "timer.h"
-#include "vm.h"
 
 #define NAME "Nara v0.4-alpha"
 #define NAME_SHORT "Nara"
@@ -75,7 +76,7 @@ struct Resources
 	struct Texture cliff1;
 	struct Texture cliff2;
 
-	const struct NEntityState* camera;
+	struct Entity* camera;
 
 } resources;
 
@@ -236,15 +237,17 @@ static int sLoadResources(struct Context* context, struct Mixer* mixer, struct V
 	SetTexture(context, 5, &out->cliff2);
 
 	// Entities
-	struct NEntityState initial_state = {0};
+	struct Entity initial_state = {0};
 
-	VmCreateEntity(vm, "Point", initial_state);
-	VmCreateEntity(vm, "Point", initial_state);
+	if (VmCreateEntity(vm, "Point", initial_state, st) == NULL ||
+	    VmCreateEntity(vm, "Point", initial_state, st) == NULL)
+		goto return_failure;
 
 	initial_state.position = (struct jaVector3){700.0f, 700.0f, 256.0f};
 	initial_state.angle = (struct jaVector3){-50.0f, 0.0f, 45.0f};
 
-	out->camera = VmEntityState(VmCreateEntity(vm, "Camera", initial_state));
+	if ((out->camera = VmCreateEntity(vm, "Camera", initial_state, st)) == NULL)
+		goto return_failure;
 
 	// Bye!
 	NTerrainPrintInfo(out->terrain);
@@ -291,9 +294,9 @@ static void sSetProjectionAndView(const struct jaCvar* fov_cvar, const struct ja
 
  sCreateVmGlobals()
 -----------------------------*/
-static struct VmGlobals sCreateVmGlobals(struct ContextEvents* events, double ms_betwen)
+static struct Globals sCreateVmGlobals(struct ContextEvents* events, double ms_betwen)
 {
-	struct VmGlobals globals = {0};
+	struct Globals globals = {0};
 
 	globals.a = events->a;
 	globals.b = events->b;
@@ -359,10 +362,10 @@ int main(int argc, const char* argv[])
 		goto return_failure;
 
 #ifdef DEBUG
-	if ((modules.vm = VmCreate("game-dbg.mrb", NULL)) == NULL)
+	if ((modules.vm = VmCreate("game-dbg.mrb", &st)) == NULL)
 		goto return_failure;
 #else
-	if ((modules.vm = VmCreate("game.mrb", NULL)) == NULL)
+	if ((modules.vm = VmCreate("game.mrb", &st)) == NULL)
 		goto return_failure;
 #endif
 
@@ -378,6 +381,7 @@ int main(int argc, const char* argv[])
 	struct ContextEvents events = {0};
 	struct NTerrainView view;
 	struct jaMatrix4 matrix_camera;
+	struct Globals globals = {0};
 
 	char temp_str[64];
 
@@ -401,8 +405,10 @@ int main(int argc, const char* argv[])
 		TimerUpdate(&modules.timer);
 		ContextUpdate(modules.context, &events);
 
-		struct VmGlobals globals = sCreateVmGlobals(&events, modules.timer.miliseconds_betwen);
-		VmEntitiesUpdate(modules.vm, &globals);
+		globals = sCreateVmGlobals(&events, modules.timer.miliseconds_betwen);
+
+		if (VmEntitiesUpdate(modules.vm, &globals, &st) != 0)
+			goto return_failure;
 
 		if (jaVector3Equals(resources.camera->position, resources.camera->old_position) == false ||
 		    jaVector3Equals(resources.camera->angle, resources.camera->old_angle) == false ||

@@ -41,11 +41,13 @@ build ./build/release/engine/mixer/dsp.o:    CompileC ./source/engine/mixer/dsp.
 build ./build/release/engine/mixer/mixer.o:  CompileC ./source/engine/mixer/mixer.c
 build ./build/release/engine/mixer/sample.o: CompileC ./source/engine/mixer/sample.c
 
+build ./build/release/engine/vm/definitions.o: CompileC ./source/engine/vm/definitions.c
+build ./build/release/engine/vm/vm.o:          CompileC ./source/engine/vm/vm.c
+
 build ./build/release/engine/misc.o:     CompileC ./source/engine/misc.c
 build ./build/release/engine/nara.o:     CompileC ./source/engine/nara.c
 build ./build/release/engine/nterrain.o: CompileC ./source/engine/nterrain.c
 build ./build/release/engine/timer.o:    CompileC ./source/engine/timer.c
-build ./build/release/engine/vm.o:       CompileC ./source/engine/vm.c
 
 # Lib Glad
 build ./build/release/lib-glad/glad.o: CompileC ./source/lib-glad/glad.c
@@ -98,11 +100,12 @@ build nara: Link $
 ./build/release/engine/mixer/dsp.o $
 ./build/release/engine/mixer/mixer.o $
 ./build/release/engine/mixer/sample.o $
+./build/release/engine/vm/definitions.o $
+./build/release/engine/vm/vm.o $
 ./build/release/engine/misc.o $
 ./build/release/engine/nara.o $
 ./build/release/engine/nterrain.o $
 ./build/release/engine/timer.o $
-./build/release/engine/vm.o $
 ./build/release/engine/debug-fragment.o $
 ./build/release/engine/debug-vertex.o $
 ./build/release/engine/terrain-fragment.o $

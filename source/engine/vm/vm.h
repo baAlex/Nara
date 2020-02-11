@@ -10,7 +10,7 @@
 	#include "japan-status.h"
 	#include "japan-vector.h"
 
-	struct VmGlobals
+	struct Globals
 	{
 		bool a, b, x, y;
 		bool lb, rb;
@@ -25,7 +25,7 @@
 		long frame;
 	};
 
-	struct NEntityState
+	struct Entity
 	{
 		struct jaVector3 position;
 		struct jaVector3 angle;
@@ -38,10 +38,9 @@
 	void VmDelete(struct Vm*);
 	void VmClean(struct Vm*);
 
-	struct NEntity* VmCreateEntity(struct Vm*, const char* class_name, struct NEntityState initial_state);
-	const struct NEntityState* VmEntityState(const struct NEntity*);
-	void VmDeleteEntity(struct Vm*, struct NEntity*);
+	struct Entity* VmCreateEntity(struct Vm*, const char* class_name, struct Entity initial_state, struct jaStatus* st);
+	void VmDeleteEntity(struct Vm*, struct Entity*);
 
-	void VmEntitiesUpdate(struct Vm*, struct VmGlobals*);
+	int VmEntitiesUpdate(struct Vm*, struct Globals*, struct jaStatus* st);
 
 #endif

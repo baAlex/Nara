@@ -13,11 +13,12 @@ set(NARA_SOURCES
 	"./source/engine/mixer/dsp.c"
 	"./source/engine/mixer/mixer.c"
 	"./source/engine/mixer/sample.c"
+	"./source/engine/vm/definitions.c"
+	"./source/engine/vm/vm.c"
 	"./source/engine/misc.c"
 	"./source/engine/nara.c"
 	"./source/engine/nterrain.c"
-	"./source/engine/timer.c"
-	"./source/engine/vm.c")
+	"./source/engine/timer.c")
 
 set(SDK_SOURCES
 	"./source/sdk/erosion.c"
