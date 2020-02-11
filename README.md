@@ -3,9 +3,9 @@ Nara
 
 The terrain in the screenshots should work as an overworld for an RPG, but currently this project is more a renderer than a videogame.
 
-Eventually Nara's goal is to recreate the experience of 90's RPGs (fixing all tedious corners), taking inspiration from the *Final Fantasy* franchise, and *Squaresoft* and *Game Arts* games.
+Eventually Nara's goal is to recreate the experience of 90's RPGs (fixing all tedious corners), taking inspiration from *Final Fantasy* franchise, *Squaresoft* and *Game Arts* games.
 
-Check implemented features and future work in [Projects](https://github.com/baAlex/Nara/projects/). And while I always try to maintain the code in a compilable state, prepare yourself to found broken things, debug messages/graphics and incomplete functionality all over the place.
+Check implemented features and future work in [Projects](https://github.com/baAlex/Nara/projects/). And while I always try to maintain the code in a compilable state, prepare yourself to found broken things, debug messages/graphics, terrible english and incomplete functionality all over the place.
 
 Any help is welcomed ⛰️📐️... oh, and 'Nara' is a codename!.
 
@@ -18,9 +18,11 @@ Dependencies
 At runtime Nara requires:
  - Portaudio
  - GLFW3
+ - MRuby
 
 For compilation:
- - Python3
+ - Python3, to inline files into C headers
+ - MRuby, to compile bytecode
  - Cmake
 
 On Ubuntu you can install all dependencies with:
