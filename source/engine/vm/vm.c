@@ -203,6 +203,8 @@ struct Vm* VmCreate(const char* filename, struct jaStatus* st)
 		goto return_failure;
 	}
 
+	vm->rstate->ud = vm;
+
 	// Definitions
 	vm->sym_iv.x = mrb_intern_cstr(vm->rstate, "@x");
 	vm->sym_iv.y = mrb_intern_cstr(vm->rstate, "@y");

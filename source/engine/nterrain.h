@@ -9,10 +9,11 @@
 
 	#include <stdint.h>
 
-	#include "japan-buffer.h"
-	#include "japan-vector.h"
 	#include "japan-aabounding.h"
+	#include "japan-buffer.h"
+	#include "japan-image.h"
 	#include "japan-status.h"
+	#include "japan-vector.h"
 
 	#include "context/context.h"
 
@@ -35,6 +36,8 @@
 		size_t steps;
 		size_t nodes_no;
 		size_t vertices_buffers_no;
+
+		struct jaImage* heightmap;
 
 		struct jaBuffer buffer;
 	};
@@ -91,5 +94,7 @@
 
 	int NTerrainDraw(struct Context*, struct NTerrain* terrain, struct NTerrainView*);
 	void NTerrainPrintInfo(struct NTerrain* terrain);
+
+	float NTerrainElevation(const struct NTerrain*, struct jaVector2);
 
 #endif

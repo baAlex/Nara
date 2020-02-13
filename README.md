@@ -56,7 +56,6 @@ cmake -DCMAKE_BUILD_TYPE=Debug ..
 
 Thanks to
 ---------
-- [0 A.D. team](https://play0ad.com/), for the textures that borrowed
 - Henrik A. Glass (['erodr'](https://github.com/henrikglass/erodr), Simulated hydraulic erosion implementation)
 - Erik de Castro Lopo (['libsamplerate'](https://github.com/erikd/libsamplerate) library)
 - David Herberth ([GLAD](https://github.com/Dav1dde/glad) loader)

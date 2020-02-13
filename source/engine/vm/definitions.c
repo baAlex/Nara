@@ -76,6 +76,36 @@ mrb_value VmCallSin(mrb_state* mrb, mrb_value self)
 }
 
 
+mrb_value VmCallTerrainElevation(mrb_state* mrb, mrb_value self)
+{
+	(void)self;
+
+	struct Vm* vm = mrb->ud;
+	mrb_float x;
+	mrb_float y;
+
+	mrb_get_args(mrb, "ff", &x, &y);
+
+	return mrb_float_value(mrb, NTerrainElevation(vm->globals.terrain, jaVector2Set((float)x, (float)y)));
+}
+
+
+mrb_value VmCallPlay2d(mrb_state* mrb, mrb_value self)
+{
+	(void)self;
+
+	struct Vm* vm = mrb->ud;
+	mrb_float volume;
+	mrb_value filename;
+
+	mrb_get_args(mrb, "fS", &volume, &filename);
+
+	PlayFile(vm->globals.mixer, PLAY_NORMAL, (float)volume, mrb_string_value_ptr(mrb, filename));
+
+	return mrb_fixnum_value(0);
+}
+
+
 void CreateSymbols(struct Vm* vm)
 {
 	vm->sym_cv.delta = mrb_intern_cstr(vm->rstate, "@@delta");
@@ -110,6 +140,9 @@ void DefineGlobals(struct Vm* vm)
 	mrb_define_module_function(vm->rstate, vm->nara_module, "print", VmCallPrint, MRB_ARGS_REQ(1));
 	mrb_define_module_function(vm->rstate, vm->nara_module, "cos", VmCallCos, MRB_ARGS_REQ(1));
 	mrb_define_module_function(vm->rstate, vm->nara_module, "sin", VmCallSin, MRB_ARGS_REQ(1));
+	mrb_define_module_function(vm->rstate, vm->nara_module, "terrain_elevation", VmCallTerrainElevation,
+	                           MRB_ARGS_REQ(2));
+	mrb_define_module_function(vm->rstate, vm->nara_module, "play2d", VmCallPlay2d, MRB_ARGS_REQ(2));
 
 	UpdateGlobals(vm, &(struct Globals){0}, true);
 
@@ -148,70 +181,70 @@ void DefineGlobals(struct Vm* vm)
 }
 
 
-void UpdateGlobals(struct Vm* vm, struct Globals* globals, bool force_update)
+void UpdateGlobals(struct Vm* vm, struct Globals* new_globals, bool force_update)
 {
-	if (globals->delta != vm->last_globals.delta || force_update == true)
-		mrb_mod_cv_set(vm->rstate, vm->nara_module, vm->sym_cv.delta, mrb_float_value(vm->rstate, globals->delta));
+	if (new_globals->delta != vm->globals.delta || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->nara_module, vm->sym_cv.delta, mrb_float_value(vm->rstate, new_globals->delta));
 
-	if (globals->frame != vm->last_globals.frame || force_update == true)
-		mrb_mod_cv_set(vm->rstate, vm->nara_module, vm->sym_cv.frame, mrb_fixnum_value(globals->frame));
+	if (new_globals->frame != vm->globals.frame || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->nara_module, vm->sym_cv.frame, mrb_fixnum_value(new_globals->frame));
 
-	if (globals->a != vm->last_globals.a || force_update == true)
-		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.a, mrb_bool_value(globals->a));
+	if (new_globals->a != vm->globals.a || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.a, mrb_bool_value(new_globals->a));
 
-	if (globals->b != vm->last_globals.b || force_update == true)
-		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.b, mrb_bool_value(globals->b));
+	if (new_globals->b != vm->globals.b || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.b, mrb_bool_value(new_globals->b));
 
-	if (globals->x != vm->last_globals.x || force_update == true)
-		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.x, mrb_bool_value(globals->x));
+	if (new_globals->x != vm->globals.x || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.x, mrb_bool_value(new_globals->x));
 
-	if (globals->y != vm->last_globals.y || force_update == true)
-		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.y, mrb_bool_value(globals->y));
+	if (new_globals->y != vm->globals.y || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.y, mrb_bool_value(new_globals->y));
 
-	if (globals->lb != vm->last_globals.lb || force_update == true)
-		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.lb, mrb_bool_value(globals->lb));
+	if (new_globals->lb != vm->globals.lb || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.lb, mrb_bool_value(new_globals->lb));
 
-	if (globals->rb != vm->last_globals.rb || force_update == true)
-		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.rb, mrb_bool_value(globals->rb));
+	if (new_globals->rb != vm->globals.rb || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.rb, mrb_bool_value(new_globals->rb));
 
-	if (globals->view != vm->last_globals.view || force_update == true)
-		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.view, mrb_bool_value(globals->view));
+	if (new_globals->view != vm->globals.view || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.view, mrb_bool_value(new_globals->view));
 
-	if (globals->menu != vm->last_globals.menu || force_update == true)
-		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.menu, mrb_bool_value(globals->menu));
+	if (new_globals->menu != vm->globals.menu || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.menu, mrb_bool_value(new_globals->menu));
 
-	if (globals->guide != vm->last_globals.guide || force_update == true)
-		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.guide, mrb_bool_value(globals->guide));
+	if (new_globals->guide != vm->globals.guide || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.guide, mrb_bool_value(new_globals->guide));
 
-	if (globals->ls != vm->last_globals.ls || force_update == true)
-		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.ls, mrb_bool_value(globals->ls));
+	if (new_globals->ls != vm->globals.ls || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.ls, mrb_bool_value(new_globals->ls));
 
-	if (globals->rs != vm->last_globals.rs || force_update == true)
-		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.rs, mrb_bool_value(globals->rs));
+	if (new_globals->rs != vm->globals.rs || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.rs, mrb_bool_value(new_globals->rs));
 
-	if (globals->pad.h != vm->last_globals.pad.h || force_update == true)
-		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.pad_h, mrb_float_value(vm->rstate, globals->pad.h));
+	if (new_globals->pad.h != vm->globals.pad.h || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.pad_h, mrb_float_value(vm->rstate, new_globals->pad.h));
 
-	if (globals->pad.v != vm->last_globals.pad.v || force_update == true)
-		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.pad_v, mrb_float_value(vm->rstate, globals->pad.v));
+	if (new_globals->pad.v != vm->globals.pad.v || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.pad_v, mrb_float_value(vm->rstate, new_globals->pad.v));
 
-	if (globals->la.h != vm->last_globals.la.h || force_update == true)
-		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.la_h, mrb_float_value(vm->rstate, globals->la.h));
+	if (new_globals->la.h != vm->globals.la.h || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.la_h, mrb_float_value(vm->rstate, new_globals->la.h));
 
-	if (globals->la.v != vm->last_globals.la.v || force_update == true)
-		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.la_v, mrb_float_value(vm->rstate, globals->la.v));
+	if (new_globals->la.v != vm->globals.la.v || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.la_v, mrb_float_value(vm->rstate, new_globals->la.v));
 
-	if (globals->la.t != vm->last_globals.la.t || force_update == true)
-		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.la_t, mrb_float_value(vm->rstate, globals->la.t));
+	if (new_globals->la.t != vm->globals.la.t || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.la_t, mrb_float_value(vm->rstate, new_globals->la.t));
 
-	if (globals->ra.h != vm->last_globals.ra.h || force_update == true)
-		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.ra_h, mrb_float_value(vm->rstate, globals->ra.h));
+	if (new_globals->ra.h != vm->globals.ra.h || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.ra_h, mrb_float_value(vm->rstate, new_globals->ra.h));
 
-	if (globals->ra.v != vm->last_globals.ra.v || force_update == true)
-		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.ra_v, mrb_float_value(vm->rstate, globals->ra.v));
+	if (new_globals->ra.v != vm->globals.ra.v || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.ra_v, mrb_float_value(vm->rstate, new_globals->ra.v));
 
-	if (globals->ra.t != vm->last_globals.ra.t || force_update == true)
-		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.ra_t, mrb_float_value(vm->rstate, globals->ra.t));
+	if (new_globals->ra.t != vm->globals.ra.t || force_update == true)
+		mrb_mod_cv_set(vm->rstate, vm->input_module, vm->sym_cv.ra_t, mrb_float_value(vm->rstate, new_globals->ra.t));
 
-	memcpy(&vm->last_globals, globals, sizeof(struct Globals));
+	memcpy(&vm->globals, new_globals, sizeof(struct Globals));
 }

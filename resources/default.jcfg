@@ -21,7 +21,7 @@ limiter.threshold = 0.7 # 0.0 - 1.0
 # limiter.attack = ???
 # limiter.release = ???
 
-lod.terrain = 1 # 1 - 4
+lod.terrain = 2 # 1 - 4
 
 max_distance = 1024.0 # 128.0 - 1024.0
 fov = 75.0            # 45.0 - 90.0

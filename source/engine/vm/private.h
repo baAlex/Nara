@@ -45,7 +45,7 @@
 	{
 		struct jaDictionary* classes;
 		struct jaList entities;
-		struct Globals last_globals;
+		struct Globals globals;
 
 		mrb_state* rstate;
 		int rgc_state;
@@ -76,6 +76,6 @@
 
 	void CreateSymbols(struct Vm* vm);
 	void DefineGlobals(struct Vm* vm);
-	void UpdateGlobals(struct Vm* vm, struct Globals* globals, bool force_update);
+	void UpdateGlobals(struct Vm* vm, struct Globals* new_globals, bool force_update);
 
 #endif

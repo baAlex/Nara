@@ -10,6 +10,9 @@
 	#include "japan-status.h"
 	#include "japan-vector.h"
 
+	#include "../nterrain.h"
+	#include "../mixer/mixer.h"
+
 	struct Globals
 	{
 		bool a, b, x, y;
@@ -23,6 +26,9 @@
 
 		float delta;
 		long frame;
+
+		const struct NTerrain* terrain;
+		struct Mixer* mixer;
 	};
 
 	struct Entity

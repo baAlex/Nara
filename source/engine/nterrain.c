@@ -114,13 +114,16 @@ static float sHeightmapElevation(const struct jaImage* hmap, struct jaVector2 co
 	{
 	case IMAGE_GRAY8:
 		result = (data.u8[x + hmap->width * y] * u_opposite + data.u8[x + 1 + hmap->width * y] * u_ratio) * v_opposite +
-		         (data.u8[x + hmap->width * (y + 1)] * u_opposite + data.u8[x + 1 + hmap->width * (y + 1)] * u_ratio) * v_ratio;
+		         (data.u8[x + hmap->width * (y + 1)] * u_opposite + data.u8[x + 1 + hmap->width * (y + 1)] * u_ratio) *
+		             v_ratio;
 		result /= 255.0f;
 		break;
 
 	case IMAGE_GRAY16:
-		result = (data.u16[x + hmap->width * y] * u_opposite + data.u16[x + 1 + hmap->width * y] * u_ratio) * v_opposite +
-		         (data.u16[x + hmap->width * (y + 1)] * u_opposite + data.u16[x + 1 + hmap->width * (y + 1)] * u_ratio) * v_ratio;
+		result =
+		    (data.u16[x + hmap->width * y] * u_opposite + data.u16[x + 1 + hmap->width * y] * u_ratio) * v_opposite +
+		    (data.u16[x + hmap->width * (y + 1)] * u_opposite + data.u16[x + 1 + hmap->width * (y + 1)] * u_ratio) *
+		        v_ratio;
 		result /= 65535.0f;
 		break;
 
@@ -128,6 +131,12 @@ static float sHeightmapElevation(const struct jaImage* hmap, struct jaVector2 co
 	}
 
 	return result;
+}
+
+float NTerrainElevation(const struct NTerrain* terrain, struct jaVector2 cords)
+{
+	return sHeightmapElevation(terrain->heightmap, jaVector2Scale(cords, 1.0f / terrain->dimension)) *
+	       terrain->elevation;
 }
 
 
@@ -150,7 +159,8 @@ static struct Index sGenerateIndex(struct jaBuffer* buffer, const struct NTerrai
 
 	{
 		size_t const org_patterns_no = sPatternsInARow(org.max.x - org.min.x, org_pattern_dimension);
-		size_t const org_step = (org_patterns_no / patterns_no) / (size_t)lroundf((org.max.x - org.min.x) / sNodeDimension(node));
+		size_t const org_step =
+		    (org_patterns_no / patterns_no) / (size_t)lroundf((org.max.x - org.min.x) / sNodeDimension(node));
 
 		size_t const org_col_start = sPatternsInARow(node->bbox.min.x - org.min.x, org_pattern_dimension);
 		size_t org_row = sPatternsInARow(node->bbox.min.y - org.min.y, org_pattern_dimension);
@@ -215,8 +225,9 @@ static struct Index sGenerateIndex(struct jaBuffer* buffer, const struct NTerrai
 
  sGenerateVertices()
 -----------------------------*/
-static struct Vertices sGenerateVertices(struct jaBuffer* buffer, const struct NTerrainNode* node, float pattern_dimension,
-                                         float terrain_dimension, const struct jaImage* hmap, float elevation)
+static struct Vertices sGenerateVertices(struct jaBuffer* buffer, const struct NTerrainNode* node,
+                                         float pattern_dimension, float terrain_dimension, const struct jaImage* hmap,
+                                         float elevation)
 {
 	// Generation on a temporary buffer
 	size_t const patterns_no = sPatternsInARow(sNodeDimension(node), pattern_dimension);
@@ -240,7 +251,8 @@ static struct Vertices sGenerateVertices(struct jaBuffer* buffer, const struct N
 				temp_data[col + (patterns_no + 1) * row].pos.y = node->bbox.min.y + (float)row * pattern_dimension;
 
 				if (hmap != NULL)
-					temp_data[col + (patterns_no + 1) * row].pos.z = sHeightmapElevation(hmap, texture_step) * elevation;
+					temp_data[col + (patterns_no + 1) * row].pos.z =
+					    sHeightmapElevation(hmap, texture_step) * elevation;
 				else
 					temp_data[col + (patterns_no + 1) * row].pos.z = 0.0;
 
@@ -345,25 +357,17 @@ static void sSubdivideNode(struct NTerrainNode* node, float min_node_dimension)
 
  NTerrainCreate()
 -----------------------------*/
-struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation, float dimension, float min_node_dimension,
-                                int pattern_subdivisions, struct jaStatus* st)
+struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation, float dimension,
+                                float min_node_dimension, int pattern_subdivisions, struct jaStatus* st)
 {
 	struct NTerrain* terrain = NULL;
 	struct NTerrainNode* node = NULL;
-
-	struct jaImage* heightmap = NULL;
 
 	struct NTerrainState state = {0};
 	struct NTerrainNode* last_parent = NULL;
 	size_t parent_depth = 0;
 
 	jaStatusSet(st, "NTerraiNCreate", STATUS_SUCCESS, NULL);
-
-	if (heightmap_filename != NULL)
-	{
-		if ((heightmap = jaImageLoad(heightmap_filename, st)) == NULL)
-			goto return_failure;
-	}
 
 	if ((terrain = calloc(1, sizeof(struct NTerrain))) == NULL || (terrain->root = sNodeCreate(NULL)) == NULL)
 	{
@@ -373,6 +377,9 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 
 	terrain->dimension = dimension;
 	terrain->elevation = elevation;
+
+	if ((terrain->heightmap = jaImageLoad(heightmap_filename, st)) == NULL)
+		goto return_failure;
 
 	// Mesures
 	for (float i = dimension; i >= min_node_dimension; i /= 3.0f)
@@ -422,7 +429,8 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 				terrain->vertices_buffers_no++;
 
 				node->vertices_type = SHARED_WITH_CHILDRENS;
-				node->vertices = sGenerateVertices(&terrain->buffer, node, terrain->min_pattern_dimension, terrain->dimension, heightmap, elevation);
+				node->vertices = sGenerateVertices(&terrain->buffer, node, terrain->min_pattern_dimension,
+				                                   terrain->dimension, terrain->heightmap, elevation);
 				node->index = sGenerateIndex(&terrain->buffer, node, node->bbox, terrain->min_pattern_dimension);
 			}
 
@@ -434,8 +442,8 @@ struct NTerrain* NTerrainCreate(const char* heightmap_filename, float elevation,
 				terrain->vertices_buffers_no++;
 
 				node->vertices_type = OWN_VERTICES;
-				node->vertices =
-				    sGenerateVertices(&terrain->buffer, node, node->pattern_dimension, terrain->dimension, heightmap, elevation);
+				node->vertices = sGenerateVertices(&terrain->buffer, node, node->pattern_dimension, terrain->dimension,
+				                                   terrain->heightmap, elevation);
 				node->index = sGenerateIndex(&terrain->buffer, node, node->bbox, node->pattern_dimension);
 			}
 		}
@@ -458,7 +466,7 @@ return_failure:
 -----------------------------*/
 void NTerrainDelete(struct NTerrain* terrain)
 {
-	if(terrain == NULL)
+	if (terrain == NULL)
 		return;
 
 	struct NTerrainState state = {.start = terrain->root};
@@ -530,28 +538,32 @@ static void sBuildFrustumPlanes(struct NTerrainState* state, const struct NTerra
 
 	// Left frustum
 	state->frustum_position[2] = jaVector3Add(view->position, jaVector3Scale(forward, 1.0f));
-	state->frustum_position[2] = jaVector3Subtract(state->frustum_position[2], jaVector3Scale(left, (jaRadToDeg(view->fov) / 90.0f) * view->aspect));
+	state->frustum_position[2] = jaVector3Subtract(
+	    state->frustum_position[2], jaVector3Scale(left, (jaRadToDeg(view->fov) / 90.0f) * view->aspect));
 
 	state->frustum_normal[2] = jaVector3Subtract(state->frustum_position[2], view->position);
 	state->frustum_normal[2] = jaVector3Cross(jaVector3Normalize(state->frustum_normal[2]), up);
 
 	// Right frustum
 	state->frustum_position[1] = jaVector3Add(view->position, jaVector3Scale(forward, 1.0f));
-	state->frustum_position[1] = jaVector3Add(state->frustum_position[1], jaVector3Scale(left, (jaRadToDeg(view->fov) / 90.0f) * view->aspect));
+	state->frustum_position[1] =
+	    jaVector3Add(state->frustum_position[1], jaVector3Scale(left, (jaRadToDeg(view->fov) / 90.0f) * view->aspect));
 
 	state->frustum_normal[1] = jaVector3Subtract(state->frustum_position[1], view->position);
 	state->frustum_normal[1] = jaVector3Cross(jaVector3Normalize(state->frustum_normal[1]), jaVector3Invert(up));
 
 	// Top frustum
 	state->frustum_position[3] = jaVector3Add(view->position, jaVector3Scale(forward, 1.0f));
-	state->frustum_position[3] = jaVector3Add(state->frustum_position[3], jaVector3Scale(up, jaRadToDeg(view->fov) / 90.0f));
+	state->frustum_position[3] =
+	    jaVector3Add(state->frustum_position[3], jaVector3Scale(up, jaRadToDeg(view->fov) / 90.0f));
 
 	state->frustum_normal[3] = jaVector3Subtract(state->frustum_position[3], view->position);
 	state->frustum_normal[3] = jaVector3Cross(jaVector3Normalize(state->frustum_normal[3]), left);
 
 	// Bottom frustum
 	state->frustum_position[4] = jaVector3Add(view->position, jaVector3Scale(forward, 1.0f));
-	state->frustum_position[4] = jaVector3Subtract(state->frustum_position[4], jaVector3Scale(up, jaRadToDeg(view->fov) / 90.0f));
+	state->frustum_position[4] =
+	    jaVector3Subtract(state->frustum_position[4], jaVector3Scale(up, jaRadToDeg(view->fov) / 90.0f));
 
 	state->frustum_normal[4] = jaVector3Subtract(state->frustum_position[4], view->position);
 	state->frustum_normal[4] = jaVector3Cross(jaVector3Normalize(state->frustum_normal[4]), jaVector3Invert(left));
@@ -594,8 +606,9 @@ again:
 			const float factor = sNodeDimension(state->actual) * (float)view->lod_factor;
 
 			view_condition = jaAABCollisionBoxBox(
-			    ((struct jaAABBox){jaVector3Subtract(view->position, (struct jaVector3){factor / 2.0f, factor / 2.0f, factor / 2.0f}),
-			                       jaVector3Add(view->position, (struct jaVector3){factor / 2.0f, factor / 2.0f, factor / 2.0f})}),
+			    ((struct jaAABBox){
+			        jaVector3Subtract(view->position, (struct jaVector3){factor / 2.0f, factor / 2.0f, factor / 2.0f}),
+			        jaVector3Add(view->position, (struct jaVector3){factor / 2.0f, factor / 2.0f, factor / 2.0f})}),
 			    state->actual->bbox);
 		}
 		else

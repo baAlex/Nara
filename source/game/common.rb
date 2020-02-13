@@ -25,6 +25,24 @@
 # [common.rb]
 # - Alexander Brandt 2019-2020
 
+class KeyState
+
+	@state = false
+
+	def update(input)
+
+		if input == false then
+			@state = true
+		elsif @state == true then
+			@state = false
+			return true
+		end
+
+		return false
+	end
+end
+
+
 class Vector3
 
 	attr_accessor :x
@@ -124,6 +142,11 @@ end
 
 def rad_to_deg(x)
 	return x * 180.0 / Nara::PI
+end
+
+
+def km_per_hour(x)
+	return x / 120.0
 end
 
 

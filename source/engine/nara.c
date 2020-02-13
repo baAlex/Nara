@@ -70,11 +70,8 @@ struct Resources
 	struct Program debug_program;
 
 	struct Texture lightmap;
-	struct Texture masksmap;
-	struct Texture grass;
-	struct Texture dirt;
-	struct Texture cliff1;
-	struct Texture cliff2;
+	struct Texture gray;
+	struct Texture pink;
 
 	struct Entity* camera;
 
@@ -115,7 +112,7 @@ static struct jaConfiguration* sInitializeConfiguration(int argc, const char* ar
 	    jaCvarCreate(config, "limiter.release", 0.0f, 0.0, 666.f, st) == NULL)   // TODO
 		goto return_failure;
 
-	if (jaCvarCreate(config, "lod.terrain", 1, 1, 4, st) == NULL)
+	if (jaCvarCreate(config, "lod.terrain", 2, 1, 4, st) == NULL)
 		goto return_failure;
 
 	if (jaCvarCreate(config, "max_distance", 1024.0f, 128.0f, 1024.f, st) == NULL ||
@@ -190,11 +187,8 @@ static inline void sUnloadResources(struct Resources* res)
 	ProgramFree(&res->terrain_program);
 	ProgramFree(&res->debug_program);
 	TextureFree(&res->lightmap);
-	TextureFree(&res->masksmap);
-	TextureFree(&res->grass);
-	TextureFree(&res->dirt);
-	TextureFree(&res->cliff1);
-	TextureFree(&res->cliff2);
+	TextureFree(&res->gray);
+	TextureFree(&res->pink);
 }
 
 
@@ -217,11 +211,8 @@ static int sLoadResources(struct Context* context, struct Mixer* mixer, struct V
 		goto return_failure;
 
 	if (TextureInit(context, "./assets/lightmap.sgi", &out->lightmap, st) != 0 ||
-	    TextureInit(context, "./assets/masksmap.sgi", &out->masksmap, st) != 0 ||
-	    TextureInit(context, "./assets/grass.sgi", &out->grass, st) != 0 ||
-	    TextureInit(context, "./assets/dirt.sgi", &out->dirt, st) != 0 ||
-	    TextureInit(context, "./assets/cliff1.sgi", &out->cliff1, st) != 0 ||
-	    TextureInit(context, "./assets/cliff2.sgi", &out->cliff2, st) != 0)
+	    TextureInit(context, "./assets/gray.sgi", &out->gray, st) != 0 ||
+	    TextureInit(context, "./assets/pink.sgi", &out->pink, st) != 0)
 		goto return_failure;
 
 	if (SampleCreate(mixer, "./assets/ambient01.au", st) == NULL || // Works as precache method
@@ -230,11 +221,8 @@ static int sLoadResources(struct Context* context, struct Mixer* mixer, struct V
 
 	// Set them
 	SetTexture(context, 0, &out->lightmap);
-	SetTexture(context, 1, &out->masksmap);
-	SetTexture(context, 2, &out->grass);
-	SetTexture(context, 3, &out->dirt);
-	SetTexture(context, 4, &out->cliff1);
-	SetTexture(context, 5, &out->cliff2);
+	SetTexture(context, 1, &out->gray);
+	SetTexture(context, 2, &out->pink);
 
 	// Entities
 	struct Entity initial_state = {0};
@@ -294,7 +282,7 @@ static void sSetProjectionAndView(const struct jaCvar* fov_cvar, const struct ja
 
  sCreateVmGlobals()
 -----------------------------*/
-static struct Globals sCreateVmGlobals(struct ContextEvents* events, double ms_betwen)
+static struct Globals sCreateVmGlobals(struct ContextEvents* events, struct Timer* timer)
 {
 	struct Globals globals = {0};
 
@@ -318,7 +306,8 @@ static struct Globals sCreateVmGlobals(struct ContextEvents* events, double ms_b
 	globals.ra.v = events->right_analog.v;
 	globals.ra.t = events->right_analog.t;
 
-	globals.delta = (float)ms_betwen / 33.3333f;
+	globals.frame = (long)timer->frame_number;
+	globals.delta = (float)timer->miliseconds_betwen / 33.3333f;
 
 	return globals;
 }
@@ -405,7 +394,9 @@ int main(int argc, const char* argv[])
 		TimerUpdate(&modules.timer);
 		ContextUpdate(modules.context, &events);
 
-		globals = sCreateVmGlobals(&events, modules.timer.miliseconds_betwen);
+		globals = sCreateVmGlobals(&events, &modules.timer);
+		globals.terrain = resources.terrain; // TODO
+		globals.mixer = modules.mixer;       // TODO
 
 		if (VmEntitiesUpdate(modules.vm, &globals, &st) != 0)
 			goto return_failure;
