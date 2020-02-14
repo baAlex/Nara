@@ -70,8 +70,10 @@ struct Resources
 	struct Program debug_program;
 
 	struct Texture lightmap;
-	struct Texture gray;
-	struct Texture pink;
+	struct Texture lofi;
+	struct Texture window;
+	struct Texture masks;
+	struct Texture details;
 
 	struct Entity* camera;
 
@@ -187,8 +189,10 @@ static inline void sUnloadResources(struct Resources* res)
 	ProgramFree(&res->terrain_program);
 	ProgramFree(&res->debug_program);
 	TextureFree(&res->lightmap);
-	TextureFree(&res->gray);
-	TextureFree(&res->pink);
+	TextureFree(&res->lofi);
+	TextureFree(&res->window);
+	TextureFree(&res->masks);
+	TextureFree(&res->details);
 }
 
 
@@ -211,8 +215,10 @@ static int sLoadResources(struct Context* context, struct Mixer* mixer, struct V
 		goto return_failure;
 
 	if (TextureInit(context, "./assets/lightmap.sgi", &out->lightmap, st) != 0 ||
-	    TextureInit(context, "./assets/gray.sgi", &out->gray, st) != 0 ||
-	    TextureInit(context, "./assets/pink.sgi", &out->pink, st) != 0)
+	    TextureInit(context, "./assets/lofi.sgi", &out->lofi, st) != 0 ||
+	    TextureInit(context, "./assets/window.sgi", &out->window, st) != 0 ||
+	    TextureInit(context, "./assets/masks.sgi", &out->masks, st) != 0 ||
+	    TextureInit(context, "./assets/details.sgi", &out->details, st) != 0)
 		goto return_failure;
 
 	if (SampleCreate(mixer, "./assets/ambient01.au", st) == NULL || // Works as precache method
@@ -221,8 +227,10 @@ static int sLoadResources(struct Context* context, struct Mixer* mixer, struct V
 
 	// Set them
 	SetTexture(context, 0, &out->lightmap);
-	SetTexture(context, 1, &out->gray);
-	SetTexture(context, 2, &out->pink);
+	SetTexture(context, 1, &out->lofi);
+	SetTexture(context, 2, &out->window);
+	SetTexture(context, 3, &out->masks);
+	SetTexture(context, 4, &out->details);
 
 	// Entities
 	struct Entity initial_state = {0};

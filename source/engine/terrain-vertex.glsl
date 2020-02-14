@@ -9,9 +9,10 @@ uniform mat4 projection;
 
 varying lowp vec3 position;
 varying lowp vec2 uv;
-
+varying lowp vec2 uv_detail;
+varying lowp vec2 uv_window;
 varying lowp float fog_factor;
-varying lowp float pink_factor;
+varying lowp float window_factor;
 
 
 lowp float LinearStep(lowp float edge0, lowp float edge1, lowp float x)
@@ -23,9 +24,11 @@ void main()
 {
 	position = vertex_position;
 	uv = vertex_uv;
+	uv_detail = vertex_uv * 512.0;
+	uv_window = vertex_uv * 16.0; // 4.0 in the completed implementation
 
 	fog_factor = LinearStep(256.0, 1024.0, distance(vertex_position, camera_origin));
-	pink_factor = LinearStep(128.0, 192.0, distance(vertex_position, camera_origin));
+	window_factor = LinearStep(96.0, 192.0, distance(vertex_position, camera_origin));
 
 	gl_Position = (projection * camera_projection) * vec4(vertex_position, 1.0);
 }

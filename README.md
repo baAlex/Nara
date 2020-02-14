@@ -61,6 +61,9 @@ Thanks to
 - David Herberth ([GLAD](https://github.com/Dav1dde/glad) loader)
 - And all contributors of [GLFW](https://github.com/glfw/glfw/graphs/contributors) and [Portaudio](http://portaudio.com/people.htmlm)
 
+### Assets
+- Giles Hodges ([seamless-pixels.blogspot.com](https://seamless-pixels.blogspot.com/))
+
 
 License
 -------

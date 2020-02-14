@@ -30,8 +30,8 @@ class Camera < Entity
 	ANALOG_DEAD_ZONE = 0.2
 	LOOK_SPEED = 3.0
 
-	WALK_SPEED = km_per_hour(8.0)
-	FLY_SPEED = km_per_hour(180.0)
+	WALK_SPEED = km_per_hour(9.0)
+	FLY_SPEED = km_per_hour(200.0)
 
 	def initialize()
 		super
@@ -103,7 +103,7 @@ class Camera < Entity
 		if @first_person == true then
 			@position.z = Nara.terrain_elevation(@position.x, @position.y) + 1.67
 
-			if @distance > 0.8 then
+			if @distance > 0.9 then
 
 				# https://knowyourmeme.com/memes/half-life-sound-effects
 				cheap_random = (@distance * Nara.frame).round % 4
