@@ -112,14 +112,14 @@ static float sHeightmapElevation(const struct jaImage* hmap, struct jaVector2 co
 
 	switch (hmap->format)
 	{
-	case IMAGE_GRAY8:
+	case IMAGE_U8:
 		result = (data.u8[x + hmap->width * y] * u_opposite + data.u8[x + 1 + hmap->width * y] * u_ratio) * v_opposite +
 		         (data.u8[x + hmap->width * (y + 1)] * u_opposite + data.u8[x + 1 + hmap->width * (y + 1)] * u_ratio) *
 		             v_ratio;
 		result /= 255.0f;
 		break;
 
-	case IMAGE_GRAY16:
+	case IMAGE_U16:
 		result =
 		    (data.u16[x + hmap->width * y] * u_opposite + data.u16[x + 1 + hmap->width * y] * u_ratio) * v_opposite +
 		    (data.u16[x + hmap->width * (y + 1)] * u_opposite + data.u16[x + 1 + hmap->width * (y + 1)] * u_ratio) *

@@ -62,7 +62,7 @@ static float* sProcessHeightmap(int width, int height, const char* filename, str
 	float* buffer = NULL;
 	struct jaImage* image = NULL;
 
-	if ((image = jaImageCreate(IMAGE_GRAY16, (size_t)width, (size_t)height)) == NULL ||
+	if ((image = jaImageCreate(IMAGE_U16, (size_t)width, (size_t)height, 1)) == NULL ||
 	    (buffer = malloc((sizeof(float)) * (size_t)width * (size_t)height)) == NULL)
 	{
 		jaStatusSet(st, NULL, STATUS_MEMORY_ERROR, NULL);
@@ -177,7 +177,7 @@ static struct jaVector3* sProcessNormalmap(int width, int height, const float* h
 	struct jaVector3* buffer = NULL;
 	struct jaImage* image = NULL;
 
-	if ((image = jaImageCreate(IMAGE_RGB8, (size_t)width, (size_t)height)) == NULL ||
+	if ((image = jaImageCreate(IMAGE_U8, (size_t)width, (size_t)height, 3)) == NULL ||
 	    (buffer = malloc((sizeof(struct jaVector3)) * (size_t)width * (size_t)height)) == NULL)
 	{
 		jaStatusSet(st, NULL, STATUS_MEMORY_ERROR, NULL);
@@ -287,12 +287,12 @@ int main(int argc, const char* argv[])
 			goto return_failure;
 		}
 
-		if (image->format == IMAGE_GRAY16)
+		if (image->format == IMAGE_U16)
 		{
 			for (size_t i = 0; i < (image->width * image->height); i++)
 				heightmap[i] = (float)(((uint16_t*)image->data)[i]) / 65536.0f;
 		}
-		else if (image->format == IMAGE_GRAY8)
+		else if (image->format == IMAGE_U8)
 		{
 			for (size_t i = 0; i < (image->width * image->height); i++)
 				heightmap[i] = (float)(((uint8_t*)image->data)[i]) / 255.0f;

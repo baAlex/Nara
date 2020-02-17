@@ -55,7 +55,7 @@ static inline float sIIRLowPass(float k, float input, float previous_lp_sample)
 }
 
 
-inline int DspLimiterInit(const struct jaConfiguration* config, struct DspLimiter* limiter, struct jaStatus* st)
+int DspLimiterInit(const struct jaConfiguration* config, struct DspLimiter* limiter, struct jaStatus* st)
 {
 	memset(limiter, 0, sizeof(struct DspLimiter));
 
@@ -68,7 +68,7 @@ inline int DspLimiterInit(const struct jaConfiguration* config, struct DspLimite
 }
 
 
-inline float DspLimiterGain(struct DspLimiter* limiter, size_t ch, float input)
+float DspLimiterGain(struct DspLimiter* limiter, size_t ch, float input)
 {
 	// TODO, hardcoded K values
 	float env = 0;

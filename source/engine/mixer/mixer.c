@@ -242,7 +242,7 @@ static inline void sPanning3d(struct jaVector3 emitter_pos, struct jaVector3 lis
 	// printf("[%0.2f - %0.2f] %0.2f\n", out_panning[0], out_panning[1], dot);
 }
 
-inline void SetListener(struct Mixer* mixer, struct jaVector3 position, struct jaVector3 angle)
+void SetListener(struct Mixer* mixer, struct jaVector3 position, struct jaVector3 angle)
 {
 	float volume = 1.0f;
 	float panning[2] = {1.0f, 1.0f};
@@ -292,7 +292,7 @@ static int sStartMixer(struct Mixer* mixer, struct jaStatus* st)
 
  sFindSample()
 -----------------------------*/
-static struct Sample* sFindSample(struct Mixer* mixer, const char* filename)
+static inline struct Sample* sFindSample(struct Mixer* mixer, const char* filename)
 {
 	struct jaDictionaryItem* item = NULL;
 
@@ -353,7 +353,7 @@ static struct PlayItem* sFindPlayitem(struct Mixer* mixer)
 
  Play
 -----------------------------*/
-inline void PlayFile(struct Mixer* mixer, enum PlayOptions options, float volume, const char* filename)
+void PlayFile(struct Mixer* mixer, enum PlayOptions options, float volume, const char* filename)
 {
 	PlaySample(mixer, options, volume, sFindSample(mixer, filename));
 }
@@ -387,7 +387,7 @@ void PlaySample(struct Mixer* mixer, enum PlayOptions options, float volume, str
 
  Play3d
 -----------------------------*/
-inline void Play3dFile(struct Mixer* mixer, enum PlayOptions options, float volume, struct PlayRange range,
+void Play3dFile(struct Mixer* mixer, enum PlayOptions options, float volume, struct PlayRange range,
                        struct jaVector3 position, const char* filename)
 {
 	Play3dSample(mixer, options, volume, range, position, sFindSample(mixer, filename));

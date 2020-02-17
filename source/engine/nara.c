@@ -233,7 +233,9 @@ static int sLoadResources(struct Context* context, struct Mixer* mixer, struct V
 	SetTexture(context, 4, &out->details);
 
 	// Entities
-	struct Entity initial_state = {0};
+	struct Entity initial_state;
+	initial_state.position = (struct jaVector3){0.0f, 0.0f, 0.0f};
+	initial_state.angle = (struct jaVector3){0.0f, 0.0f, 0.0f};
 
 	if (VmCreateEntity(vm, "Point", initial_state, st) == NULL ||
 	    VmCreateEntity(vm, "Point", initial_state, st) == NULL)
@@ -433,8 +435,8 @@ int main(int argc, const char* argv[])
 		SetProgram(modules.context, &resources.terrain_program);
 		NTerrainDraw(modules.context, resources.terrain, &view);
 
-		SetProgram(modules.context, &resources.debug_program);
-		DrawAABB(modules.context, (struct jaAABBox){0}, (struct jaVector3){0.0f, 0.0f, 0.0f});
+		// SetProgram(modules.context, &resources.debug_program);
+		// DrawAABB(modules.context, (struct jaAABBox){0}, (struct jaVector3){0.0f, 0.0f, 0.0f});
 
 		// Window title
 		if (modules.timer.one_second == true)

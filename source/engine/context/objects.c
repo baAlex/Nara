@@ -263,8 +263,7 @@ int TextureInitImage(const struct Context* context, const struct jaImage* image,
 
 	jaStatusSet(st, "TextureInitImage", STATUS_SUCCESS, NULL);
 
-	if (image->format != IMAGE_RGB8 && image->format != IMAGE_RGBA8 && image->format != IMAGE_GRAY8 &&
-	    image->format != IMAGE_GRAYA8)
+	if (image->format != IMAGE_U8)
 	{
 		jaStatusSet(st, "TextureInitImage", STATUS_UNEXPECTED_DATA, "Only 8 bits per component images supported");
 		return 1;
@@ -307,23 +306,23 @@ int TextureInitImage(const struct Context* context, const struct jaImage* image,
 		break;
 	}
 
-	switch (image->format)
+	switch (image->channels)
 	{
-	case IMAGE_RGB8:
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, (GLsizei)image->width, (GLsizei)image->height, 0, GL_RGB,
-		             GL_UNSIGNED_BYTE, image->data);
-		break;
-	case IMAGE_RGBA8:
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)image->width, (GLsizei)image->height, 0, GL_RGBA,
-		             GL_UNSIGNED_BYTE, image->data);
-		break;
-	case IMAGE_GRAY8:
+	case 1:
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, (GLsizei)image->width, (GLsizei)image->height, 0, GL_LUMINANCE,
 		             GL_UNSIGNED_BYTE, image->data);
 		break;
-	case IMAGE_GRAYA8:
+	case 2:
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE_ALPHA, (GLsizei)image->width, (GLsizei)image->height, 0,
 		             GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE, image->data);
+		break;
+	case 3:
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, (GLsizei)image->width, (GLsizei)image->height, 0, GL_RGB,
+		             GL_UNSIGNED_BYTE, image->data);
+		break;
+	case 4:
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)image->width, (GLsizei)image->height, 0, GL_RGBA,
+		             GL_UNSIGNED_BYTE, image->data);
 		break;
 	default: break;
 	}

@@ -230,7 +230,7 @@ int TakeScreenshot(const struct Context* context, const char* filename, struct j
 	struct jaImage* image = NULL;
 	GLenum error;
 
-	if ((image = jaImageCreate(IMAGE_RGBA8, (size_t)context->window_size.x, (size_t)context->window_size.y + 1)) ==
+	if ((image = jaImageCreate(IMAGE_U8, (size_t)context->window_size.x, (size_t)context->window_size.y + 1, 4)) ==
 	    NULL)
 	{
 		jaStatusSet(st, "TakeScreenshot", STATUS_MEMORY_ERROR, NULL);
@@ -246,20 +246,18 @@ int TakeScreenshot(const struct Context* context, const char* filename, struct j
 		goto return_failure;
 	}
 
-	size_t bpp = (size_t)jaBytesPerPixel(image->format);
-
 	for (size_t i = 0;; i++)
 	{
 		if (i >= (image->height - 1) / 2)
 			break;
 
 		// The image has an extra row
-		memcpy((uint8_t*)image->data + (image->width * bpp) * (image->height - 1),
-		       (uint8_t*)image->data + (image->width * bpp) * i, (image->width * bpp));
-		memcpy((uint8_t*)image->data + (image->width * bpp) * i,
-		       (uint8_t*)image->data + (image->width * bpp) * (image->height - 2 - i), (image->width * bpp));
-		memcpy((uint8_t*)image->data + (image->width * bpp) * (image->height - 2 - i),
-		       (uint8_t*)image->data + (image->width * bpp) * (image->height - 1), (image->width * bpp));
+		memcpy((uint8_t*)image->data + (image->width * 4) * (image->height - 1),
+		       (uint8_t*)image->data + (image->width * 4) * i, (image->width * 4));
+		memcpy((uint8_t*)image->data + (image->width * 4) * i,
+		       (uint8_t*)image->data + (image->width * 4) * (image->height - 2 - i), (image->width * 4));
+		memcpy((uint8_t*)image->data + (image->width * 4) * (image->height - 2 - i),
+		       (uint8_t*)image->data + (image->width * 4) * (image->height - 1), (image->width * 4));
 	}
 
 	image->height -= 1; // ;)
