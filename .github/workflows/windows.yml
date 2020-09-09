@@ -1,0 +1,46 @@
+name: Windows
+
+on: [push]
+
+jobs:
+  ci:
+    name: "CI"
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Install dependencies
+      run: |
+        vcpkg install sdl2:x64-windows
+        git submodule init
+        git submodule update
+
+    - name: Compile release build
+      shell: cmd
+      run: |
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        mkdir build-release
+        cd build-release
+        cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake ..
+        cmake --build . --config Release
+
+    - name: Upload release artifacts
+      uses: actions/upload-artifact@v1
+      with:
+        name: Windows release
+        path: build-release\release\
+
+    - name: Compile debug build
+      shell: cmd
+      run: |
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        mkdir build-debug
+        cd build-debug
+        cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake ..
+        cmake --build . --config Debug
+
+    - name: Upload debug artifacts
+      uses: actions/upload-artifact@v1
+      with:
+        name: Windows debug
+        path: build-debug\debug\

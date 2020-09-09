@@ -1,0 +1,43 @@
+name: Ubuntu
+
+on: [push]
+
+jobs:
+  ci:
+    name: "CI"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install libsdl2-dev
+        git submodule init
+        git submodule update
+
+    - name: Compile release build
+      run: |
+        mkdir build-release
+        cd build-release
+        cmake -DCMAKE_BUILD_TYPE=Release ..
+        cmake --build . --config Release
+
+    - name: Upload release artifacts
+      uses: actions/upload-artifact@v1
+      with:
+        name: Ubuntu release
+        path: build-release/
+
+    - name: Compile debug build
+      run: |
+        mkdir build-debug
+        cd build-debug
+        cmake -DCMAKE_BUILD_TYPE=Debug ..
+        cmake --build . --config Debug
+
+    - name: Upload debug artifacts
+      uses: actions/upload-artifact@v1
+      with:
+        name: Ubuntu debug
+        path: build-debug/
