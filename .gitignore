@@ -1,14 +1,19 @@
-/nara
-/nara-dbg
-/sdk
-/sdk-dbg
-/nterrain-tests
-/game.mrb
-/game-dbg.mrb
 
-/user.jcfg
-/nara - *.sgi
+# All platforms
+/assets/
 
+# Posix
+/nara-posix
+/nara-ubuntu
+
+# Windows
+/nara-windows.exe
+/SDL2.dll
+
+# Developers, developers, developers
+/plot-*.png
+
+/*.sgi
 /.ninja_log
 /.ninja_deps
 

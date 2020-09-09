@@ -1,6 +1,6 @@
-[submodule "source/lib-japan"]
-	path = source/lib-japan
-	url = https://github.com/baAlex/Japan.git
-[submodule "source/lib-samplerate"]
-	path = source/lib-samplerate
-	url = https://github.com/erikd/libsamplerate
+[submodule "source/engine/libjapan"]
+	path = source/engine/libjapan
+	url = https://github.com/baAlex/libjapan
+[submodule "source/engine/libkansai"]
+	path = source/engine/libkansai
+	url = https://github.com/baAlex/libkansai
