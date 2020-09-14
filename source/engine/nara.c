@@ -36,11 +36,14 @@ SOFTWARE.
 #include <string.h>
 #include <time.h>
 
-#include "japan-image.h"
+#include "japan-buffer.h"
 #include "japan-matrix.h"
+#include "japan-utilities.h"
 #include "japan-version.h"
 #include "kansai-context.h"
 #include "kansai-version.h"
+
+#include "skydome.h"
 
 #define NAME "Nara"
 #define VERSION "0.4-alpha"
@@ -49,35 +52,46 @@ SOFTWARE.
 
 struct NaraData
 {
-	int a;
+	float showcase_angle;
+	struct Skydome* skydome;
+	struct jaBuffer buffer;
 };
 
 
 static void sInit(struct kaWindow* w, void* raw_data, struct jaStatus* st)
 {
-	(void)w;
-	(void)raw_data;
-	(void)st;
+	struct NaraData* data = raw_data;
+
+	if ((data->skydome = SkydomeCreate(w, 1.0f, 1, &data->buffer, st)) == NULL)
+		return;
+
+	kaSetVertices(w, &data->skydome->vertices);
 }
 
 
 static void sFrame(struct kaWindow* w, struct kaEvents e, float delta, void* raw_data, struct jaStatus* st)
 {
-	(void)w;
 	(void)e;
-	(void)delta;
-	(void)raw_data;
 	(void)st;
+
+	struct NaraData* data = raw_data;
+
+	data->showcase_angle += jaDegToRad(1.0f) * delta;
+	kaSetLocal(w, jaMatrix4RotateZ(jaMatrix4Identity(), data->showcase_angle));
+
+	kaDraw(w, &data->skydome->index);
 }
 
 
 static void sResize(struct kaWindow* w, int width, int height, void* raw_data, struct jaStatus* st)
 {
-	(void)w;
-	(void)width;
-	(void)height;
 	(void)raw_data;
 	(void)st;
+
+	float aspect = (float)width / (float)height;
+
+	kaSetWorld(w, jaMatrix4Perspective(jaDegToRad(45.0f), aspect, 0.1f, 500.0f));
+	kaSetCameraLookAt(w, (struct jaVector3){0.0f, 0.0f, 0.0f}, (struct jaVector3){2.0f, 2.0f, 2.0f});
 }
 
 
@@ -94,12 +108,13 @@ static void sFunctionKey(struct kaWindow* w, int f, void* raw_data, struct jaSta
 
 static void sClose(struct kaWindow* w, void* raw_data)
 {
-	(void)w;
-	(void)raw_data;
+	struct NaraData* data = raw_data;
+	jaBufferClean(&data->buffer);
+	SkydomeDelete(w, data->skydome);
 }
 
 
-int main(int argc, char* argv[])
+int main()
 {
 	struct jaStatus st = {0};
 	struct NaraData* data = NULL;
