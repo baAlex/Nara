@@ -23,10 +23,10 @@ if (NOT RUBY OR NOT RAKE)
 endif()
 
 if (MSVC) # Hack just to force rake to use MSVC
-	add_custom_command(TARGET "nara" PRE_LINK COMMAND ${RAKE} "VSINSTALLDIR=YesPlease"
+	add_custom_command(TARGET "nara" PRE_BUILD COMMAND ${RAKE} "VSINSTALLDIR=YesPlease"
 		WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/source/engine/mruby")
 else ()
-	add_custom_command(TARGET "nara" PRE_LINK COMMAND ${RAKE}
+	add_custom_command(TARGET "nara" PRE_BUILD COMMAND ${RAKE}
 		WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/source/engine/mruby")
 endif ()
 
