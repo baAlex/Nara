@@ -11,6 +11,8 @@ add_executable("nara"
 	"./source/engine/skydome.c"
 )
 
+execute_process(COMMAND "rake" "-f" "./source/engine/mruby/Rakefile")
+
 # LibJapan
 option(JAPAN_SHARED OFF)
 option(JAPAN_BUILD_TEST OFF)
