@@ -12,7 +12,6 @@ jobs:
     - name: Install dependencies
       run: |
         vcpkg install sdl2:x64-windows
-        choco install winflexbison
         git submodule init
         git submodule update
 

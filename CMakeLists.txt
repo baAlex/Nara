@@ -11,7 +11,9 @@ add_executable("nara"
 	"./source/engine/skydome.c"
 )
 
-execute_process(COMMAND "rake" "-f" "./source/engine/mruby/Rakefile")
+# MRuby
+execute_process(COMMAND rake -f "${PROJECT_SOURCE_DIR}/source/engine/mruby/Rakefile")
+target_link_libraries("nara" PRIVATE "${PROJECT_SOURCE_DIR}/source/engine/mruby/build/host/lib/libmruby.a")
 
 # LibJapan
 option(JAPAN_SHARED OFF)
