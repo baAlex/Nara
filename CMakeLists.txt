@@ -1,5 +1,5 @@
 
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.12)
 project("Nara" C)
 
 if (MSVC)
@@ -23,13 +23,14 @@ if (NOT RUBY OR NOT RAKE)
 endif()
 
 if (MSVC) # Hack just to force rake to use MSVC
-	add_custom_command(TARGET "nara" PRE_BUILD COMMAND ${RAKE} "VSINSTALLDIR=YesPlease"
+	add_custom_target("mruby" COMMAND ${RAKE} "VSINSTALLDIR=YesPlease"
 		WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/source/engine/mruby")
 else ()
-	add_custom_command(TARGET "nara" PRE_BUILD COMMAND ${RAKE}
+	add_custom_target("mruby" COMMAND ${RAKE}
 		WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/source/engine/mruby")
 endif ()
 
+add_dependencies("nara" "mruby")
 target_link_libraries("nara" PRIVATE
 	"${PROJECT_SOURCE_DIR}/source/engine/mruby/build/host/lib/libmruby${CMAKE_STATIC_LIBRARY_SUFFIX}")
 target_include_directories("nara" PRIVATE "${PROJECT_SOURCE_DIR}/source/engine/mruby/include")
