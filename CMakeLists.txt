@@ -14,18 +14,25 @@ add_executable("nara"
 # MRuby
 find_program(RUBY ruby)
 find_program(RAKE rake)
-find_program(BISON bison)
 
 message("### It´s dangerous to compile alone, read this: '${RUBY}'")
 message("### It´s dangerous to compile alone, read this: '${RAKE}'")
-message("### It´s dangerous to compile alone, read this: '${BISON}'")
 
-if (NOT RUBY OR NOT RAKE OR NOT BISON)
+if (NOT RUBY OR NOT RAKE)
 	message(FATAL_ERROR "Install da deps' my final message. Goodbye.")
 endif()
 
-#execute_process(COMMAND rake -f "${PROJECT_SOURCE_DIR}/source/engine/mruby/Rakefile" ERROR_VARIABLE mruby_out)
-#target_link_libraries("nara" PRIVATE "${PROJECT_SOURCE_DIR}/source/engine/mruby/build/host/lib/libmruby.a")
+if (MSVC) # Hack just to force rake to use MSVC
+	add_custom_command(TARGET "nara" PRE_LINK COMMAND ${RAKE} "VSINSTALLDIR=YesPlease"
+		WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/source/engine/mruby")
+else ()
+	add_custom_command(TARGET "nara" PRE_LINK COMMAND ${RAKE}
+		WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/source/engine/mruby")
+endif ()
+
+target_link_libraries("nara" PRIVATE
+	"${PROJECT_SOURCE_DIR}/source/engine/mruby/build/host/lib/libmruby${CMAKE_STATIC_LIBRARY_SUFFIX}")
+target_include_directories("nara" PRIVATE "${PROJECT_SOURCE_DIR}/source/engine/mruby/include")
 
 # LibJapan
 option(JAPAN_SHARED OFF)
