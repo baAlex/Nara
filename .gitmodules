@@ -4,3 +4,6 @@
 [submodule "source/engine/libkansai"]
 	path = source/engine/libkansai
 	url = https://github.com/baAlex/libkansai
+[submodule "source/engine/mruby"]
+	path = source/engine/mruby
+	url = https://github.com/mruby/mruby
