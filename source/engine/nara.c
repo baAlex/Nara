@@ -44,7 +44,12 @@ SOFTWARE.
 #include "kansai-version.h"
 
 #include "mruby.h"
+#include "mruby/array.h"
 #include "mruby/compile.h"
+#include "mruby/dump.h"
+#include "mruby/error.h"
+#include "mruby/string.h"
+#include "mruby/variable.h"
 #include "mruby/version.h"
 
 #define NAME "Nara"
@@ -66,12 +71,32 @@ struct NaraData
 };
 
 
+mrb_value VmCallPrint(mrb_state* state, mrb_value self)
+{
+	// TODO, add the license:
+	// https://github.com/mruby/mruby/blob/master/mrbgems/mruby-print/src/print.c
+
+	(void)self;
+	mrb_value argv;
+
+	mrb_get_args(state, "o", &argv);
+
+	if (mrb_string_p(argv))
+	{
+		fwrite(RSTRING_PTR(argv), (size_t)RSTRING_LEN(argv), 1, stdout);
+		fflush(stdout);
+	}
+
+	return argv;
+}
+
+
 static void sInit(struct kaWindow* w, void* raw_data, struct jaStatus* st)
 {
 	(void)w;
 	struct NaraData* data = raw_data;
 
-	// Initialize state and load program
+	// Initialize state
 	FILE* fp = NULL;
 
 	if ((fp = fopen("./source/game/nara.rb", "r")) == NULL)
@@ -80,14 +105,11 @@ static void sInit(struct kaWindow* w, void* raw_data, struct jaStatus* st)
 		return;
 	}
 
-	if ((data->state = mrb_open()) == NULL)
+	if ((data->state = mrb_open_core(mrb_default_allocf, NULL)) == NULL)
 	{
-		jaStatusSet(st, "sInit", JA_STATUS_ERROR, "mrb_open()");
+		jaStatusSet(st, "sInit", JA_STATUS_ERROR, "mrb_open_core()");
 		return;
 	}
-
-	data->program = mrb_load_file(data->state, fp);
-	fclose(fp);
 
 	// Create frequently used symbols (being uint32_t they are cheaper than strings)
 	data->init_symbol = mrb_intern_cstr(data->state, "NaraInit");
@@ -95,6 +117,14 @@ static void sInit(struct kaWindow* w, void* raw_data, struct jaStatus* st)
 	data->resize_symbol = mrb_intern_cstr(data->state, "NaraResize");
 	data->close_symbol = mrb_intern_cstr(data->state, "NaraClose");
 
+	// Define basic functions
+	mrb_define_method(data->state, data->state->kernel_module, "print", VmCallPrint, MRB_ARGS_REQ(1));
+
+	// Load the program
+	data->program = mrb_load_file(data->state, fp);
+	fclose(fp);
+
+	// First call
 	mrb_funcall_argv(data->state, data->program, data->init_symbol, 0, NULL); // 0 arguments, with NULL as them
 }
 

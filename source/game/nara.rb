@@ -1,6 +1,7 @@
 
 def NaraInit
 	print("Come here my little friend, don't be afraid.\n")
+	print("Come here my little friend, don't be afraid.\n")
 end
 
 def NaraResize
