@@ -33,6 +33,11 @@ target_link_libraries("nara" PRIVATE
 	"${PROJECT_SOURCE_DIR}/source/engine/mruby/build/host/lib/libmruby${CMAKE_STATIC_LIBRARY_SUFFIX}")
 target_include_directories("nara" PRIVATE "${PROJECT_SOURCE_DIR}/source/engine/mruby/include")
 
+if (MSVC)
+	target_link_libraries("nara" PRIVATE "wsock32") # A gem requires it :/
+	target_link_libraries("nara" PRIVATE "ws2_32")
+endif ()
+
 # LibJapan
 option(JAPAN_SHARED OFF)
 option(JAPAN_BUILD_TEST OFF)
