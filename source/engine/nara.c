@@ -43,7 +43,9 @@ SOFTWARE.
 #include "kansai-context.h"
 #include "kansai-version.h"
 
-#include "skydome.h"
+#include "mruby.h"
+#include "mruby/compile.h"
+#include "mruby/version.h"
 
 #define NAME "Nara"
 #define VERSION "0.4-alpha"
@@ -53,19 +55,47 @@ SOFTWARE.
 struct NaraData
 {
 	float showcase_angle;
-	struct Skydome* skydome;
-	struct jaBuffer buffer;
+
+	mrb_state* state;
+	mrb_value program;
+
+	mrb_sym init_symbol;
+	mrb_sym frame_symbol;
+	mrb_sym resize_symbol;
+	mrb_sym close_symbol;
 };
 
 
 static void sInit(struct kaWindow* w, void* raw_data, struct jaStatus* st)
 {
+	(void)w;
 	struct NaraData* data = raw_data;
 
-	if ((data->skydome = SkydomeCreate(w, 1.0f, 1, &data->buffer, st)) == NULL)
-		return;
+	// Initialize state and load program
+	FILE* fp = NULL;
 
-	kaSetVertices(w, &data->skydome->vertices);
+	if ((fp = fopen("./source/game/nara.rb", "r")) == NULL)
+	{
+		jaStatusSet(st, "sInit", JA_STATUS_FS_ERROR, "'%s'", "./source/game/nara.rb");
+		return;
+	}
+
+	if ((data->state = mrb_open()) == NULL)
+	{
+		jaStatusSet(st, "sInit", JA_STATUS_ERROR, "mrb_open()");
+		return;
+	}
+
+	data->program = mrb_load_file(data->state, fp);
+	fclose(fp);
+
+	// Create frequently used symbols (being uint32_t they are cheaper than strings)
+	data->init_symbol = mrb_intern_cstr(data->state, "NaraInit");
+	data->frame_symbol = mrb_intern_cstr(data->state, "NaraFrame");
+	data->resize_symbol = mrb_intern_cstr(data->state, "NaraResize");
+	data->close_symbol = mrb_intern_cstr(data->state, "NaraClose");
+
+	mrb_funcall_argv(data->state, data->program, data->init_symbol, 0, NULL); // 0 arguments, with NULL as them
 }
 
 
@@ -79,19 +109,21 @@ static void sFrame(struct kaWindow* w, struct kaEvents e, float delta, void* raw
 	data->showcase_angle += jaDegToRad(1.0f) * delta;
 	kaSetLocal(w, jaMatrix4RotateZ(jaMatrix4Identity(), data->showcase_angle));
 
-	kaDraw(w, &data->skydome->index);
+	kaDrawDefault(w);
 }
 
 
 static void sResize(struct kaWindow* w, int width, int height, void* raw_data, struct jaStatus* st)
 {
-	(void)raw_data;
 	(void)st;
+	struct NaraData* data = raw_data;
 
 	float aspect = (float)width / (float)height;
 
 	kaSetWorld(w, jaMatrix4Perspective(jaDegToRad(45.0f), aspect, 0.1f, 500.0f));
 	kaSetCameraLookAt(w, (struct jaVector3){0.0f, 0.0f, 0.0f}, (struct jaVector3){2.0f, 2.0f, 2.0f});
+
+	mrb_funcall_argv(data->state, data->program, data->resize_symbol, 0, NULL); // 0 arguments, with NULL as them
 }
 
 
@@ -108,9 +140,11 @@ static void sFunctionKey(struct kaWindow* w, int f, void* raw_data, struct jaSta
 
 static void sClose(struct kaWindow* w, void* raw_data)
 {
+	(void)w;
 	struct NaraData* data = raw_data;
-	jaBufferClean(&data->buffer);
-	SkydomeDelete(w, data->skydome);
+
+	mrb_funcall_argv(data->state, data->program, data->close_symbol, 0, NULL); // 0 arguments, with NULL as them
+	mrb_close(data->state);
 }
 
 
@@ -123,9 +157,13 @@ int main()
 	printf("%s v%s\n", NAME, VERSION);
 	printf(" - LibJapan %i.%i.%i\n", jaVersionMajor(), jaVersionMinor(), jaVersionPatch());
 	printf(" - LibKansai %i.%i.%i\n", kaVersionMajor(), kaVersionMinor(), kaVersionPatch());
+	printf(" - mruby %i.%i.%i\n", MRUBY_RELEASE_MAJOR, MRUBY_RELEASE_MINOR, MRUBY_RELEASE_TEENY);
 
 	if ((data = calloc(1, sizeof(struct NaraData))) == NULL)
+	{
+		jaStatusSet(&st, "main", JA_STATUS_MEMORY_ERROR, NULL);
 		goto return_failure;
+	}
 
 	if (kaContextStart(&st) != 0)
 		goto return_failure;

@@ -15,14 +15,11 @@ add_executable("nara"
 find_program(RUBY ruby)
 find_program(RAKE rake)
 
-message("### It´s dangerous to compile alone, read this: '${RUBY}'")
-message("### It´s dangerous to compile alone, read this: '${RAKE}'")
-
 if (NOT RUBY OR NOT RAKE)
 	message(FATAL_ERROR "Install da deps' my final message. Goodbye.")
 endif()
 
-if (MSVC) # Hack just to force rake to use MSVC
+if (MSVC) # Hack just to force rake use MSVC
 	add_custom_target("mruby" COMMAND ${RAKE} "VSINSTALLDIR=YesPlease"
 		WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/source/engine/mruby")
 else ()
@@ -31,6 +28,7 @@ else ()
 endif ()
 
 add_dependencies("nara" "mruby")
+
 target_link_libraries("nara" PRIVATE
 	"${PROJECT_SOURCE_DIR}/source/engine/mruby/build/host/lib/libmruby${CMAKE_STATIC_LIBRARY_SUFFIX}")
 target_include_directories("nara" PRIVATE "${PROJECT_SOURCE_DIR}/source/engine/mruby/include")
