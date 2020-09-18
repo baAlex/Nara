@@ -1,5 +1,5 @@
 
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.10)
 project("Nara" C)
 
 if (MSVC)
@@ -11,32 +11,12 @@ add_executable("nara"
 	"./source/engine/skydome.c"
 )
 
-# MRuby
-find_program(RUBY ruby)
-find_program(RAKE rake)
+# mruby
+option(MRUBY_SHARED OFF)
 
-if (NOT RUBY OR NOT RAKE)
-	message(FATAL_ERROR "Install da deps' my final message. Goodbye.")
-endif()
-
-if (MSVC) # Hack just to force rake use MSVC
-	add_custom_target("mruby" COMMAND ${RAKE} "VSINSTALLDIR=YesPlease"
-		WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/source/engine/mruby")
-else ()
-	add_custom_target("mruby" COMMAND ${RAKE}
-		WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/source/engine/mruby")
-endif ()
-
-add_dependencies("nara" "mruby")
-
-target_link_libraries("nara" PRIVATE
-	"${PROJECT_SOURCE_DIR}/source/engine/mruby/build/host/lib/libmruby${CMAKE_STATIC_LIBRARY_SUFFIX}")
-target_include_directories("nara" PRIVATE "${PROJECT_SOURCE_DIR}/source/engine/mruby/include")
-
-if (MSVC)
-	target_link_libraries("nara" PRIVATE "wsock32") # A gem requires it :/
-	target_link_libraries("nara" PRIVATE "ws2_32")
-endif ()
+add_subdirectory("./source/engine/mruby")
+target_link_libraries("nara" PRIVATE "mruby-static")
+target_include_directories("nara" PRIVATE "./source/engine/mruby/include")
 
 # LibJapan
 option(JAPAN_SHARED OFF)

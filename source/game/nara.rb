@@ -1,11 +1,20 @@
 
+require "vector"
+require "player"
+
 def NaraInit
-	print("Come here my little friend, don't be afraid.\n")
 	print("Come here my little friend, don't be afraid.\n")
 end
 
-def NaraResize
-	print("Beepp, bep, beepp.\n")
+def NaraFrame(delta)
+end
+
+def NaraResize(width, height)
+	print("Beepp, bep, beepp (#{width}, #{height}).\n")
+end
+
+def NaraFunction(f)
+	print("F#{f} released\n")
 end
 
 def NaraClose
@@ -14,4 +23,5 @@ def NaraClose
 	print("Boy I'm glad of see you.\n")
 end
 
+require "Kenobi"
 print("Hello there!.\n")
