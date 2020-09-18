@@ -43,14 +43,8 @@ SOFTWARE.
 #include "kansai-context.h"
 #include "kansai-version.h"
 
-#include "mruby.h"
-#include "mruby/array.h"
-#include "mruby/compile.h"
-#include "mruby/dump.h"
-#include "mruby/error.h"
-#include "mruby/string.h"
-#include "mruby/variable.h"
 #include "mruby/version.h"
+#include "vm.h"
 
 #define NAME "Nara"
 #define VERSION "0.4-alpha"
@@ -66,66 +60,8 @@ struct NaraData
 
 	float showcase_angle;
 
-	mrb_state* state;
-	mrb_value program;
-
-	mrb_sym init_symbol;
-	mrb_sym frame_symbol;
-	mrb_sym resize_symbol;
-	mrb_sym function_symbol;
-	mrb_sym close_symbol;
+	struct Vm* vm;
 };
-
-
-mrb_value VmCallPrint(mrb_state* state, mrb_value self)
-{
-	// TODO, add the license:
-	// https://github.com/mruby/mruby/blob/master/mrbgems/mruby-print/src/print.c
-
-	(void)self;
-	mrb_value argv;
-
-	mrb_get_args(state, "o", &argv);
-
-	if (mrb_string_p(argv)) // Same as 'mrb_type(o) == MRB_TT_STRING'
-	{
-		fwrite(RSTRING_PTR(argv), (size_t)RSTRING_LEN(argv), 1, stdout);
-		fflush(stdout);
-	}
-
-	return argv;
-}
-
-
-mrb_value VmCallRequire(mrb_state* state, mrb_value self)
-{
-	(void)self;
-	mrb_value filename;
-
-	mrb_get_args(state, "S", &filename);
-
-	if (mrb_type(filename) != MRB_TT_STRING)
-	{
-		printf("Error!, the argument isn't an string?\n");
-		return mrb_fixnum_value(1);
-	}
-
-	printf("Required file '%s', blah, blah, blah...\n", mrb_string_cstr(state, filename));
-	return mrb_fixnum_value(0);
-}
-
-
-static inline void sCheckException(struct mrb_state* state)
-{
-	if (state->exc != NULL)
-	{
-		printf("[MRuby error]\n");
-		mrb_print_error(state);
-
-		state->exc = NULL;
-		exit(1);
-	}
-}
 
 
 static void sInit(struct kaWindow* w, void* raw_data, struct jaStatus* st)
@@ -133,48 +69,17 @@ static void sInit(struct kaWindow* w, void* raw_data, struct jaStatus* st)
 	(void)w;
 	struct NaraData* data = raw_data;
 
-	// Initialize state
-	FILE* fp = NULL;
-
-	if ((fp = fopen("./source/game/nara.rb", "r")) == NULL)
-	{
-		jaStatusSet(st, "sInit", JA_STATUS_FS_ERROR, "'%s'", "./source/game/nara.rb");
+	if ((data->vm = VmCreate("./source/game/nara.rb", st)) == NULL)
 		return;
-	}
 
-	if ((data->state = mrb_open_core(mrb_default_allocf, NULL)) == NULL)
-	{
-		jaStatusSet(st, "sInit", JA_STATUS_ERROR, "mrb_open_core()");
+	if (VmCallbackInit(data->vm, st) != 0)
 		return;
-	}
-
-	// Create frequently used symbols (being uint32_t they are cheaper than strings)
-	data->init_symbol = mrb_intern_cstr(data->state, "NaraInit");
-	data->frame_symbol = mrb_intern_cstr(data->state, "NaraFrame");
-	data->resize_symbol = mrb_intern_cstr(data->state, "NaraResize");
-	data->function_symbol = mrb_intern_cstr(data->state, "NaraFunction");
-	data->close_symbol = mrb_intern_cstr(data->state, "NaraClose");
-
-	// Define basic functions
-	mrb_define_method(data->state, data->state->kernel_module, "print", VmCallPrint, MRB_ARGS_REQ(1));
-	mrb_define_method(data->state, data->state->kernel_module, "require", VmCallRequire, MRB_ARGS_REQ(1));
-
-	// Load the program
-	data->program = mrb_load_file(data->state, fp);
-	sCheckException(data->state);
-
-	fclose(fp);
-
-	// First game callback
-	mrb_funcall_argv(data->state, data->program, data->init_symbol, 0, NULL); // 0 arguments, with NULL as them
-	sCheckException(data->state);
 }
 
 
 static void sFrame(struct kaWindow* w, struct kaEvents e, float delta, void* raw_data, struct jaStatus* st)
 {
 	(void)e;
-	(void)st;
 
 	struct NaraData* data = raw_data;
 	unsigned start = 0;
@@ -183,9 +88,8 @@ static void sFrame(struct kaWindow* w, struct kaEvents e, float delta, void* raw
 	// Game frame callback
 	start = kaGetTime();
 	{
-		struct mrb_value delta_vmized = mrb_float_value(data->state, delta);
-		mrb_funcall_argv(data->state, data->program, data->frame_symbol, 1, &delta_vmized);
-		sCheckException(data->state);
+		if (VmCallbackFrame(data->vm, delta, st) != 0)
+			return;
 	}
 
 	diff = (kaGetTime() - start);
@@ -209,13 +113,10 @@ static void sFrame(struct kaWindow* w, struct kaEvents e, float delta, void* raw
 
 static void sResize(struct kaWindow* w, int width, int height, void* raw_data, struct jaStatus* st)
 {
-	(void)st;
 	struct NaraData* data = raw_data;
 
-	// Game resize callback
-	struct mrb_value args_vmized[2] = {mrb_fixnum_value(width), mrb_fixnum_value(height)};
-	mrb_funcall_argv(data->state, data->program, data->resize_symbol, 2, args_vmized);
-	sCheckException(data->state);
+	if (VmCallbackResize(data->vm, width, height, st) != 0)
+		return;
 
 	// Render
 	float aspect = (float)width / (float)height;
@@ -228,13 +129,10 @@ static void sResize(struct kaWindow* w, int width, int height, void* raw_data, s
 static void sFunctionKey(struct kaWindow* w, int f, void* raw_data, struct jaStatus* st)
 {
 	(void)w;
-	(void)st;
 	struct NaraData* data = raw_data;
 
-	// Game function callback
-	struct mrb_value f_vmized = mrb_fixnum_value(f);
-	mrb_funcall_argv(data->state, data->program, data->function_symbol, 1, &f_vmized);
-	sCheckException(data->state);
+	if (VmCallbackFunction(data->vm, f, st) != 0)
+		return;
 
 	// Render
 	if (f == 11)
@@ -247,12 +145,11 @@ static void sClose(struct kaWindow* w, void* raw_data)
 	(void)w;
 	struct NaraData* data = raw_data;
 
-	// Game quit callback
-	mrb_funcall_argv(data->state, data->program, data->close_symbol, 0, NULL); // 0 arguments, with NULL as them
-	sCheckException(data->state);
+	if (VmCallbackQuit(data->vm) != 0)
+		return;
 
 	// Bye!
-	mrb_close(data->state);
+	VmDelete(data->vm);
 	printf("Times, vm: %u ms (%u ms max), render: %u ms (%u ms max)\n", data->time_vm_med, data->time_vm_max,
 	       data->time_render_med, data->time_render_max);
 }
