@@ -155,10 +155,32 @@ static void sClose(struct kaWindow* w, void* raw_data)
 }
 
 
-int main()
+static void sArgumentsCallback(enum jaStatusCode code, int i, const char* key, const char* value)
+{
+	printf("[Warning] %s, argument %i ['%s' = '%s']\n", jaStatusCodeMessage(code), i, key, value);
+}
+
+int main(int argc, const char* argv[])
 {
 	struct jaStatus st = {0};
 	struct NaraData* data = NULL;
+	struct jaConfiguration* cfg = NULL;
+
+	// Configuration
+	if ((cfg = jaConfigurationCreate()) == NULL)
+	{
+		jaStatusSet(&st, "main", JA_STATUS_MEMORY_ERROR, NULL);
+		goto return_failure;
+	}
+
+	if (jaCvarCreateInt(cfg, "render.width", 720, 360, INT_MAX, &st) == NULL ||
+	    jaCvarCreateInt(cfg, "render.height", 480, 240, INT_MAX, &st) == NULL ||
+	    jaCvarCreateInt(cfg, "render.fullscreen", 0, 0, 1, &st) == NULL ||
+	    jaCvarCreateInt(cfg, "render.vsync", 1, 0, 1, &st) == NULL ||
+	    jaCvarCreateString(cfg, "kansai.caption", CAPTION, NULL, NULL, &st) == NULL)
+		goto return_failure;
+
+	jaConfigurationArgumentsEx(cfg, JA_UTF8, JA_SKIP_FIRST, sArgumentsCallback, argc, argv);
 
 	// Game as normal
 	printf("%s v%s\n", NAME, VERSION);
@@ -175,7 +197,7 @@ int main()
 	if (kaContextStart(&st) != 0)
 		goto return_failure;
 
-	if (kaWindowCreate(CAPTION, sInit, sFrame, sResize, sFunctionKey, sClose, data, &st) != 0)
+	if (kaWindowCreate(cfg, sInit, sFrame, sResize, sFunctionKey, sClose, data, &st) != 0)
 		goto return_failure;
 
 	// Main loop
@@ -190,10 +212,16 @@ int main()
 
 	// Bye!
 	kaContextStop();
+	jaConfigurationDelete(cfg);
+	free(data);
 	return EXIT_SUCCESS;
 
 return_failure:
 	jaStatusPrint(NAME, st);
 	kaContextStop();
+	if (cfg != NULL)
+		jaConfigurationDelete(cfg);
+	if (data != NULL)
+		free(data);
 	return EXIT_FAILURE;
 }

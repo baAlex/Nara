@@ -8,7 +8,6 @@ endif ()
 
 add_executable("nara"
 	"./source/engine/nara.c"
-	"./source/engine/skydome.c"
 	"./source/engine/vm.c"
 )
 
