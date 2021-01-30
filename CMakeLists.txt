@@ -8,15 +8,7 @@ endif ()
 
 add_executable("nara"
 	"./source/engine/nara.c"
-	"./source/engine/vm.c"
 )
-
-# mruby
-option(MRUBY_SHARED OFF)
-
-add_subdirectory("./source/engine/mruby")
-target_link_libraries("nara" PRIVATE "mruby-static")
-target_include_directories("nara" PRIVATE "./source/engine/mruby/include")
 
 # LibJapan
 option(JAPAN_SHARED OFF)
