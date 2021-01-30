@@ -43,8 +43,6 @@ SOFTWARE.
 #include "kansai-context.h"
 #include "kansai-version.h"
 
-#include "mruby/version.h"
-#include "vm.h"
 
 #define NAME "Nara"
 #define VERSION "0.4-alpha"
@@ -59,37 +57,30 @@ struct NaraData
 	unsigned time_render_max;
 
 	float showcase_angle;
-
-	struct Vm* vm;
 };
 
 
-static void sInit(struct kaWindow* w, void* raw_data, struct jaStatus* st)
+static void sInit(struct kaWindow* w, void* user_data, struct jaStatus* st)
 {
 	(void)w;
-	struct NaraData* data = raw_data;
-
-	if ((data->vm = VmCreate("./source/game/nara.rb", st)) == NULL)
-		return;
-
-	if (VmCallbackInit(data->vm, st) != 0)
-		return;
+	(void)user_data;
+	(void)st;
 }
 
 
-static void sFrame(struct kaWindow* w, struct kaEvents e, float delta, void* raw_data, struct jaStatus* st)
+static void sFrame(struct kaWindow* w, struct kaEvents e, float delta, void* user_data, struct jaStatus* st)
 {
 	(void)e;
+	(void)st;
 
-	struct NaraData* data = raw_data;
+	struct NaraData* data = user_data;
 	unsigned start = 0;
 	unsigned diff = 0;
 
 	// Game frame callback
 	start = kaGetTime();
 	{
-		if (VmCallbackFrame(data->vm, delta, st) != 0)
-			return;
+		// Nothing :)
 	}
 
 	diff = (kaGetTime() - start);
@@ -101,7 +92,7 @@ static void sFrame(struct kaWindow* w, struct kaEvents e, float delta, void* raw
 	{
 		data->showcase_angle += jaDegToRad(1.0f) * delta;
 
-		kaSetLocal(w, jaMatrix4RotateZ(jaMatrix4Identity(), data->showcase_angle));
+		kaSetLocal(w, jaMatrixRotateZF4(jaMatrixF4Identity(), data->showcase_angle));
 		kaDrawDefault(w);
 	}
 
@@ -111,45 +102,35 @@ static void sFrame(struct kaWindow* w, struct kaEvents e, float delta, void* raw
 }
 
 
-static void sResize(struct kaWindow* w, int width, int height, void* raw_data, struct jaStatus* st)
+static void sResize(struct kaWindow* w, int width, int height, void* user_data, struct jaStatus* st)
 {
-	struct NaraData* data = raw_data;
-
-	if (VmCallbackResize(data->vm, width, height, st) != 0)
-		return;
+	(void)user_data;
+	(void)st;
 
 	// Render
 	float aspect = (float)width / (float)height;
 
-	kaSetWorld(w, jaMatrix4Perspective(jaDegToRad(45.0f), aspect, 0.1f, 500.0f));
-	kaSetCameraLookAt(w, (struct jaVector3){0.0f, 0.0f, 0.0f}, (struct jaVector3){2.0f, 2.0f, 2.0f});
+	kaSetWorld(w, jaMatrixPerspectiveF4(jaDegToRad(45.0f), aspect, 0.1f, 500.0f));
+	kaSetCameraLookAt(w, (struct jaVectorF3){0.0f, 0.0f, 0.0f}, (struct jaVectorF3){2.0f, 2.0f, 2.0f});
 }
 
 
-static void sFunctionKey(struct kaWindow* w, int f, void* raw_data, struct jaStatus* st)
+static void sKeyboard(struct kaWindow* w, enum kaKey key, enum kaGesture mode, void* user_data, struct jaStatus* st)
 {
 	(void)w;
-	struct NaraData* data = raw_data;
+	(void)user_data;
+	(void)st;
 
-	if (VmCallbackFunction(data->vm, f, st) != 0)
-		return;
-
-	// Render
-	if (f == 11)
+	if (key == KA_KEY_F11 && mode == KA_PRESSED)
 		kaSwitchFullscreen(w);
 }
 
 
-static void sClose(struct kaWindow* w, void* raw_data)
+static void sClose(struct kaWindow* w, void* user_data)
 {
 	(void)w;
-	struct NaraData* data = raw_data;
+	struct NaraData* data = user_data;
 
-	if (VmCallbackQuit(data->vm) != 0)
-		return;
-
-	// Bye!
-	VmDelete(data->vm);
 	printf("Times, vm: %u ms (%u ms max), render: %u ms (%u ms max)\n", data->time_vm_med, data->time_vm_max,
 	       data->time_render_med, data->time_render_max);
 }
@@ -177,7 +158,7 @@ int main(int argc, const char* argv[])
 	    jaCvarCreateInt(cfg, "render.height", 480, 240, INT_MAX, &st) == NULL ||
 	    jaCvarCreateInt(cfg, "render.fullscreen", 0, 0, 1, &st) == NULL ||
 	    jaCvarCreateInt(cfg, "render.vsync", 1, 0, 1, &st) == NULL ||
-	    jaCvarCreateString(cfg, "kansai.caption", CAPTION, NULL, NULL, &st) == NULL)
+	    jaCvarCreateString(cfg, "caption", CAPTION, NULL, NULL, &st) == NULL)
 		goto return_failure;
 
 	jaConfigurationArgumentsEx(cfg, JA_UTF8, JA_SKIP_FIRST, sArgumentsCallback, argc, argv);
@@ -186,7 +167,6 @@ int main(int argc, const char* argv[])
 	printf("%s v%s\n", NAME, VERSION);
 	printf(" - LibJapan %i.%i.%i\n", jaVersionMajor(), jaVersionMinor(), jaVersionPatch());
 	printf(" - LibKansai %i.%i.%i\n", kaVersionMajor(), kaVersionMinor(), kaVersionPatch());
-	printf(" - mruby-peko %i.%i.%i\n", MRUBY_RELEASE_MAJOR, MRUBY_RELEASE_MINOR, MRUBY_RELEASE_TEENY);
 
 	if ((data = calloc(1, sizeof(struct NaraData))) == NULL)
 	{
@@ -197,7 +177,7 @@ int main(int argc, const char* argv[])
 	if (kaContextStart(&st) != 0)
 		goto return_failure;
 
-	if (kaWindowCreate(cfg, sInit, sFrame, sResize, sFunctionKey, sClose, data, &st) != 0)
+	if (kaWindowCreate(cfg, sInit, sFrame, sResize, sKeyboard, NULL, sClose, data, &st) != 0)
 		goto return_failure;
 
 	// Main loop
